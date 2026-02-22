@@ -1,0 +1,47 @@
+# Binaries (built artifacts — do not commit runnable binaries)
+/blackbox-agent
+/bastion
+!/bastion/
+!/bastion/**
+agent/blackbox-agent
+bastion/bastion
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Go
+/vendor/
+
+# Node / SvelteKit
+web/node_modules/
+web/build/
+web/.svelte-kit/
+
+# Environment (keep .env.example)
+.env
+.env.local
+.env.*.local
+
+# IDE / editor
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs and temp
+*.log
+/tmp/
+/temp/
+
+# Docker (local overrides; data is in volumes)
+docker-compose.override.yml
+
+# dev
+PLAN.md

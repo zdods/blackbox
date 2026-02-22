@@ -1,0 +1,32 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: blackbox
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 2s
+      timeout: 2s
+      retries: 10
+
+  # blackbox-server (serves blackbox-console + agent hub)
+  bastion:
+    build:
+      context: .
+      dockerfile: bastion/Dockerfile
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@postgres:5432/blackbox?sslmode=disable
+      SERVER_ADDR: :8080
+      JWT_SECRET: ${JWT_SECRET:-poc-secret-change-in-production}
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  postgres_data:

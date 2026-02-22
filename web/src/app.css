@@ -1,0 +1,243 @@
+/* blackbox-console — Nord theme */
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+:root {
+  /* Nord: Polar Night */
+  --term-bg: #2E3440;
+  --term-surface: #3B4252;
+  --term-border: #434C5E;
+  --term-text-dim: #4C566A;
+  /* Nord: Snow Storm — legible text */
+  --term-text: #D8DEE9;
+  --term-text-muted: #9CA3B5;
+  --term-text-bright: #E5E9F0;
+  /* Nord: Frost */
+  --term-cyan: #88C0D0;
+  --term-green: #A3BE8C;
+  /* Nord: Aurora */
+  --term-red: #BF616A;
+  --term-amber: #B48EAD;
+  --term-yellow: #EBCB8B;
+  --term-orange: #D08770;
+  --term-cursor: rgba(163, 190, 140, 0.4);
+  --font-mono: 'JetBrains Mono', ui-monospace, 'Cascadia Code', 'SF Mono', Consolas, Monaco, 'Courier New', monospace;
+  --space-sm: 0.5rem;
+  --space-md: 1rem;
+  --space-lg: 1.5rem;
+  --space-xl: 2rem;
+  --input-height: 2.5rem;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  line-height: 1.6;
+  margin: 0;
+  min-height: 100vh;
+  padding: var(--space-md);
+  background: var(--term-bg);
+  color: var(--term-text);
+  -webkit-font-smoothing: antialiased;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Subtle gradient overlay */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(136, 192, 208, 0.04), transparent);
+  pointer-events: none;
+  z-index: 0;
+}
+
+a {
+  color: var(--term-cyan);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+  color: var(--term-green);
+}
+
+/* Terminal window container — centered horizontally and vertically */
+.terminal {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 100%;
+  max-height: calc(100vh - 2 * var(--space-md));
+  margin: 0 auto;
+  padding: 0;
+  background: var(--term-surface);
+  border: 1px solid var(--term-border);
+  border-radius: 8px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Login/register: terminal only as wide as the form */
+.terminal.narrow {
+  width: fit-content;
+  max-width: calc(100vw - 2 * var(--space-md));
+}
+
+.terminal .container {
+  overflow: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+@media (min-width: 1280px) {
+  .terminal {
+    max-width: 1200px;
+  }
+}
+
+.terminal-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: rgba(0, 0, 0, 0.2);
+  border-bottom: 1px solid var(--term-border);
+  border-radius: 8px 8px 0 0;
+  font-size: 12px;
+  color: var(--term-text-dim);
+}
+
+.terminal-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.terminal-dot.red { background: #BF616A; }
+.terminal-dot.yellow { background: #EBCB8B; }
+.terminal-dot.green { background: #A3BE8C; }
+
+.terminal-title {
+  margin-left: 8px;
+  color: var(--term-text-dim);
+}
+
+/* Main content area — full width of terminal, generous spacing */
+.container {
+  width: 100%;
+  padding: var(--space-xl) var(--space-xl) var(--space-xl);
+  box-sizing: border-box;
+}
+
+/* Prompt-style labels */
+.prompt-prefix {
+  color: var(--term-green);
+  margin-right: 0.35em;
+}
+
+.term-h1 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--term-green);
+  margin: 0 0 var(--space-lg);
+  letter-spacing: 0.02em;
+}
+
+.term-h2 {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--term-amber);
+  margin: var(--space-xl) 0 var(--space-md);
+}
+
+/* Inputs and buttons — consistent height, full width of container */
+input, button, .btn {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  min-height: var(--input-height);
+  height: var(--input-height);
+  line-height: 1.25;
+  box-sizing: border-box;
+  border-radius: 4px;
+}
+
+input {
+  width: 100%;
+  background: var(--term-bg);
+  border: 1px solid var(--term-border);
+  color: var(--term-text);
+  padding: 0 var(--space-md);
+}
+
+input::placeholder {
+  color: var(--term-text-muted);
+}
+
+input:focus {
+  outline: none;
+  border-color: var(--term-green);
+  box-shadow: 0 0 0 2px rgba(163, 190, 140, 0.2);
+}
+
+button, .btn {
+  padding: 0 var(--space-lg);
+  background: var(--term-border);
+  border: 1px solid var(--term-border);
+  color: var(--term-text);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+button:hover:not(:disabled), .btn:hover {
+  background: rgba(163, 190, 140, 0.15);
+  border-color: var(--term-green);
+  color: var(--term-green);
+}
+
+button.primary, .btn.primary {
+  background: rgba(163, 190, 140, 0.25);
+  border-color: var(--term-green);
+  color: var(--term-text-bright);
+}
+
+button.primary:hover:not(:disabled) {
+  background: rgba(163, 190, 140, 0.35);
+  color: var(--term-text-bright);
+}
+
+button.secondary {
+  background: transparent;
+  color: var(--term-text);
+  border-color: var(--term-border);
+}
+
+button.secondary:hover {
+  color: var(--term-text-bright);
+  border-color: var(--term-text-muted);
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.error {
+  color: var(--term-red);
+  font-size: 0.9rem;
+  margin: var(--space-md) 0;
+}
+
+.kaomoji {
+  font-style: normal;
+  margin-right: 0.25em;
+  opacity: 0.75;
+  font-size: 0.9em;
+}
