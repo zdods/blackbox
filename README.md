@@ -28,6 +28,14 @@ The **Agents** view lists agents and connection status; add an agent with a labe
 docker compose up --build
 ```
 
+Or use the Makefile / PowerShell script from the repo root:
+
+- **Start once:** `make up` (macOS/Linux) or `.\make.ps1 up` (Windows PowerShell).
+- **Hot reload (dev):** `make dev` or `.\make.ps1 dev` — runs `docker compose up --build --watch` so you see container logs and changes under `bastion/`, `web/`, or `pkg/` rebuild the bastion container automatically. Requires Docker Compose v2.22+.
+- **Build only:** `make build-bastion` / `.\make.ps1 build-bastion` for the server image; `make build-agent` / `.\make.ps1 build-agent` for the agent binary (outputs `blackbox-agent.exe` on Windows when using make.ps1).
+
+**Windows (PowerShell):** If you get “cannot be loaded because running scripts is disabled”, run once: `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser`. Or run a single command without changing policy: `powershell -ExecutionPolicy Bypass -File .\make.ps1 dev`.
+
 - **blackbox-console:** http://localhost:8080  
 - Register once at http://localhost:8080/register  
 - Log in, add an agent (label); the agent token is copied to your clipboard automatically.
@@ -49,6 +57,8 @@ The agent runs on **Linux**, **macOS**, and **Windows**. Build the binary for yo
 Keep the agent running; it appears as connected in blackbox-console. Open it to browse and transfer files.
 
 ## Local development (no Docker)
+
+For Docker-based development with hot reload, use `make dev` or `.\make.ps1 dev` (see Quick start above).
 
 1. **Postgres** – start Postgres and create a DB (e.g. `brew services start postgresql` on macOS):
    ```bash

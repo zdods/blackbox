@@ -18,6 +18,14 @@ services:
     build:
       context: .
       dockerfile: bastion/Dockerfile
+    develop:
+      watch:
+        - path: ./bastion
+          action: rebuild
+        - path: ./web
+          action: rebuild
+        - path: ./pkg
+          action: rebuild
     environment:
       DATABASE_URL: postgres://postgres:postgres@postgres:5432/blackbox?sslmode=disable
       SERVER_ADDR: :8080

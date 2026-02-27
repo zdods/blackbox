@@ -1,0 +1,49 @@
+---
+description: Use conventional commits for all generated commit messages
+alwaysApply: true
+---
+
+# Commit messages: conventional commits
+
+When writing or suggesting a commit message for this repo, use the **Conventional Commits** format.
+
+## Format
+
+```
+<type>(<scope>): <short description>
+
+[optional body]
+
+[optional footer(s)]
+```
+
+- **type**: Required. One of `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`, `perf`, `ci`, `build`.
+- **scope**: Optional. Area of the codebase (e.g. `dev`, `agent`, `bastion`, `web`, `pkg`).
+- **short description**: Required. Imperative, lowercase after the colon, no period. Max ~72 chars.
+- **body**: Optional. Wrap at 72 chars. Explain what and why, not how.
+- **footer**: Optional. e.g. `BREAKING CHANGE:`, `Refs: #123`.
+
+## Examples
+
+```
+feat(dev): add hot reload and cross-platform build scripts
+
+- Add develop.watch to docker-compose.yml for bastion (bastion/, web/, pkg/)
+- Add Makefile and make.ps1: build-bastion, build-agent, up, dev
+- up: docker compose up --build; dev: docker compose up --build --watch (with logs)
+- Document hot reload, script usage, and Windows PowerShell execution policy in README
+```
+
+```
+fix(agent): handle empty hosted-path on Windows
+```
+
+```
+docs: add TLS production section to README
+```
+
+## Guidelines
+
+- Use **feat** for user- or dev-facing new behavior, **fix** for bug fixes, **docs** for documentation-only, **chore** for tooling/config/tidy-up, **refactor** for non-fixing code changes.
+- Prefer a **scope** when the change is limited to a clear area (e.g. `bastion`, `agent`, `web`, `dev`).
+- Keep the subject line concise; put detail in the body with bullet points if needed.
