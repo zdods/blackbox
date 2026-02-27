@@ -76,7 +76,7 @@
         <input id="password" type="password" bind:value={password} placeholder="••••••••" required />
       </div>
       {#if error}<p class="error">{error}</p>{/if}
-      <button type="submit" class="primary" disabled={loading}>{loading ? '(´・ω・`) ...' : 'register'}</button>
+      <button type="submit" class="primary" disabled={loading || !username.trim() || !password}>{loading ? '(´・ω・`) ...' : 'register'}</button>
     </form>
   {/if}
 </div>

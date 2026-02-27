@@ -168,7 +168,7 @@
             {#if editingId === agent.id}
               <form class="agent-rename-form" on:submit={(e) => saveRename(e, agent.id)}>
                 <input type="text" bind:value={editLabel} class="agent-rename-input" />
-                <button type="submit" class="primary">save</button>
+                <button type="submit" class="primary" disabled={!editLabel.trim()}>save</button>
                 <button type="button" class="secondary" on:click={() => { editingId = null; editLabel = ''; }}>cancel</button>
               </form>
             {:else}
@@ -196,7 +196,7 @@
         <label for="agent-label"><span class="prompt-prefix">$</span> label</label>
         <input id="agent-label" type="text" bind:value={newLabel} placeholder="e.g. my-mac" />
       </div>
-      <button type="submit" class="primary" disabled={creating}>{creating ? '(´・ω・`) ...' : 'add agent'}</button>
+      <button type="submit" class="primary" disabled={creating || !newLabel.trim()}>{creating ? '(´・ω・`) ...' : 'add agent'}</button>
     </form>
   {/if}
 </div>

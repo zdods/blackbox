@@ -63,7 +63,7 @@
       <input id="password" type="password" bind:value={password} placeholder="••••••••" required />
     </div>
     {#if error}<p class="error">{error}</p>{/if}
-    <button type="submit" class="primary" disabled={loading}>{loading ? '(´・ω・`) ...' : 'log in'}</button>
+    <button type="submit" class="primary" disabled={loading || !username.trim() || !password}>{loading ? '(´・ω・`) ...' : 'log in'}</button>
   </form>
   {#if !setupLoading && registrationOpen}
     <p class="term-muted"><a href="/register">register</a> (one-time setup)</p>
