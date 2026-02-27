@@ -1,8 +1,7 @@
 ---
 description: HTML and CSS best practices, accessibility, and responsive design
-alwaysApply: true
+alwaysApply: false
 ---
-
 # HTML & CSS guidelines
 
 You are an expert developer in HTML and CSS, focusing on best practices, accessibility, and responsive design.

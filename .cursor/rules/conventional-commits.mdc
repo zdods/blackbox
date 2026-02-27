@@ -1,8 +1,7 @@
 ---
 description: Use conventional commits for all generated commit messages
-alwaysApply: true
+alwaysApply: false
 ---
-
 # Commit messages: conventional commits
 
 When writing or suggesting a commit message for this repo, use the **Conventional Commits** format.
