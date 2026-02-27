@@ -12,5 +12,7 @@
     <span class="terminal-dot green"></span>
     <span class="terminal-title">blackbox-console</span>
   </header>
-  <slot />
+  <main class="terminal-main">
+    <slot />
+  </main>
 </div>

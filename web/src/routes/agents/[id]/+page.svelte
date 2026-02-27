@@ -205,16 +205,16 @@
       <table class="file-list">
         <thead>
           <tr>
-            <th class="col-name sortable" class:sort-asc={sortBy === 'name' && sortDir === 'asc'} class:sort-desc={sortBy === 'name' && sortDir === 'desc'}>
+            <th scope="col" class="col-name sortable" class:sort-asc={sortBy === 'name' && sortDir === 'asc'} class:sort-desc={sortBy === 'name' && sortDir === 'desc'}>
               <button type="button" class="th-sort" on:click={() => setSort('name')}>name</button>
             </th>
-            <th class="col-size sortable" class:sort-asc={sortBy === 'size' && sortDir === 'asc'} class:sort-desc={sortBy === 'size' && sortDir === 'desc'}>
+            <th scope="col" class="col-size sortable" class:sort-asc={sortBy === 'size' && sortDir === 'asc'} class:sort-desc={sortBy === 'size' && sortDir === 'desc'}>
               <button type="button" class="th-sort" on:click={() => setSort('size')}>size</button>
             </th>
-            <th class="col-mtime sortable" class:sort-asc={sortBy === 'mtime' && sortDir === 'asc'} class:sort-desc={sortBy === 'mtime' && sortDir === 'desc'}>
+            <th scope="col" class="col-mtime sortable" class:sort-asc={sortBy === 'mtime' && sortDir === 'asc'} class:sort-desc={sortBy === 'mtime' && sortDir === 'desc'}>
               <button type="button" class="th-sort" on:click={() => setSort('mtime')}>modified</button>
             </th>
-            <th class="col-actions"></th>
+            <th scope="col" class="col-actions"></th>
           </tr>
         </thead>
         <tbody>

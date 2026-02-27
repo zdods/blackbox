@@ -202,7 +202,7 @@
 </div>
 
 {#if toast.show}
-  <div class="toast toast-{toast.type}" role="status">
+  <div class="toast toast-{toast.type}" role="status" aria-live="polite">
     {toast.message}
   </div>
 {/if}
@@ -327,9 +327,13 @@
     font-size: 0.9rem;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
     z-index: 100;
-    animation: toast-in 0.25s ease-out;
     max-width: min(90vw, 28rem);
     text-align: center;
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .toast {
+      animation: toast-in 0.25s ease-out;
+    }
   }
   .toast-success {
     background: var(--term-surface);
