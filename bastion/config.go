@@ -27,7 +27,7 @@ func LoadConfig() Config {
 	}
 	jwtSecret := os.Getenv("JWT_SECRET")
 	if jwtSecret == "" {
-		jwtSecret = "poc-secret-change-in-production"
+		jwtSecret = "dev-secret-change-in-production"
 	}
 	staticDir := os.Getenv("STATIC_DIR")
 	tlsCert := os.Getenv("TLS_CERT_FILE")
