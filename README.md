@@ -40,7 +40,7 @@ Or use the Makefile / PowerShell script from the repo root:
 - Register once at http://localhost:8080/register  
 - Log in, add an agent (label); the agent token is copied to your clipboard automatically.
 
-For production, set `JWT_SECRET` (e.g. in `.env`). See [.env.example](.env.example).
+For production, set `JWT_SECRET` (e.g. in `.env`). Ports, Postgres credentials, and other options can be overridden via environment variables; see [.env.example](.env.example).
 
 ### 2. Run blackbox-agent (on each host)
 

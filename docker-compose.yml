@@ -2,13 +2,15 @@ services:
   postgres:
     image: postgres:16-alpine
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: blackbox
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-blackbox}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U $POSTGRES_USER"]
       interval: 2s
       timeout: 2s
       retries: 10
@@ -27,11 +29,11 @@ services:
         - path: ./pkg
           action: rebuild
     environment:
-      DATABASE_URL: postgres://postgres:postgres@postgres:5432/blackbox?sslmode=disable
+      DATABASE_URL: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-blackbox}?sslmode=disable
       SERVER_ADDR: :8080
       JWT_SECRET: ${JWT_SECRET:-poc-secret-change-in-production}
     ports:
-      - "8080:8080"
+      - "${BASTION_PORT:-8080}:8080"
     depends_on:
       postgres:
         condition: service_healthy
