@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgconn"
@@ -12,34 +13,34 @@ import (
 
 const sessionExpiry = 24 * time.Hour
 
+// writeJSONError sends a JSON error response {"error": "message"} with the given status code.
+func writeJSONError(w http.ResponseWriter, code int, message string) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(code)
+	// best-effort encode; body may already be written on WriteHeader
+	_ = json.NewEncoder(w).Encode(map[string]string{"error": message})
+}
+
 func (s *Server) Setup(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
 	ctx := r.Context()
 	hasUser, err := HasAnyUser(ctx, s.pool)
 	if err != nil {
-		http.Error(w, "internal error", http.StatusInternalServerError)
+		writeJSONError(w, http.StatusInternalServerError, "internal error")
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]bool{"registration_open": !hasUser})
+	_ = json.NewEncoder(w).Encode(map[string]bool{"registration_open": !hasUser})
 }
 
 func (s *Server) Register(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
 	ctx := r.Context()
 	hasUser, err := HasAnyUser(ctx, s.pool)
 	if err != nil {
-		http.Error(w, "internal error", http.StatusInternalServerError)
+		writeJSONError(w, http.StatusInternalServerError, "internal error")
 		return
 	}
 	if hasUser {
-		http.Error(w, "Registration already completed", http.StatusForbidden)
+		writeJSONError(w, http.StatusForbidden, "registration already completed")
 		return
 	}
 	var req struct {
@@ -47,24 +48,24 @@ func (s *Server) Register(w http.ResponseWriter, r *http.Request) {
 		Password string `json:"password"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "bad request", http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, "bad request")
 		return
 	}
 	if req.Username == "" || req.Password == "" {
-		http.Error(w, "username and password required", http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, "username and password required")
 		return
 	}
 	_, err = CreateUser(ctx, s.pool, req.Username, req.Password)
 	if err != nil {
 		if isDuplicate(err) {
-			http.Error(w, "username already exists", http.StatusConflict)
+			writeJSONError(w, http.StatusConflict, "username already exists")
 			return
 		}
-		http.Error(w, "internal error", http.StatusInternalServerError)
+		writeJSONError(w, http.StatusInternalServerError, "internal error")
 		return
 	}
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(map[string]string{"status": "created"})
+	_ = json.NewEncoder(w).Encode(map[string]string{"status": "created"})
 }
 
 func isDuplicate(err error) bool {
@@ -73,35 +74,31 @@ func isDuplicate(err error) bool {
 }
 
 func (s *Server) Login(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
 	var req struct {
 		Username string `json:"username"`
 		Password string `json:"password"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "bad request", http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, "bad request")
 		return
 	}
 	if req.Username == "" || req.Password == "" {
-		http.Error(w, "username and password required", http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, "username and password required")
 		return
 	}
 	ctx := r.Context()
 	user, err := GetUserByUsername(ctx, s.pool, req.Username)
 	if err != nil {
-		http.Error(w, "invalid credentials", http.StatusUnauthorized)
+		writeJSONError(w, http.StatusUnauthorized, "invalid credentials")
 		return
 	}
 	if !CheckPassword(user.PasswordHash, req.Password) {
-		http.Error(w, "invalid credentials", http.StatusUnauthorized)
+		writeJSONError(w, http.StatusUnauthorized, "invalid credentials")
 		return
 	}
 	token, err := IssueToken(user.ID, user.Username, s.cfg.JWTSecret, sessionExpiry)
 	if err != nil {
-		http.Error(w, "internal error", http.StatusInternalServerError)
+		writeJSONError(w, http.StatusInternalServerError, "internal error")
 		return
 	}
 	http.SetCookie(w, &http.Cookie{
@@ -112,7 +109,7 @@ func (s *Server) Login(w http.ResponseWriter, r *http.Request) {
 		HttpOnly: true,
 		SameSite: http.SameSiteLaxMode,
 	})
-	json.NewEncoder(w).Encode(map[string]string{
+	_ = json.NewEncoder(w).Encode(map[string]string{
 		"token":   token,
 		"user_id": user.ID,
 		"username": user.Username,
@@ -125,19 +122,18 @@ func (s *Server) AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 		if c, _ := r.Cookie("session"); c != nil {
 			token = c.Value
 		}
-		if token == "" && r.Header.Get("Authorization") != "" {
-			// Bearer <token>
-			if len(r.Header.Get("Authorization")) > 7 {
-				token = r.Header.Get("Authorization")[7:]
+		if token == "" {
+			if prefix, suffix, ok := strings.Cut(r.Header.Get("Authorization"), " "); ok && strings.EqualFold(prefix, "Bearer") {
+				token = strings.TrimSpace(suffix)
 			}
 		}
 		if token == "" {
-			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			writeJSONError(w, http.StatusUnauthorized, "unauthorized")
 			return
 		}
 		claims, err := ValidateToken(token, s.cfg.JWTSecret)
 		if err != nil {
-			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			writeJSONError(w, http.StatusUnauthorized, "unauthorized")
 			return
 		}
 		ctx := context.WithValue(r.Context(), ctxKeyClaims, claims)

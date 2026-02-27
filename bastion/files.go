@@ -18,7 +18,7 @@ const proxyTimeout = 30 * time.Second
 func (s *Server) AgentFiles(w http.ResponseWriter, r *http.Request) {
 	agentID := r.PathValue("id")
 	if agentID == "" {
-		http.Error(w, "blackbox agent id required", http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, "agent id required")
 		return
 	}
 	path := r.URL.Query().Get("path")
@@ -27,7 +27,7 @@ func (s *Server) AgentFiles(w http.ResponseWriter, r *http.Request) {
 	}
 	ac := s.hub.Get(agentID)
 	if ac == nil {
-		http.Error(w, "blackbox agent not connected", http.StatusServiceUnavailable)
+		writeJSONError(w, http.StatusServiceUnavailable, "agent not connected")
 		return
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), proxyTimeout)
@@ -48,13 +48,13 @@ func (s *Server) AgentFiles(w http.ResponseWriter, r *http.Request) {
 		s.proxyDeleteFile(ctx, w, ac, path)
 		return
 	}
-	http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+	writeJSONError(w, http.StatusMethodNotAllowed, "method not allowed")
 }
 
 func (s *Server) AgentMeta(w http.ResponseWriter, r *http.Request) {
 	agentID := r.PathValue("id")
 	if agentID == "" {
-		http.Error(w, "blackbox agent id required", http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, "agent id required")
 		return
 	}
 	path := r.URL.Query().Get("path")
@@ -63,7 +63,7 @@ func (s *Server) AgentMeta(w http.ResponseWriter, r *http.Request) {
 	}
 	ac := s.hub.Get(agentID)
 	if ac == nil {
-		http.Error(w, "blackbox agent not connected", http.StatusServiceUnavailable)
+		writeJSONError(w, http.StatusServiceUnavailable, "agent not connected")
 		return
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), proxyTimeout)
@@ -72,20 +72,20 @@ func (s *Server) AgentMeta(w http.ResponseWriter, r *http.Request) {
 	req := pkg.GetMetaRequest{Type: pkg.TypeGetMeta, RequestID: reqID, Path: path}
 	respData, err := ac.Request(ctx, reqID, req)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadGateway)
+		writeJSONError(w, http.StatusBadGateway, err.Error())
 		return
 	}
 	var resp pkg.GetMetaResponse
 	if json.Unmarshal(respData, &resp) != nil {
-		http.Error(w, "invalid response", http.StatusBadGateway)
+		writeJSONError(w, http.StatusBadGateway, "invalid response")
 		return
 	}
 	if resp.Error != "" {
-		http.Error(w, resp.Error, http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, resp.Error)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
 		"size":   resp.Size,
 		"mtime":  resp.Mtime,
 		"is_dir": resp.IsDir,
@@ -97,20 +97,20 @@ func (s *Server) proxyListDir(ctx context.Context, w http.ResponseWriter, ac *Ag
 	req := pkg.ListDirRequest{Type: pkg.TypeListDir, RequestID: reqID, Path: path}
 	respData, err := ac.Request(ctx, reqID, req)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadGateway)
+		writeJSONError(w, http.StatusBadGateway, err.Error())
 		return
 	}
 	var resp pkg.ListDirResponse
 	if json.Unmarshal(respData, &resp) != nil {
-		http.Error(w, "invalid response", http.StatusBadGateway)
+		writeJSONError(w, http.StatusBadGateway, "invalid response")
 		return
 	}
 	if resp.Error != "" {
-		http.Error(w, resp.Error, http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, resp.Error)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(resp.Entries)
+	_ = json.NewEncoder(w).Encode(resp.Entries)
 }
 
 func (s *Server) proxyReadFile(ctx context.Context, w http.ResponseWriter, ac *AgentConn, path string) {
@@ -118,21 +118,21 @@ func (s *Server) proxyReadFile(ctx context.Context, w http.ResponseWriter, ac *A
 	req := pkg.ReadFileRequest{Type: pkg.TypeReadFile, RequestID: reqID, Path: path}
 	respData, err := ac.Request(ctx, reqID, req)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadGateway)
+		writeJSONError(w, http.StatusBadGateway, err.Error())
 		return
 	}
 	var resp pkg.ReadFileResponse
 	if json.Unmarshal(respData, &resp) != nil {
-		http.Error(w, "invalid response", http.StatusBadGateway)
+		writeJSONError(w, http.StatusBadGateway, "invalid response")
 		return
 	}
 	if resp.Error != "" {
-		http.Error(w, resp.Error, http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, resp.Error)
 		return
 	}
 	data, err := base64.StdEncoding.DecodeString(resp.Data)
 	if err != nil {
-		http.Error(w, "invalid data", http.StatusBadGateway)
+		writeJSONError(w, http.StatusBadGateway, "invalid data")
 		return
 	}
 	w.Header().Set("Content-Disposition", "attachment")
@@ -142,7 +142,7 @@ func (s *Server) proxyReadFile(ctx context.Context, w http.ResponseWriter, ac *A
 func (s *Server) proxyWriteFile(ctx context.Context, w http.ResponseWriter, r *http.Request, ac *AgentConn, path string) {
 	data, err := io.ReadAll(r.Body)
 	if err != nil {
-		http.Error(w, "failed to read body", http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, "failed to read body")
 		return
 	}
 	reqID := uuid.New().String()
@@ -154,16 +154,16 @@ func (s *Server) proxyWriteFile(ctx context.Context, w http.ResponseWriter, r *h
 	}
 	respData, err := ac.Request(ctx, reqID, req)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadGateway)
+		writeJSONError(w, http.StatusBadGateway, err.Error())
 		return
 	}
 	var resp pkg.WriteFileResponse
 	if json.Unmarshal(respData, &resp) != nil {
-		http.Error(w, "invalid response", http.StatusBadGateway)
+		writeJSONError(w, http.StatusBadGateway, "invalid response")
 		return
 	}
 	if resp.Error != "" {
-		http.Error(w, resp.Error, http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, resp.Error)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -174,16 +174,16 @@ func (s *Server) proxyDeleteFile(ctx context.Context, w http.ResponseWriter, ac 
 	req := pkg.DeleteFileRequest{Type: pkg.TypeDeleteFile, RequestID: reqID, Path: path}
 	respData, err := ac.Request(ctx, reqID, req)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadGateway)
+		writeJSONError(w, http.StatusBadGateway, err.Error())
 		return
 	}
 	var resp pkg.DeleteFileResponse
 	if json.Unmarshal(respData, &resp) != nil {
-		http.Error(w, "invalid response", http.StatusBadGateway)
+		writeJSONError(w, http.StatusBadGateway, "invalid response")
 		return
 	}
 	if resp.Error != "" {
-		http.Error(w, resp.Error, http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, resp.Error)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)

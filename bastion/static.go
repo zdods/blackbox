@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 )
 
@@ -28,11 +29,11 @@ func staticHandler(dir string) http.Handler {
 			http.NotFound(w, r)
 			return
 		}
-		fullPath := path.Join(dir, p)
+		fullPath := filepath.Join(dir, p)
 		info, err := os.Stat(fullPath)
 		if err != nil || info.IsDir() {
 			// SPA fallback
-			indexPath := path.Join(dir, "index.html")
+			indexPath := filepath.Join(dir, "index.html")
 			if _, err := os.Stat(indexPath); err != nil {
 				http.NotFound(w, r)
 				return

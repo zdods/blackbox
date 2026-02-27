@@ -194,37 +194,55 @@ func runAgent(bastionURL, token, root string) error {
 			var req pkg.ListDirRequest
 			if json.Unmarshal(data, &req) == nil {
 				resp := handleListDir(root, &req)
-				conn.WriteJSON(resp)
+				if err := conn.WriteJSON(resp); err != nil {
+					log.Printf("write: %v", err)
+					return nil
+				}
 			}
 		case pkg.TypeReadFile:
 			var req pkg.ReadFileRequest
 			if json.Unmarshal(data, &req) == nil {
 				resp := handleReadFile(root, &req)
-				conn.WriteJSON(resp)
+				if err := conn.WriteJSON(resp); err != nil {
+					log.Printf("write: %v", err)
+					return nil
+				}
 			}
 		case pkg.TypeWriteFile:
 			var req pkg.WriteFileRequest
 			if json.Unmarshal(data, &req) == nil {
 				resp := handleWriteFile(root, &req)
-				conn.WriteJSON(resp)
+				if err := conn.WriteJSON(resp); err != nil {
+					log.Printf("write: %v", err)
+					return nil
+				}
 			}
 		case pkg.TypeGetMeta:
 			var req pkg.GetMetaRequest
 			if json.Unmarshal(data, &req) == nil {
 				resp := handleGetMeta(root, &req)
-				conn.WriteJSON(resp)
+				if err := conn.WriteJSON(resp); err != nil {
+					log.Printf("write: %v", err)
+					return nil
+				}
 			}
 		case pkg.TypeDeleteFile:
 			var req pkg.DeleteFileRequest
 			if json.Unmarshal(data, &req) == nil {
 				resp := handleDeleteFile(root, &req)
-				conn.WriteJSON(resp)
+				if err := conn.WriteJSON(resp); err != nil {
+					log.Printf("write: %v", err)
+					return nil
+				}
 			}
 		case pkg.TypeGetDisk:
 			var req pkg.GetDiskRequest
 			if json.Unmarshal(data, &req) == nil {
 				resp := handleGetDisk(root, &req)
-				conn.WriteJSON(resp)
+				if err := conn.WriteJSON(resp); err != nil {
+					log.Printf("write: %v", err)
+					return nil
+				}
 			}
 		}
 	}
@@ -255,10 +273,12 @@ func handleListDir(root string, req *pkg.ListDirRequest) pkg.ListDirResponse {
 	}
 	var out []pkg.FileEntry
 	for _, e := range entries {
-		info, _ := e.Info()
+		info, err := e.Info()
 		var size int64
 		var mtime string
-		if info != nil {
+		if err != nil {
+			log.Printf("list dir entry %s: %v", e.Name(), err)
+		} else if info != nil {
 			size = info.Size()
 			mtime = info.ModTime().Format("2006-01-02T15:04:05Z07:00")
 		}

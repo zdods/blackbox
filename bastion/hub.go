@@ -5,13 +5,26 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 	"sync"
 
 	"github.com/gorilla/websocket"
 )
 
-var upgrader = websocket.Upgrader{
-	CheckOrigin: func(r *http.Request) bool { return true },
+// wsCheckOrigin returns true if the request origin is allowed. allowed is from config (CORSOrigin); "" or "*" allows all.
+func wsCheckOrigin(allowed string) func(*http.Request) bool {
+	return func(r *http.Request) bool {
+		if allowed == "" || allowed == "*" {
+			return true
+		}
+		origin := r.Header.Get("Origin")
+		for _, o := range strings.Split(allowed, ",") {
+			if strings.TrimSpace(o) == origin {
+				return true
+			}
+		}
+		return false
+	}
 }
 
 // Hub holds connected agents by agent ID.

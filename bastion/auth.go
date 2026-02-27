@@ -85,6 +85,9 @@ func IssueToken(userID, username, jwtSecret string, expiresIn time.Duration) (st
 
 func ValidateToken(tokenString, jwtSecret string) (*SessionClaims, error) {
 	t, err := jwt.ParseWithClaims(tokenString, &SessionClaims{}, func(t *jwt.Token) (interface{}, error) {
+		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, jwt.ErrSignatureInvalid
+		}
 		return []byte(jwtSecret), nil
 	})
 	if err != nil {

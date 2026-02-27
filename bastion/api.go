@@ -16,24 +16,21 @@ import (
 func (s *Server) Me(w http.ResponseWriter, r *http.Request) {
 	claims := ClaimsFromContext(r.Context())
 	if claims == nil {
-		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		writeJSONError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
-	json.NewEncoder(w).Encode(map[string]string{
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]string{
 		"user_id":  claims.UserID,
 		"username": claims.Username,
 	})
 }
 
 func (s *Server) ListAgents(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
 	rows, err := s.pool.Query(r.Context(),
 		`SELECT id::text, label, hosted_path, created_at FROM agents ORDER BY label`)
 	if err != nil {
-		http.Error(w, "internal error", http.StatusInternalServerError)
+		writeJSONError(w, http.StatusInternalServerError, "internal error")
 		return
 	}
 	defer rows.Close()
@@ -50,7 +47,7 @@ func (s *Server) ListAgents(w http.ResponseWriter, r *http.Request) {
 		var id, label, hostedPath string
 		var createdAt interface{}
 		if err := rows.Scan(&id, &label, &hostedPath, &createdAt); err != nil {
-			http.Error(w, "internal error", http.StatusInternalServerError)
+			writeJSONError(w, http.StatusInternalServerError, "internal error")
 			return
 		}
 		connected := s.hub.Connected(id)
@@ -63,12 +60,16 @@ func (s *Server) ListAgents(w http.ResponseWriter, r *http.Request) {
 		}
 		list = append(list, row)
 	}
+	if err := rows.Err(); err != nil {
+		writeJSONError(w, http.StatusInternalServerError, "internal error")
+		return
+	}
 	if list == nil {
 		list = []agentRow{}
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Cache-Control", "no-store")
-	json.NewEncoder(w).Encode(list)
+	_ = json.NewEncoder(w).Encode(list)
 }
 
 // getAgentDisk returns free and total bytes for the agent's volume, or -1,-1 on failure.
@@ -94,20 +95,16 @@ func (s *Server) getAgentDisk(ctx context.Context, agentID string) (free, total 
 
 // CreateAgent creates a new agent; returns agent id and token (show token only on create).
 func (s *Server) CreateAgent(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
 	var req struct {
 		Label      string `json:"label"`
 		HostedPath string `json:"hosted_path"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "bad request", http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, "bad request")
 		return
 	}
 	if req.Label == "" {
-		http.Error(w, "label required", http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, "label required")
 		return
 	}
 	hostedPath := req.HostedPath
@@ -116,7 +113,7 @@ func (s *Server) CreateAgent(w http.ResponseWriter, r *http.Request) {
 	}
 	token, err := generateAgentToken()
 	if err != nil {
-		http.Error(w, "internal error", http.StatusInternalServerError)
+		writeJSONError(w, http.StatusInternalServerError, "internal error")
 		return
 	}
 	var id string
@@ -125,12 +122,12 @@ func (s *Server) CreateAgent(w http.ResponseWriter, r *http.Request) {
 		req.Label, token, hostedPath,
 	).Scan(&id)
 	if err != nil {
-		http.Error(w, "internal error", http.StatusInternalServerError)
+		writeJSONError(w, http.StatusInternalServerError, "internal error")
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(map[string]string{
+	_ = json.NewEncoder(w).Encode(map[string]string{
 		"id":          id,
 		"label":       req.Label,
 		"hosted_path": hostedPath,
@@ -140,33 +137,29 @@ func (s *Server) CreateAgent(w http.ResponseWriter, r *http.Request) {
 
 // UpdateAgent updates an agent (e.g. label). PATCH /api/agents/:id
 func (s *Server) UpdateAgent(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPatch {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
 	agentID := r.PathValue("id")
 	if agentID == "" {
-		http.Error(w, "agent id required", http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, "agent id required")
 		return
 	}
 	var req struct {
 		Label *string `json:"label"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "bad request", http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, "bad request")
 		return
 	}
 	if req.Label == nil || *req.Label == "" {
-		http.Error(w, "label required", http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, "label required")
 		return
 	}
 	result, err := s.pool.Exec(r.Context(), `UPDATE agents SET label = $1 WHERE id::text = $2`, *req.Label, agentID)
 	if err != nil {
-		http.Error(w, "internal error", http.StatusInternalServerError)
+		writeJSONError(w, http.StatusInternalServerError, "internal error")
 		return
 	}
 	if result.RowsAffected() == 0 {
-		http.Error(w, "not found", http.StatusNotFound)
+		writeJSONError(w, http.StatusNotFound, "not found")
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -174,23 +167,19 @@ func (s *Server) UpdateAgent(w http.ResponseWriter, r *http.Request) {
 
 // DeleteAgent removes an agent. DELETE /api/agents/:id
 func (s *Server) DeleteAgent(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodDelete {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
 	agentID := r.PathValue("id")
 	if agentID == "" {
-		http.Error(w, "agent id required", http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, "agent id required")
 		return
 	}
 	s.hub.Unregister(agentID)
 	result, err := s.pool.Exec(r.Context(), `DELETE FROM agents WHERE id::text = $1`, agentID)
 	if err != nil {
-		http.Error(w, "internal error", http.StatusInternalServerError)
+		writeJSONError(w, http.StatusInternalServerError, "internal error")
 		return
 	}
 	if result.RowsAffected() == 0 {
-		http.Error(w, "not found", http.StatusNotFound)
+		writeJSONError(w, http.StatusNotFound, "not found")
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
