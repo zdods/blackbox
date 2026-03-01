@@ -102,7 +102,6 @@ Then use **https://** for the console and **wss://** for agents, e.g. `--bastion
 
 ## Roadmap
 
-- 2FA (TOTP) for the single user
 - Rate limiting and audit log (who accessed which host/path when)
 - Clearer error messages and loading states in the UI
 - Packaging: macOS (launchd), Linux (systemd), and Windows service/installer for blackbox-agent
