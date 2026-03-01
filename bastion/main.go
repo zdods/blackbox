@@ -12,9 +12,10 @@ import (
 )
 
 type Server struct {
-	pool *pgxpool.Pool
-	cfg  Config
-	hub  *Hub
+	pool      *pgxpool.Pool
+	cfg       Config
+	hub       *Hub
+	totpCache *TotpSetupCache
 }
 
 func main() {
@@ -32,12 +33,15 @@ func main() {
 		log.Fatalf("migrations: %v", err)
 	}
 	hub := NewHub()
-	srv := &Server{pool: pool, cfg: cfg, hub: hub}
+	totpCache := NewTotpSetupCache()
+	srv := &Server{pool: pool, cfg: cfg, hub: hub, totpCache: totpCache}
 	mux := http.NewServeMux()
 	// Auth (public)
 	mux.HandleFunc("GET /api/setup", srv.Setup)
 	mux.HandleFunc("POST /api/register", srv.Register)
+	mux.HandleFunc("POST /api/register/totp-setup", srv.RegisterTOTPSetup)
 	mux.HandleFunc("POST /api/login", srv.Login)
+	mux.HandleFunc("POST /api/login/totp", srv.LoginTOTP)
 	// Protected (placeholder until step 5)
 	mux.HandleFunc("GET /api/me", srv.AuthMiddleware(srv.Me))
 	mux.HandleFunc("GET /api/agents", srv.AuthMiddleware(srv.ListAgents))

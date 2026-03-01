@@ -13,6 +13,11 @@ import (
 
 const sessionExpiry = 24 * time.Hour
 
+// Generic auth error messages to avoid user/enumeration leakage. Use same message and status for all failure cases.
+const errMsgAuthFailed = "invalid credentials"
+const errMsgBadRequest = "invalid request"
+const errMsgUnavailable = "unavailable"
+
 // writeJSONError sends a JSON error response {"error": "message"} with the given status code.
 func writeJSONError(w http.ResponseWriter, code int, message string) {
 	w.Header().Set("Content-Type", "application/json")
@@ -22,6 +27,7 @@ func writeJSONError(w http.ResponseWriter, code int, message string) {
 }
 
 func (s *Server) Setup(w http.ResponseWriter, r *http.Request) {
+	// Note: registration_open reveals whether any user exists. Acceptable for single-user self-hosted UX.
 	ctx := r.Context()
 	hasUser, err := HasAnyUser(ctx, s.pool)
 	if err != nil {
@@ -40,32 +46,68 @@ func (s *Server) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if hasUser {
-		writeJSONError(w, http.StatusForbidden, "registration already completed")
+		writeJSONError(w, http.StatusForbidden, errMsgUnavailable)
 		return
 	}
 	var req struct {
-		Username string `json:"username"`
-		Password string `json:"password"`
+		Username  string `json:"username"`
+		Password  string `json:"password"`
+		TotpCode  string `json:"totp_code"`
+		SetupID   string `json:"setup_id"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "bad request")
+		writeJSONError(w, http.StatusBadRequest, errMsgBadRequest)
 		return
 	}
-	if req.Username == "" || req.Password == "" {
-		writeJSONError(w, http.StatusBadRequest, "username and password required")
+	if req.Username == "" || req.Password == "" || req.TotpCode == "" || req.SetupID == "" {
+		writeJSONError(w, http.StatusBadRequest, errMsgBadRequest)
 		return
 	}
-	_, err = CreateUser(ctx, s.pool, req.Username, req.Password)
+	secret, ok := s.totpCache.Get(req.SetupID)
+	if !ok {
+		writeJSONError(w, http.StatusBadRequest, errMsgBadRequest)
+		return
+	}
+	if !ValidateTOTP(req.TotpCode, secret) {
+		writeJSONError(w, http.StatusBadRequest, errMsgBadRequest)
+		return
+	}
+	_, err = CreateUserWithTOTP(ctx, s.pool, req.Username, req.Password, secret)
 	if err != nil {
 		if isDuplicate(err) {
-			writeJSONError(w, http.StatusConflict, "username already exists")
+			writeJSONError(w, http.StatusBadRequest, errMsgBadRequest)
 			return
 		}
 		writeJSONError(w, http.StatusInternalServerError, "internal error")
 		return
 	}
+	s.totpCache.Delete(req.SetupID)
 	w.WriteHeader(http.StatusCreated)
 	_ = json.NewEncoder(w).Encode(map[string]string{"status": "created"})
+}
+
+func (s *Server) RegisterTOTPSetup(w http.ResponseWriter, r *http.Request) {
+	hasUser, err := HasAnyUser(r.Context(), s.pool)
+	if err != nil {
+		writeJSONError(w, http.StatusInternalServerError, "internal error")
+		return
+	}
+	if hasUser {
+		writeJSONError(w, http.StatusForbidden, errMsgUnavailable)
+		return
+	}
+	setupID, secret, provisioningURI, err := GenerateTOTPSetup("blackbox", "user")
+	if err != nil {
+		writeJSONError(w, http.StatusInternalServerError, "internal error")
+		return
+	}
+	s.totpCache.Set(setupID, secret)
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]string{
+		"setup_id":          setupID,
+		"secret":            secret,
+		"provisioning_uri":  provisioningURI,
+	})
 }
 
 func isDuplicate(err error) bool {
@@ -79,21 +121,34 @@ func (s *Server) Login(w http.ResponseWriter, r *http.Request) {
 		Password string `json:"password"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "bad request")
+		writeJSONError(w, http.StatusBadRequest, errMsgBadRequest)
 		return
 	}
 	if req.Username == "" || req.Password == "" {
-		writeJSONError(w, http.StatusBadRequest, "username and password required")
+		writeJSONError(w, http.StatusBadRequest, errMsgBadRequest)
 		return
 	}
 	ctx := r.Context()
 	user, err := GetUserByUsername(ctx, s.pool, req.Username)
 	if err != nil {
-		writeJSONError(w, http.StatusUnauthorized, "invalid credentials")
+		writeJSONError(w, http.StatusUnauthorized, errMsgAuthFailed)
 		return
 	}
 	if !CheckPassword(user.PasswordHash, req.Password) {
-		writeJSONError(w, http.StatusUnauthorized, "invalid credentials")
+		writeJSONError(w, http.StatusUnauthorized, errMsgAuthFailed)
+		return
+	}
+	if user.TotpSecret != "" {
+		loginToken, err := IssueLoginToken(user.ID, user.Username, s.cfg.JWTSecret)
+		if err != nil {
+			writeJSONError(w, http.StatusInternalServerError, "internal error")
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+			"requires_totp": true,
+			"login_token":   loginToken,
+		})
 		return
 	}
 	token, err := IssueToken(user.ID, user.Username, s.cfg.JWTSecret, sessionExpiry)
@@ -108,7 +163,62 @@ func (s *Server) Login(w http.ResponseWriter, r *http.Request) {
 		MaxAge:   int(sessionExpiry.Seconds()),
 		HttpOnly: true,
 		SameSite: http.SameSiteLaxMode,
+		Secure:   s.cfg.TLSCertFile != "" && s.cfg.TLSKeyFile != "",
 	})
+	_ = json.NewEncoder(w).Encode(map[string]string{
+		"token":   token,
+		"user_id": user.ID,
+		"username": user.Username,
+	})
+}
+
+func (s *Server) LoginTOTP(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		LoginToken string `json:"login_token"`
+		Code      string `json:"code"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSONError(w, http.StatusBadRequest, errMsgBadRequest)
+		return
+	}
+	if req.LoginToken == "" || req.Code == "" {
+		writeJSONError(w, http.StatusBadRequest, errMsgBadRequest)
+		return
+	}
+	claims, err := ValidateToken(req.LoginToken, s.cfg.JWTSecret)
+	if err != nil {
+		writeJSONError(w, http.StatusUnauthorized, errMsgAuthFailed)
+		return
+	}
+	if claims.Purpose != "totp_challenge" {
+		writeJSONError(w, http.StatusUnauthorized, errMsgAuthFailed)
+		return
+	}
+	ctx := r.Context()
+	user, err := GetUserByID(ctx, s.pool, claims.UserID)
+	if err != nil {
+		writeJSONError(w, http.StatusUnauthorized, errMsgAuthFailed)
+		return
+	}
+	if user.TotpSecret == "" || !ValidateTOTP(req.Code, user.TotpSecret) {
+		writeJSONError(w, http.StatusUnauthorized, errMsgAuthFailed)
+		return
+	}
+	token, err := IssueToken(user.ID, user.Username, s.cfg.JWTSecret, sessionExpiry)
+	if err != nil {
+		writeJSONError(w, http.StatusInternalServerError, "internal error")
+		return
+	}
+	http.SetCookie(w, &http.Cookie{
+		Name:     "session",
+		Value:    token,
+		Path:     "/",
+		MaxAge:   int(sessionExpiry.Seconds()),
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
+		Secure:   s.cfg.TLSCertFile != "" && s.cfg.TLSKeyFile != "",
+	})
+	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(map[string]string{
 		"token":   token,
 		"user_id": user.ID,
@@ -133,6 +243,11 @@ func (s *Server) AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 		}
 		claims, err := ValidateToken(token, s.cfg.JWTSecret)
 		if err != nil {
+			writeJSONError(w, http.StatusUnauthorized, "unauthorized")
+			return
+		}
+		// Reject tokens that are not full session tokens (e.g. login_token with purpose totp_challenge).
+		if claims.Purpose != "" {
 			writeJSONError(w, http.StatusUnauthorized, "unauthorized")
 			return
 		}
