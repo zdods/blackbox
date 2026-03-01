@@ -18,13 +18,13 @@ import (
 	"golang.org/x/term"
 )
 
-const defaultBastionURL = "ws://localhost:8080/ws/agent"
+const defaultBastionURL = "ws://localhost:8080/ws/daemon"
 
 var errAuthFailed = fmt.Errorf("auth failed")
 
 func main() {
 	bastionURL := flag.String("bastion-url", "", "blackbox-server WebSocket URL")
-	token := flag.String("token", "", "blackbox agent token (from blackbox-console)")
+	token := flag.String("token", "", "blackbox daemon token (from blackbox-console)")
 	hostedPath := flag.String("hosted-path", "", "Root directory to expose (e.g. /path/to/dir or C:\\Users\\you\\files)")
 	flag.Parse()
 
@@ -45,16 +45,16 @@ func main() {
 	}
 	authFailures := 0
 	for {
-		err := runAgent(url, tok, root)
+		err := runDaemon(url, tok, root)
 		if err == errAuthFailed {
 			authFailures++
 			if authFailures >= 3 {
-				log.Fatalf("auth failed repeatedly; check your token in blackbox-console and restart the agent")
+				log.Fatalf("auth failed repeatedly; check your token in blackbox-console and restart the daemon")
 			}
 		} else {
 			authFailures = 0
 		}
-		log.Println("blackbox agent disconnected; reconnecting in 5s...")
+		log.Println("blackbox daemon disconnected; reconnecting in 5s...")
 		time.Sleep(5 * time.Second)
 	}
 }
@@ -62,7 +62,7 @@ func main() {
 // runSetup prompts for host, directory, and token when not provided. Returns (url, token, hostedPath).
 func runSetup(url, token, hostedPath string) (string, string, string) {
 	fmt.Println()
-	fmt.Println("  [▪‿▪]  blackbox-agent setup")
+	fmt.Println("  [▪‿▪]  blackbox-daemon setup")
 	fmt.Println()
 	scan := bufio.NewScanner(os.Stdin)
 
@@ -139,7 +139,7 @@ func resolveDir(path string) (string, error) {
 	return filepath.Abs(path)
 }
 
-func runAgent(bastionURL, token, root string) error {
+func runDaemon(bastionURL, token, root string) error {
 	header := http.Header{}
 	conn, _, err := websocket.DefaultDialer.Dial(bastionURL, header)
 	if err != nil {
@@ -159,9 +159,9 @@ func runAgent(bastionURL, token, root string) error {
 		return nil
 	}
 	var authResp struct {
-		Type    string `json:"type"`
-		AgentID string `json:"agent_id"`
-		Error   string `json:"error"`
+		Type     string `json:"type"`
+		DaemonID string `json:"daemon_id"`
+		Error    string `json:"error"`
 	}
 	if err := json.Unmarshal(data, &authResp); err != nil {
 		log.Printf("auth parse: %v", err)
@@ -175,7 +175,7 @@ func runAgent(bastionURL, token, root string) error {
 		log.Printf("unexpected auth response: %s", authResp.Type)
 		return nil
 	}
-	log.Printf("blackbox agent connected (id %s)", authResp.AgentID)
+	log.Printf("blackbox daemon connected (id %s)", authResp.DaemonID)
 	// Message loop
 	for {
 		_, data, err := conn.ReadMessage()

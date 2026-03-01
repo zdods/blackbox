@@ -9,7 +9,7 @@ type Config struct {
 	ServerAddr  string
 	JWTSecret   string
 	StaticDir   string // optional: serve web app from this dir (e.g. web/build)
-	// TLS: if both set, server listens with TLS (HTTPS/WSS). Agents use wss://.
+	// TLS: if both set, server listens with TLS (HTTPS/WSS). Daemons use wss://.
 	TLSCertFile string
 	TLSKeyFile  string
 	// CORSOrigin: if set, sent as Access-Control-Allow-Origin; empty means "*"

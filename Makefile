@@ -1,10 +1,10 @@
-.PHONY: build-bastion build-agent up dev
+.PHONY: build-bastion build-daemon up dev
 
 build-bastion:
 	docker compose build bastion
 
-build-agent:
-	go build -o blackbox-agent ./agent
+build-daemon:
+	go build -o blackbox-daemon ./daemon
 
 up:
 	docker compose up --build

@@ -26,23 +26,23 @@ func (s *Server) Me(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func (s *Server) ListAgents(w http.ResponseWriter, r *http.Request) {
+func (s *Server) ListDaemons(w http.ResponseWriter, r *http.Request) {
 	rows, err := s.pool.Query(r.Context(),
-		`SELECT id::text, label, hosted_path, created_at FROM agents ORDER BY label`)
+		`SELECT id::text, label, hosted_path, created_at FROM daemons ORDER BY label`)
 	if err != nil {
 		writeJSONError(w, http.StatusInternalServerError, "internal error")
 		return
 	}
 	defer rows.Close()
-	type agentRow struct {
-		ID           string  `json:"id"`
-		Label        string  `json:"label"`
-		HostedPath   string  `json:"hosted_path"`
-		Connected    bool    `json:"connected"`
-		DiskFree     *int64  `json:"disk_free,omitempty"`
-		DiskTotal    *int64  `json:"disk_total,omitempty"`
+	type daemonRow struct {
+		ID         string  `json:"id"`
+		Label      string  `json:"label"`
+		HostedPath string  `json:"hosted_path"`
+		Connected  bool    `json:"connected"`
+		DiskFree   *int64  `json:"disk_free,omitempty"`
+		DiskTotal  *int64  `json:"disk_total,omitempty"`
 	}
-	var list []agentRow
+	var list []daemonRow
 	for rows.Next() {
 		var id, label, hostedPath string
 		var createdAt interface{}
@@ -51,9 +51,9 @@ func (s *Server) ListAgents(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		connected := s.hub.Connected(id)
-		row := agentRow{ID: id, Label: label, HostedPath: hostedPath, Connected: connected}
+		row := daemonRow{ID: id, Label: label, HostedPath: hostedPath, Connected: connected}
 		if connected {
-			if free, total := s.getAgentDisk(r.Context(), id); free >= 0 && total >= 0 {
+			if free, total := s.getDaemonDisk(r.Context(), id); free >= 0 && total >= 0 {
 				row.DiskFree = &free
 				row.DiskTotal = &total
 			}
@@ -65,16 +65,16 @@ func (s *Server) ListAgents(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if list == nil {
-		list = []agentRow{}
+		list = []daemonRow{}
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Cache-Control", "no-store")
 	_ = json.NewEncoder(w).Encode(list)
 }
 
-// getAgentDisk returns free and total bytes for the agent's volume, or -1,-1 on failure.
-func (s *Server) getAgentDisk(ctx context.Context, agentID string) (free, total int64) {
-	ac := s.hub.Get(agentID)
+// getDaemonDisk returns free and total bytes for the daemon's volume, or -1,-1 on failure.
+func (s *Server) getDaemonDisk(ctx context.Context, daemonID string) (free, total int64) {
+	ac := s.hub.Get(daemonID)
 	if ac == nil {
 		return -1, -1
 	}
@@ -93,8 +93,8 @@ func (s *Server) getAgentDisk(ctx context.Context, agentID string) (free, total 
 	return resp.FreeBytes, resp.TotalBytes
 }
 
-// CreateAgent creates a new agent; returns agent id and token (show token only on create).
-func (s *Server) CreateAgent(w http.ResponseWriter, r *http.Request) {
+// CreateDaemon creates a new daemon; returns daemon id and token (show token only on create).
+func (s *Server) CreateDaemon(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		Label      string `json:"label"`
 		HostedPath string `json:"hosted_path"`
@@ -109,16 +109,16 @@ func (s *Server) CreateAgent(w http.ResponseWriter, r *http.Request) {
 	}
 	hostedPath := req.HostedPath
 	if hostedPath == "" {
-		hostedPath = "." // path is set by the agent when it runs
+		hostedPath = "." // path is set by the daemon when it runs
 	}
-	token, err := generateAgentToken()
+	token, err := generateDaemonToken()
 	if err != nil {
 		writeJSONError(w, http.StatusInternalServerError, "internal error")
 		return
 	}
 	var id string
 	err = s.pool.QueryRow(r.Context(),
-		`INSERT INTO agents (label, token, hosted_path) VALUES ($1, $2, $3) RETURNING id::text`,
+		`INSERT INTO daemons (label, token, hosted_path) VALUES ($1, $2, $3) RETURNING id::text`,
 		req.Label, token, hostedPath,
 	).Scan(&id)
 	if err != nil {
@@ -135,11 +135,11 @@ func (s *Server) CreateAgent(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// UpdateAgent updates an agent (e.g. label). PATCH /api/agents/:id
-func (s *Server) UpdateAgent(w http.ResponseWriter, r *http.Request) {
-	agentID := r.PathValue("id")
-	if agentID == "" {
-		writeJSONError(w, http.StatusBadRequest, "agent id required")
+// UpdateDaemon updates a daemon (e.g. label). PATCH /api/daemons/:id
+func (s *Server) UpdateDaemon(w http.ResponseWriter, r *http.Request) {
+	daemonID := r.PathValue("id")
+	if daemonID == "" {
+		writeJSONError(w, http.StatusBadRequest, "daemon id required")
 		return
 	}
 	var req struct {
@@ -153,7 +153,7 @@ func (s *Server) UpdateAgent(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, "label required")
 		return
 	}
-	result, err := s.pool.Exec(r.Context(), `UPDATE agents SET label = $1 WHERE id::text = $2`, *req.Label, agentID)
+	result, err := s.pool.Exec(r.Context(), `UPDATE daemons SET label = $1 WHERE id::text = $2`, *req.Label, daemonID)
 	if err != nil {
 		writeJSONError(w, http.StatusInternalServerError, "internal error")
 		return
@@ -165,15 +165,15 @@ func (s *Server) UpdateAgent(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// DeleteAgent removes an agent. DELETE /api/agents/:id
-func (s *Server) DeleteAgent(w http.ResponseWriter, r *http.Request) {
-	agentID := r.PathValue("id")
-	if agentID == "" {
-		writeJSONError(w, http.StatusBadRequest, "agent id required")
+// DeleteDaemon removes a daemon. DELETE /api/daemons/:id
+func (s *Server) DeleteDaemon(w http.ResponseWriter, r *http.Request) {
+	daemonID := r.PathValue("id")
+	if daemonID == "" {
+		writeJSONError(w, http.StatusBadRequest, "daemon id required")
 		return
 	}
-	s.hub.Unregister(agentID)
-	result, err := s.pool.Exec(r.Context(), `DELETE FROM agents WHERE id::text = $1`, agentID)
+	s.hub.Unregister(daemonID)
+	result, err := s.pool.Exec(r.Context(), `DELETE FROM daemons WHERE id::text = $1`, daemonID)
 	if err != nil {
 		writeJSONError(w, http.StatusInternalServerError, "internal error")
 		return
@@ -185,8 +185,8 @@ func (s *Server) DeleteAgent(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// generateAgentToken returns a cryptographically secure token (32 bytes entropy, base64url).
-func generateAgentToken() (string, error) {
+// generateDaemonToken returns a cryptographically secure token (32 bytes entropy, base64url).
+func generateDaemonToken() (string, error) {
 	b := make([]byte, 32)
 	if _, err := rand.Read(b); err != nil {
 		return "", err

@@ -27,58 +27,58 @@ func wsCheckOrigin(allowed string) func(*http.Request) bool {
 	}
 }
 
-// Hub holds connected agents by agent ID.
+// Hub holds connected daemons by daemon ID.
 type Hub struct {
-	mu     sync.RWMutex
-	agents map[string]*AgentConn
+	mu      sync.RWMutex
+	daemons map[string]*DaemonConn
 }
 
-// AgentConn is a single agent WebSocket with request/response pairing.
-type AgentConn struct {
-	AgentID string
-	conn   *websocket.Conn
+// DaemonConn is a single daemon WebSocket with request/response pairing.
+type DaemonConn struct {
+	DaemonID string
+	conn    *websocket.Conn
 	mu     sync.Mutex
 	pending map[string]chan json.RawMessage
 	done   chan struct{}
 }
 
 func NewHub() *Hub {
-	return &Hub{agents: make(map[string]*AgentConn)}
+	return &Hub{daemons: make(map[string]*DaemonConn)}
 }
 
-func (h *Hub) Register(agentID string, conn *websocket.Conn) *AgentConn {
-	ac := &AgentConn{
-		AgentID: agentID,
-		conn:    conn,
-		pending: make(map[string]chan json.RawMessage),
-		done:    make(chan struct{}),
+func (h *Hub) Register(daemonID string, conn *websocket.Conn) *DaemonConn {
+	ac := &DaemonConn{
+		DaemonID: daemonID,
+		conn:     conn,
+		pending:  make(map[string]chan json.RawMessage),
+		done:     make(chan struct{}),
 	}
 	h.mu.Lock()
-	if old, ok := h.agents[agentID]; ok {
+	if old, ok := h.daemons[daemonID]; ok {
 		old.close()
 	}
-	h.agents[agentID] = ac
+	h.daemons[daemonID] = ac
 	h.mu.Unlock()
 	return ac
 }
 
-func (h *Hub) Unregister(agentID string) {
+func (h *Hub) Unregister(daemonID string) {
 	h.mu.Lock()
-	delete(h.agents, agentID)
+	delete(h.daemons, daemonID)
 	h.mu.Unlock()
 }
 
-func (h *Hub) Get(agentID string) *AgentConn {
+func (h *Hub) Get(daemonID string) *DaemonConn {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
-	return h.agents[agentID]
+	return h.daemons[daemonID]
 }
 
-func (h *Hub) Connected(agentID string) bool {
-	return h.Get(agentID) != nil
+func (h *Hub) Connected(daemonID string) bool {
+	return h.Get(daemonID) != nil
 }
 
-func (ac *AgentConn) close() {
+func (ac *DaemonConn) close() {
 	ac.mu.Lock()
 	for _, ch := range ac.pending {
 		select {
@@ -92,8 +92,8 @@ func (ac *AgentConn) close() {
 	close(ac.done)
 }
 
-// Request sends a JSON message to the agent and waits for the response (by request_id).
-func (ac *AgentConn) Request(ctx context.Context, requestID string, req interface{}) (json.RawMessage, error) {
+// Request sends a JSON message to the daemon and waits for the response (by request_id).
+func (ac *DaemonConn) Request(ctx context.Context, requestID string, req interface{}) (json.RawMessage, error) {
 	if requestID == "" {
 		return nil, errNoRequestID
 	}
@@ -134,9 +134,9 @@ var errNoRequestID = fmt.Errorf("request_id required")
 var errConnClosed = fmt.Errorf("connection closed")
 
 // readLoop reads responses and dispatches to pending channels. Run in goroutine.
-func (ac *AgentConn) readLoop(hub *Hub) {
+func (ac *DaemonConn) readLoop(hub *Hub) {
 	defer func() {
-		hub.Unregister(ac.AgentID)
+		hub.Unregister(ac.DaemonID)
 		ac.close()
 	}()
 	for {

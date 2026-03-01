@@ -4,12 +4,12 @@
   import { goto } from '$app/navigation';
   import { getToken, clearToken, apiFetch } from '$lib/auth.js';
 
-  const agentId = $page.params.id;
+  const daemonId = $page.params.id;
   let path = '';
   let entries = [];
   let loading = true;
   let error = '';
-  let agentLabel = '';
+  let daemonLabel = '';
   let uploadPath = '';
   let uploading = false;
   let selectedFileName = '';
@@ -55,23 +55,23 @@
     loading = true;
     error = '';
     try {
-      if (!agentLabel) {
-        const listRes = await apiFetch('/api/agents');
+      if (!daemonLabel) {
+        const listRes = await apiFetch('/api/daemons');
         if (listRes.ok) {
           const list = await listRes.json();
-          const a = list.find((x) => x.id === agentId);
-          if (a) agentLabel = a.label;
+          const a = list.find((x) => x.id === daemonId);
+          if (a) daemonLabel = a.label;
         }
       }
       const q = path ? `?path=${encodeURIComponent(path)}` : '';
-      const res = await apiFetch(`/api/agents/${agentId}/files${q}`);
+      const res = await apiFetch(`/api/daemons/${daemonId}/files${q}`);
       if (res.status === 401) {
         clearToken();
         goto('/login');
         return;
       }
       if (res.status === 503) {
-        error = 'blackbox agent not connected';
+        error = 'host not connected';
         entries = [];
         loading = false;
         return;
@@ -100,7 +100,7 @@
 
   async function download(entry) {
     const fullPath = path ? `${path}/${entry.name}` : entry.name;
-    const url = `/api/agents/${agentId}/files?path=${encodeURIComponent(fullPath)}&download=1`;
+    const url = `/api/daemons/${daemonId}/files?path=${encodeURIComponent(fullPath)}&download=1`;
     const res = await apiFetch(url);
     if (!res.ok) return;
     const blob = await res.blob();
@@ -124,7 +124,7 @@
         selectedFileName = total > 1 ? `Uploading ${i + 1} of ${total}…` : files[i].name;
         const file = files[i];
         const targetPath = uploadPath ? `${uploadPath}/${file.name}` : file.name;
-        const res = await apiFetch(`/api/agents/${agentId}/files?path=${encodeURIComponent(targetPath)}`, {
+        const res = await apiFetch(`/api/daemons/${daemonId}/files?path=${encodeURIComponent(targetPath)}`, {
           method: 'PUT',
           body: file
         });
@@ -171,7 +171,7 @@
     deletingPath = fullPath;
     error = '';
     try {
-      const res = await apiFetch(`/api/agents/${agentId}/files?path=${encodeURIComponent(fullPath)}`, {
+      const res = await apiFetch(`/api/daemons/${daemonId}/files?path=${encodeURIComponent(fullPath)}`, {
         method: 'DELETE'
       });
       if (!res.ok) throw new Error(await res.text());
@@ -186,7 +186,7 @@
 
 <div class="container">
   <p class="term-muted"><a href="/dashboard">← dashboard</a></p>
-  <h1 class="term-h1"><span class="kaomoji">[▪‿▪]</span>files {#if agentLabel}<span class="path-label">({agentLabel})</span>{/if}</h1>
+  <h1 class="term-h1"><span class="kaomoji">[▪‿▪]</span>files {#if daemonLabel}<span class="path-label">({daemonLabel})</span>{/if}</h1>
 
   <div class="breadcrumb">
     <button type="button" class="link" on:click={() => { path = ''; load(); }}>root</button>

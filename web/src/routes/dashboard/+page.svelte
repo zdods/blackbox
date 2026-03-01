@@ -3,9 +3,9 @@
   import { goto } from '$app/navigation';
   import { getToken, clearToken, apiFetch } from '$lib/auth.js';
 
-  const POLL_INTERVAL_MS = 8000; // refreshes agent list and disk space
+  const POLL_INTERVAL_MS = 8000; // refreshes daemon list and disk space
 
-  let agents = [];
+  let daemons = [];
   let loading = true;
   let error = '';
   let creating = false;
@@ -44,14 +44,14 @@
     loading = true;
     error = '';
     try {
-      const res = await apiFetch('/api/agents');
+      const res = await apiFetch('/api/daemons');
       if (res.status === 401) {
         clearToken();
         goto('/login');
         return;
       }
       if (!res.ok) throw new Error(await res.text());
-      agents = await res.json();
+      daemons = await res.json();
     } catch (e) {
       error = e.message;
     } finally {
@@ -62,19 +62,19 @@
   async function loadQuiet() {
     if (!getToken()) return;
     try {
-      const res = await apiFetch('/api/agents');
+      const res = await apiFetch('/api/daemons');
       if (res.status === 401) return;
       if (!res.ok) return;
-      agents = await res.json();
+      daemons = await res.json();
     } catch (_) {}
   }
 
-  async function createAgent(e) {
+  async function createDaemon(e) {
     e.preventDefault();
     if (!newLabel.trim()) return;
     creating = true;
     try {
-      const res = await apiFetch('/api/agents', {
+      const res = await apiFetch('/api/daemons', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ label: newLabel.trim() })
@@ -107,7 +107,7 @@
     e.preventDefault();
     if (!editLabel.trim()) return;
     try {
-      const res = await apiFetch(`/api/agents/${id}`, {
+      const res = await apiFetch(`/api/daemons/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ label: editLabel.trim() })
@@ -134,12 +134,12 @@
     return (i === 0 ? v : v.toFixed(1)) + ' ' + units[i];
   }
 
-  async function deleteAgent(agent) {
-    if (!confirm(`Delete agent "${agent.label}"? This cannot be undone.`)) return;
-    deletingId = agent.id;
+  async function deleteDaemon(daemon) {
+    if (!confirm(`Delete host "${daemon.label}"? This cannot be undone.`)) return;
+    deletingId = daemon.id;
     error = '';
     try {
-      const res = await apiFetch(`/api/agents/${agent.id}`, { method: 'DELETE' });
+      const res = await apiFetch(`/api/daemons/${daemon.id}`, { method: 'DELETE' });
       if (!res.ok) throw new Error(await res.text());
       await load();
     } catch (err) {
@@ -152,7 +152,7 @@
 
 <div class="container">
   <header class="dashboard-header">
-    <h1 class="term-h1"><span class="kaomoji">[▪‿▪]</span>agents</h1>
+    <h1 class="term-h1"><span class="kaomoji">[▪‿▪]</span>hosts</h1>
     <button class="secondary" on:click={logout}>log out</button>
   </header>
 
@@ -161,42 +161,42 @@
   {:else if error}
     <p class="error">{error}</p>
   {:else}
-    <div class="agent-list-wrap">
-      <ul class="agent-list">
-        {#each agents as agent}
+    <div class="daemon-list-wrap">
+      <ul class="daemon-list">
+        {#each daemons as daemon}
           <li>
-            {#if editingId === agent.id}
-              <form class="agent-rename-form" on:submit={(e) => saveRename(e, agent.id)}>
-                <input type="text" bind:value={editLabel} class="agent-rename-input" />
+            {#if editingId === daemon.id}
+              <form class="daemon-rename-form" on:submit={(e) => saveRename(e, daemon.id)}>
+                <input type="text" bind:value={editLabel} class="daemon-rename-input" />
                 <button type="submit" class="primary" disabled={!editLabel.trim()}>save</button>
                 <button type="button" class="secondary" on:click={() => { editingId = null; editLabel = ''; }}>cancel</button>
               </form>
             {:else}
-              <a href="/agents/{agent.id}">{agent.label}</a>
-              {#if agent.connected}<span class="badge">connected</span>{:else}<span class="badge off">offline</span>{/if}
-              {#if agent.disk_free != null}
-                <span class="disk-free" title={agent.disk_total != null ? formatBytes(agent.disk_free) + ' free of ' + formatBytes(agent.disk_total) : ''}>
-                  {formatBytes(agent.disk_free)} free
+              <a href="/daemons/{daemon.id}">{daemon.label}</a>
+              {#if daemon.connected}<span class="badge">connected</span>{:else}<span class="badge off">offline</span>{/if}
+              {#if daemon.disk_free != null}
+                <span class="disk-free" title={daemon.disk_total != null ? formatBytes(daemon.disk_free) + ' free of ' + formatBytes(daemon.disk_total) : ''}>
+                  {formatBytes(daemon.disk_free)} free
                 </span>
               {/if}
-              <button type="button" class="link-button" on:click={() => { editingId = agent.id; editLabel = agent.label; }} title="rename">rename</button>
-              <button type="button" class="link-button delete-btn" on:click={() => deleteAgent(agent)} disabled={deletingId !== null} title="delete">delete</button>
+              <button type="button" class="link-button" on:click={() => { editingId = daemon.id; editLabel = daemon.label; }} title="rename">rename</button>
+              <button type="button" class="link-button delete-btn" on:click={() => deleteDaemon(daemon)} disabled={deletingId !== null} title="delete">delete</button>
             {/if}
           </li>
         {/each}
       </ul>
-      {#if agents.length === 0}
-        <p class="term-muted">no agents yet. add one below.</p>
+      {#if daemons.length === 0}
+        <p class="term-muted">no hosts yet. add one below.</p>
       {/if}
     </div>
 
-    <h2 class="term-h2">add agent</h2>
-    <form on:submit={createAgent} class="term-form">
+    <h2 class="term-h2">add host</h2>
+    <form on:submit={createDaemon} class="term-form">
       <div class="form-row">
-        <label for="agent-label"><span class="prompt-prefix">$</span> label</label>
-        <input id="agent-label" type="text" bind:value={newLabel} placeholder="e.g. my-mac" />
+        <label for="daemon-label"><span class="prompt-prefix">$</span> label</label>
+        <input id="daemon-label" type="text" bind:value={newLabel} placeholder="e.g. my-mac" />
       </div>
-      <button type="submit" class="primary" disabled={creating || !newLabel.trim()}>{creating ? '(´・ω・`) ...' : 'add agent'}</button>
+      <button type="submit" class="primary" disabled={creating || !newLabel.trim()}>{creating ? '(´・ω・`) ...' : 'add host'}</button>
     </form>
   {/if}
 </div>
@@ -214,7 +214,7 @@
     align-items: center;
     margin-bottom: var(--space-lg);
   }
-  .agent-list-wrap {
+  .daemon-list-wrap {
     overflow-y: auto;
     min-height: 120px;
     max-height: min(50vh, 400px);
@@ -223,12 +223,12 @@
     border: 1px solid var(--term-border);
     border-radius: 4px;
   }
-  .agent-list {
+  .daemon-list {
     list-style: none;
     padding: 0;
     margin: 0;
   }
-  .agent-list li {
+  .daemon-list li {
     padding: var(--space-md) 0;
     display: flex;
     align-items: center;
@@ -236,15 +236,15 @@
     border-bottom: 1px solid var(--term-border);
     flex-wrap: wrap;
   }
-  .agent-list li:last-child {
+  .daemon-list li:last-child {
     border-bottom: none;
   }
-  .agent-list a {
+  .daemon-list a {
     color: var(--term-cyan);
     flex: 1;
     min-width: 0;
   }
-  .agent-list a:hover {
+  .daemon-list a:hover {
     color: var(--term-green);
   }
   .link-button {
@@ -261,14 +261,14 @@
   .link-button.delete-btn:hover {
     color: var(--term-red);
   }
-  .agent-rename-form {
+  .daemon-rename-form {
     display: flex;
     align-items: center;
     gap: var(--space-sm);
     flex: 1;
     min-width: 0;
   }
-  .agent-rename-input {
+  .daemon-rename-input {
     flex: 1;
     min-width: 8rem;
   }

@@ -11,7 +11,7 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-func (s *Server) HandleAgentWS(w http.ResponseWriter, r *http.Request) {
+func (s *Server) HandleDaemonWS(w http.ResponseWriter, r *http.Request) {
 	upgrader := websocket.Upgrader{CheckOrigin: wsCheckOrigin(s.cfg.CORSOrigin)}
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -30,22 +30,22 @@ func (s *Server) HandleAgentWS(w http.ResponseWriter, r *http.Request) {
 	var auth pkg.Auth
 	if err := json.Unmarshal(data, &auth); err != nil || auth.Type != pkg.TypeAuth {
 		if err := conn.WriteJSON(pkg.AuthError{Type: pkg.TypeAuthError, Error: "invalid auth message"}); err != nil {
-			log.Printf("agent ws: write auth error: %v", err)
+			log.Printf("daemon ws: write auth error: %v", err)
 		}
 		return
 	}
-	var agentID string
-	err = s.pool.QueryRow(r.Context(), `SELECT id::text FROM agents WHERE token = $1`, auth.Token).Scan(&agentID)
+	var daemonID string
+	err = s.pool.QueryRow(r.Context(), `SELECT id::text FROM daemons WHERE token = $1`, auth.Token).Scan(&daemonID)
 	if err != nil {
 		if err := conn.WriteJSON(pkg.AuthError{Type: pkg.TypeAuthError, Error: "invalid token"}); err != nil {
-			log.Printf("agent ws: write auth error: %v", err)
+			log.Printf("daemon ws: write auth error: %v", err)
 		}
 		return
 	}
-	ac := s.hub.Register(agentID, conn)
-	defer s.hub.Unregister(agentID)
-	if err := conn.WriteJSON(pkg.AuthOK{Type: pkg.TypeAuthOK, AgentID: agentID}); err != nil {
-		log.Printf("agent ws: write auth ok: %v", err)
+	ac := s.hub.Register(daemonID, conn)
+	defer s.hub.Unregister(daemonID)
+	if err := conn.WriteJSON(pkg.AuthOK{Type: pkg.TypeAuthOK, DaemonID: daemonID}); err != nil {
+		log.Printf("daemon ws: write auth ok: %v", err)
 		return
 	}
 	ac.readLoop(s.hub)

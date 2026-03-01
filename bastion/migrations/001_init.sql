@@ -19,8 +19,8 @@ CREATE TABLE IF NOT EXISTS sessions (
 CREATE INDEX IF NOT EXISTS idx_sessions_token ON sessions(token);
 CREATE INDEX IF NOT EXISTS idx_sessions_expires_at ON sessions(expires_at);
 
--- Agents: registered agents (token for auth; hosted_path = root to expose).
-CREATE TABLE IF NOT EXISTS agents (
+-- Daemons: registered daemons (token for auth; hosted_path = root to expose).
+CREATE TABLE IF NOT EXISTS daemons (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     label TEXT NOT NULL,
     token TEXT NOT NULL UNIQUE,
@@ -28,4 +28,4 @@ CREATE TABLE IF NOT EXISTS agents (
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE INDEX IF NOT EXISTS idx_agents_token ON agents(token);
+CREATE INDEX IF NOT EXISTS idx_daemons_token ON daemons(token);

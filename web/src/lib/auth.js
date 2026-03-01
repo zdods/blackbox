@@ -19,7 +19,7 @@ export function apiFetch(path, options = {}) {
   const token = getToken();
   const headers = { ...options.headers };
   if (token) headers['Authorization'] = `Bearer ${token}`;
-  // Ensure fresh data on refresh (e.g. agent connected status)
+  // Ensure fresh data on refresh (e.g. daemon connected status)
   const fetchOptions = { ...options, headers, cache: 'no-store' };
   return fetch(path, fetchOptions);
 }

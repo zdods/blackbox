@@ -1,10 +1,10 @@
 # Cross-platform make-style script for Windows (PowerShell).
 # Usage: .\make.ps1 <target>
-# Targets: build-bastion, build-agent, up, dev
+# Targets: build-bastion, build-daemon, up, dev
 
 param(
     [Parameter(Mandatory = $true, Position = 0)]
-    [ValidateSet("build-bastion", "build-agent", "up", "dev")]
+    [ValidateSet("build-bastion", "build-daemon", "up", "dev")]
     [string]$Target
 )
 
@@ -14,8 +14,8 @@ switch ($Target) {
     "build-bastion" {
         docker compose build bastion
     }
-    "build-agent" {
-        go build -o blackbox-agent.exe ./agent
+    "build-daemon" {
+        go build -o blackbox-daemon.exe ./daemon
     }
     "up" {
         docker compose up --build

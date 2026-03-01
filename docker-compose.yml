@@ -15,7 +15,7 @@ services:
       timeout: 2s
       retries: 10
 
-  # blackbox-server (serves blackbox-console + agent hub)
+  # blackbox-server (serves blackbox-console + daemon hub)
   bastion:
     build:
       context: .
