@@ -29,9 +29,11 @@ func main() {
 		log.Fatalf("database: %v", err)
 	}
 	defer pool.Close()
+	log.Print("database connected")
 	if err := RunMigrations(ctx, pool); err != nil {
 		log.Fatalf("migrations: %v", err)
 	}
+	log.Print("migrations applied")
 	hub := NewHub()
 	totpCache := NewTotpSetupCache()
 	srv := &Server{pool: pool, cfg: cfg, hub: hub, totpCache: totpCache}
@@ -60,8 +62,10 @@ func main() {
 	go func() {
 		var err error
 		if cfg.TLSCertFile != "" && cfg.TLSKeyFile != "" {
+			log.Printf("server listening on %s (TLS)", cfg.ServerAddr)
 			err = httpServer.ListenAndServeTLS(cfg.TLSCertFile, cfg.TLSKeyFile)
 		} else {
+			log.Printf("server listening on %s", cfg.ServerAddr)
 			err = httpServer.ListenAndServe()
 		}
 		if err != nil && err != http.ErrServerClosed {
@@ -71,8 +75,11 @@ func main() {
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
+	log.Print("shutdown signal received, stopping server")
 	if err := httpServer.Shutdown(context.Background()); err != nil {
 		log.Printf("shutdown: %v", err)
+	} else {
+		log.Print("server stopped")
 	}
 }
 
