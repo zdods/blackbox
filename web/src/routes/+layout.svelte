@@ -2,7 +2,7 @@
   import { page } from '$app/stores';
   import '../app.css';
 
-  $: narrowWindow = $page.url.pathname === '/login' || $page.url.pathname === '/register';
+  $: narrowWindow = $page.url.pathname === '/login' || $page.url.pathname.startsWith('/register');
 </script>
 
 <div class="terminal" class:narrow={narrowWindow}>

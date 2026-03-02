@@ -102,6 +102,7 @@
         <label for="totp"><span class="prompt-prefix">$</span> 2FA code</label>
         <input
           id="totp"
+          name="totp"
           type="text"
           inputmode="numeric"
           autocomplete="one-time-code"
@@ -117,14 +118,14 @@
       <button type="button" class="link-button" on:click={backToPassword}>back</button>
     </form>
   {:else}
-    <form on:submit={handleSubmit} class="term-form">
+    <form method="post" action="/login" on:submit={handleSubmit} class="term-form">
       <div class="form-row">
         <label for="username"><span class="prompt-prefix">$</span> username</label>
-        <input id="username" type="text" bind:value={username} placeholder="your-username" required />
+        <input id="username" name="login" type="text" autocomplete="username" bind:value={username} placeholder="your-username" required />
       </div>
       <div class="form-row">
         <label for="password"><span class="prompt-prefix">$</span> password</label>
-        <input id="password" type="password" bind:value={password} placeholder="••••••••" required />
+        <input id="password" name="password" type="password" autocomplete="current-password" bind:value={password} placeholder="••••••••" required />
       </div>
       {#if error}<p class="error">{error}</p>{/if}
       <button type="submit" class="primary" disabled={loading || !username.trim() || !password}>{loading ? '(´・ω・`) ...' : 'log in'}</button>
