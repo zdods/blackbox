@@ -79,4 +79,11 @@ go run ./bastion
 
 # Build daemon
 go build -o blackbox-daemon ./daemon
+
+# Run daemon (interactive first-time setup; saves config to ~/.blackbox-daemon)
+./blackbox-daemon
+
+# Run daemon with explicit values (flags > env vars > config file > interactive)
+./blackbox-daemon --bastion-url=ws://localhost:8080/ws/daemon --token=TOKEN --hosted-path=~/files
+BLACKBOX_TOKEN=TOKEN BLACKBOX_HOSTED_PATH=~/files ./blackbox-daemon
 ```

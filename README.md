@@ -44,17 +44,73 @@ For production, set `JWT_SECRET` (e.g. in `.env`). Ports, Postgres credentials, 
 
 ### 2. Run blackbox-daemon (on each host)
 
-The daemon runs on **Linux**, **macOS**, and **Windows**. Build the binary for your platform, then run it. Without arguments it starts an interactive setup (bastion URL, directory to serve, then token—paste the token from the console; the token prompt is masked when run in a terminal).
+The daemon runs on **Linux**, **macOS**, and **Windows**. Build the binary for your platform, then run it.
 
-| Platform | Build | Run (interactive) | Example with flags |
-|----------|-------|-------------------|--------------------|
-| **Linux / macOS** | `go build -o blackbox-daemon ./daemon` | `./blackbox-daemon` | `./blackbox-daemon --bastion-url=ws://localhost:8080/ws/daemon --token=YOUR_DAEMON_TOKEN --hosted-path=/home/you/files` |
-| **Windows** | `go build -o blackbox-daemon.exe ./daemon` | `.\blackbox-daemon.exe` | `.\blackbox-daemon.exe --bastion-url=ws://localhost:8080/ws/daemon --token=YOUR_DAEMON_TOKEN --hosted-path=C:\Users\You\files` |
+| Platform | Build | Run |
+|----------|-------|-----|
+| **Linux / macOS** | `go build -o blackbox-daemon ./daemon` | `./blackbox-daemon` |
+| **Windows** | `go build -o blackbox-daemon.exe ./daemon` | `.\blackbox-daemon.exe` |
 
-- **Linux / macOS:** Use Unix paths for `--hosted-path` (e.g. `/home/you/files`, `~/files`).
-- **Windows:** Use Windows paths for `--hosted-path` (e.g. `C:\Users\You\files`). Build and run from PowerShell or Git Bash; if the server is on the same machine, use `ws://localhost:8080/ws/daemon` as the bastion URL.
+Without arguments the daemon starts an interactive setup (bastion URL, directory to serve, token). At the end it offers to save those values to a config file (`~/.blackbox-daemon` on Linux/macOS, `%USERPROFILE%\.blackbox-daemon` on Windows, permissions `0600`). On subsequent runs it reads the config automatically — no prompts needed.
+
+You can also supply values directly without going through setup:
+
+```bash
+# Flags (highest priority)
+./blackbox-daemon --bastion-url=ws://localhost:8080/ws/daemon --token=YOUR_TOKEN --hosted-path=~/files
+
+# Environment variables (useful for containers and service files)
+BLACKBOX_BASTION_URL=ws://localhost:8080/ws/daemon \
+BLACKBOX_TOKEN=YOUR_TOKEN \
+BLACKBOX_HOSTED_PATH=~/files \
+./blackbox-daemon
+
+# Alternate config file path
+./blackbox-daemon --config=/etc/blackbox/daemon.conf
+```
+
+Priority order: **flags > env vars > config file > interactive prompts**.
 
 Keep the daemon running; it appears as connected in blackbox-console. Open it to browse and transfer files.
+
+## Running blackbox-daemon as a service
+
+After running the daemon interactively once and saving its config (it will prompt you), install it as a persistent service so it starts automatically.
+
+### Linux (systemd)
+
+```bash
+sudo cp packaging/systemd/blackbox-daemon.service /etc/systemd/system/
+# Edit the file and replace "yourusername" with your actual username
+sudo systemctl daemon-reload
+sudo systemctl enable --now blackbox-daemon
+# Check status
+sudo systemctl status blackbox-daemon
+journalctl -u blackbox-daemon -f
+```
+
+The config lives at `~/.blackbox-daemon` (owner-read-only, `0600`).
+
+### macOS (launchd)
+
+```bash
+# Edit packaging/launchd/io.github.blackbox.daemon.plist and replace "yourusername"
+cp packaging/launchd/io.github.blackbox.daemon.plist ~/Library/LaunchAgents/
+launchctl load ~/Library/LaunchAgents/io.github.blackbox.daemon.plist
+# Check status
+launchctl list | grep blackbox
+tail -f ~/Library/Logs/blackbox-daemon.log
+```
+
+The config lives at `~/.blackbox-daemon` (owner-read-only, `0600`).
+
+### Windows
+
+See [`packaging/windows/README.md`](packaging/windows/README.md) for NSSM (recommended) and `sc.exe` instructions.
+
+The config lives at `%USERPROFILE%\.blackbox-daemon` (e.g. `C:\Users\You\.blackbox-daemon`).
+
+---
 
 ## Local development (no Docker)
 
@@ -77,7 +133,12 @@ For Docker-based development with hot reload, use `make dev` or `.\make.ps1 dev`
    go run ./bastion
    ```
 
-4. **blackbox-daemon** – From the repo root, build for your platform (`go build -o blackbox-daemon ./daemon` on Linux/macOS, `go build -o blackbox-daemon.exe ./daemon` on Windows), then run the binary and follow the prompts (bastion URL, directory, token), or pass `--bastion-url=ws://localhost:8080/ws/daemon`, `--token=...`, and `--hosted-path=...` (Unix path on Linux/macOS, e.g. `~/files`; Windows path on Windows, e.g. `C:\Users\you\files`).
+4. **blackbox-daemon** – Build and run:
+   ```bash
+   go build -o blackbox-daemon ./daemon
+   ./blackbox-daemon
+   ```
+   Follow the prompts (bastion URL, directory, token) and choose **y** to save the config to `~/.blackbox-daemon`. On subsequent runs the daemon starts without prompts.
 
 ## TLS (production)
 
@@ -103,7 +164,8 @@ Then use **https://** for the console and **wss://** for daemons, e.g. `--bastio
 ## Roadmap
 
 - Rate limiting and audit log (who accessed which host/path when)
-- Clearer error messages and loading states in the UI
-- Packaging: macOS (launchd), Linux (systemd), and Windows service/installer for blackbox-daemon
+- File and directory rename
+- File preview for common types (images, text, PDFs) in the browser
+- Live daemon status via WebSocket push instead of polling
 - Daemon grouping to create volumes (combine multiple daemons into one logical volume)
 - Further out: sharding files in a volume across daemons (distribute file storage across grouped daemons)

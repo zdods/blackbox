@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>io.github.blackbox.daemon</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <!-- Update this path to match where you placed the blackbox-daemon binary -->
+        <string>/usr/local/bin/blackbox-daemon</string>
+    </array>
+
+    <!-- Start immediately when loaded and keep running -->
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+
+    <!-- Log stderr to ~/Library/Logs/blackbox-daemon.log -->
+    <key>StandardErrorPath</key>
+    <string>/Users/yourusername/Library/Logs/blackbox-daemon.log</string>
+    <key>StandardOutPath</key>
+    <string>/Users/yourusername/Library/Logs/blackbox-daemon.log</string>
+</dict>
+</plist>
+
+<!--
+Install instructions:
+
+  1. Build the daemon:
+       go build -o blackbox-daemon ./daemon
+
+  2. Copy the binary:
+       sudo cp blackbox-daemon /usr/local/bin/blackbox-daemon
+       sudo chmod +x /usr/local/bin/blackbox-daemon
+
+  3. Run setup once to create ~/.blackbox-daemon:
+       /usr/local/bin/blackbox-daemon
+     Answer the prompts and save the config when asked.
+
+  4. Edit this file:
+     - Replace "yourusername" in StandardErrorPath and StandardOutPath
+       with the output of `whoami`
+     - Update ProgramArguments if you placed the binary elsewhere
+
+  5. Install and load the LaunchAgent:
+       cp io.github.blackbox.daemon.plist ~/Library/LaunchAgents/
+       launchctl load ~/Library/LaunchAgents/io.github.blackbox.daemon.plist
+
+  6. Check status:
+       launchctl list | grep blackbox
+       tail -f ~/Library/Logs/blackbox-daemon.log
+
+  To unload:
+       launchctl unload ~/Library/LaunchAgents/io.github.blackbox.daemon.plist
+-->

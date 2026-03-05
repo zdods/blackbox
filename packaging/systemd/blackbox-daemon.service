@@ -1,0 +1,45 @@
+[Unit]
+Description=Blackbox Daemon
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+# Run as your user so the daemon can read ~/.blackbox-daemon
+# Replace "yourusername" with the output of `whoami`
+User=yourusername
+Group=yourusername
+
+ExecStart=/usr/local/bin/blackbox-daemon
+Restart=on-failure
+RestartSec=5
+
+# Harden the service (optional but recommended)
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
+
+# Install instructions:
+#
+#   1. Build the daemon:
+#        go build -o blackbox-daemon ./daemon
+#
+#   2. Copy the binary to a system path:
+#        sudo cp blackbox-daemon /usr/local/bin/blackbox-daemon
+#        sudo chmod +x /usr/local/bin/blackbox-daemon
+#
+#   3. Run setup once as your user (not root) to create ~/.blackbox-daemon:
+#        /usr/local/bin/blackbox-daemon
+#      Answer the prompts and save the config when asked.
+#
+#   4. Edit this file and replace "yourusername" with your actual username.
+#
+#   5. Install and enable the service:
+#        sudo cp blackbox-daemon.service /etc/systemd/system/
+#        sudo systemctl daemon-reload
+#        sudo systemctl enable --now blackbox-daemon
+#
+#   6. Check status:
+#        sudo systemctl status blackbox-daemon
+#        journalctl -u blackbox-daemon -f

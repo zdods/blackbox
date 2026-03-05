@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -20,20 +21,60 @@ import (
 
 const defaultBastionURL = "ws://localhost:8080/ws/daemon"
 
-var errAuthFailed = fmt.Errorf("auth failed")
+var errAuthFailed = errors.New("auth failed")
+var errDialFailed = errors.New("dial failed")
 
 func main() {
 	bastionURL := flag.String("bastion-url", "", "blackbox-server WebSocket URL")
 	token := flag.String("token", "", "blackbox daemon token (from blackbox-console)")
 	hostedPath := flag.String("hosted-path", "", "Root directory to expose (e.g. /path/to/dir or C:\\Users\\you\\files)")
+	configPath := flag.String("config", "", "Path to config file (default: ~/.blackbox-daemon)")
 	flag.Parse()
 
-	url, tok, path := *bastionURL, *token, *hostedPath
+	// Resolve config file path (expand ~ for both default and user-supplied paths)
+	cfgPath := *configPath
+	if cfgPath == "" {
+		cfgPath = "~/.blackbox-daemon"
+	}
+	var err error
+	cfgPath, err = resolveDir(cfgPath)
+	if err != nil {
+		log.Fatalf("config path: %v", err)
+	}
+
+	// Load config file (missing file is not an error)
+	cfgURL, cfgToken, cfgHosted, err := loadConfig(cfgPath)
+	if err != nil {
+		log.Printf("warning: could not read config %s: %v", cfgPath, err)
+	}
+
+	// Priority: flags > env vars > config file
+	url := firstNonEmpty(*bastionURL, os.Getenv("BLACKBOX_BASTION_URL"), cfgURL)
+	tok := firstNonEmpty(*token, os.Getenv("BLACKBOX_TOKEN"), cfgToken)
+	path := firstNonEmpty(*hostedPath, os.Getenv("BLACKBOX_HOSTED_PATH"), cfgHosted)
+
+	// Fall back to interactive setup if required values are still missing
+	fromSetup := false
 	if tok == "" || path == "" {
 		url, tok, path = runSetup(url, tok, path)
+		fromSetup = true
 	}
 	if url == "" {
 		url = defaultBastionURL
+	}
+
+	// Offer to save config after interactive setup
+	if fromSetup {
+		fmt.Printf("\n  save config to %s? [y/N]: ", cfgPath)
+		reader := bufio.NewReader(os.Stdin)
+		ans, _ := reader.ReadString('\n')
+		if strings.ToLower(strings.TrimSpace(ans)) == "y" {
+			if err := saveConfig(cfgPath, url, tok, path); err != nil {
+				log.Printf("warning: could not save config: %v", err)
+			} else {
+				log.Printf("config saved to %s", cfgPath)
+			}
+		}
 	}
 
 	root, err := resolveDir(path)
@@ -43,20 +84,44 @@ func main() {
 	if info, err := os.Stat(root); err != nil || !info.IsDir() {
 		log.Fatalf("hosted-path must be an existing directory: %v", err)
 	}
+
 	authFailures := 0
+	backoff := 2 * time.Second
 	for {
 		err := runDaemon(url, tok, root)
-		if err == errAuthFailed {
+		switch err {
+		case errAuthFailed:
 			authFailures++
 			if authFailures >= 3 {
 				log.Fatalf("auth failed repeatedly; check your token in blackbox-console and restart the daemon")
 			}
-		} else {
+			log.Printf("auth failed (%d/3); reconnecting in %v...", authFailures, backoff)
+		case errDialFailed:
 			authFailures = 0
+			log.Printf("could not reach server; reconnecting in %v...", backoff)
+		default: // nil — was connected, session ended normally
+			authFailures = 0
+			backoff = 2 * time.Second // reset after a successful session
+			log.Printf("disconnected; reconnecting in %v...", backoff)
 		}
-		log.Println("blackbox daemon disconnected; reconnecting in 5s...")
-		time.Sleep(5 * time.Second)
+		time.Sleep(backoff)
+		if backoff < 60*time.Second {
+			backoff *= 2
+			if backoff > 60*time.Second {
+				backoff = 60 * time.Second
+			}
+		}
 	}
+}
+
+// firstNonEmpty returns the first non-empty string from vals.
+func firstNonEmpty(vals ...string) string {
+	for _, v := range vals {
+		if v != "" {
+			return v
+		}
+	}
+	return ""
 }
 
 // runSetup prompts for host, directory, and token when not provided. Returns (url, token, hostedPath).
@@ -144,7 +209,7 @@ func runDaemon(bastionURL, token, root string) error {
 	conn, _, err := websocket.DefaultDialer.Dial(bastionURL, header)
 	if err != nil {
 		log.Printf("dial: %v", err)
-		return nil
+		return errDialFailed
 	}
 	defer conn.Close()
 	// Send auth
