@@ -16,6 +16,7 @@ import (
 	"blackbox/pkg"
 
 	"github.com/gorilla/websocket"
+	"github.com/zalando/go-keyring"
 	"golang.org/x/term"
 )
 
@@ -43,14 +44,20 @@ func main() {
 	}
 
 	// Load config file (missing file is not an error)
-	cfgURL, cfgToken, cfgHosted, err := loadConfig(cfgPath)
+	cfgURL, cfgHosted, err := loadConfig(cfgPath)
 	if err != nil {
 		log.Printf("warning: could not read config %s: %v", cfgPath, err)
 	}
 
-	// Priority: flags > env vars > config file
+	// Load token from OS keyring
+	keyringTok, err := loadToken()
+	if err != nil && err != keyring.ErrNotFound {
+		log.Printf("warning: could not read token from keyring: %v", err)
+	}
+
+	// Priority: flags > env vars > keyring > config file
 	url := firstNonEmpty(*bastionURL, os.Getenv("BLACKBOX_BASTION_URL"), cfgURL)
-	tok := firstNonEmpty(*token, os.Getenv("BLACKBOX_TOKEN"), cfgToken)
+	tok := firstNonEmpty(*token, os.Getenv("BLACKBOX_TOKEN"), keyringTok)
 	path := firstNonEmpty(*hostedPath, os.Getenv("BLACKBOX_HOSTED_PATH"), cfgHosted)
 
 	// Fall back to interactive setup if required values are still missing
@@ -65,11 +72,16 @@ func main() {
 
 	// Offer to save config after interactive setup
 	if fromSetup {
-		fmt.Printf("\n  save config to %s? [y/N]: ", cfgPath)
+		fmt.Printf("\n  save settings? (config: %s, token: OS keyring) [y/N]: ", cfgPath)
 		reader := bufio.NewReader(os.Stdin)
 		ans, _ := reader.ReadString('\n')
 		if strings.ToLower(strings.TrimSpace(ans)) == "y" {
-			if err := saveConfig(cfgPath, url, tok, path); err != nil {
+			if err := saveToken(tok); err != nil {
+				log.Printf("warning: could not save token to keyring: %v", err)
+			} else {
+				log.Printf("token saved to OS keyring")
+			}
+			if err := saveConfig(cfgPath, url, path); err != nil {
 				log.Printf("warning: could not save config: %v", err)
 			} else {
 				log.Printf("config saved to %s", cfgPath)
