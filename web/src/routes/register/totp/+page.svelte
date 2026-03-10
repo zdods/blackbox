@@ -129,7 +129,7 @@
   {#if setupLoading}
     <p class="term-muted">loading...</p>
   {:else if setupError}
-    <p class="error">{setupError}</p>
+    <p class="error" role="alert">{setupError}</p>
     <p class="term-muted"><a href="/register">retry</a></p>
   {:else}
     <h1 class="term-h1"><span class="kaomoji">[▪‿▪]</span> set up 2FA</h1>
@@ -142,7 +142,7 @@
     {#if secret}
       <div class="secret-row">
         <code class="secret-text">{secret}</code>
-        <button type="button" class="link-button" on:click={copySecret}>Copy</button>
+        <button type="button" class="link-button" on:click={copySecret} aria-label="copy secret to clipboard">Copy</button>
       </div>
     {/if}
     <form on:submit={handleSubmit} class="term-form">
@@ -159,7 +159,7 @@
           maxlength="8"
         />
       </div>
-      {#if error}<p class="error">{error}</p>{/if}
+      {#if error}<p class="error" role="alert">{error}</p>{/if}
       <button type="submit" class="primary" disabled={loading || !totpCode.trim()}>
         {loading ? '(´・ω・`) ...' : 'verify and register'}
       </button>

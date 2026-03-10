@@ -70,7 +70,7 @@
         <label for="password"><span class="prompt-prefix">$</span> password</label>
         <input id="password" name="password" type="password" autocomplete="new-password" bind:value={password} placeholder="••••••••" required />
       </div>
-      {#if error}<p class="error">{error}</p>{/if}
+      {#if error}<p class="error" role="alert">{error}</p>{/if}
       <button type="submit" class="primary" disabled={loading || !username.trim() || !password}>
         {loading ? '(´・ω・`) ...' : 'continue'}
       </button>

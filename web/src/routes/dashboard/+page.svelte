@@ -157,9 +157,9 @@
   </header>
 
   {#if loading}
-    <p class="term-muted">loading...</p>
+    <p class="term-muted" role="status" aria-live="polite">loading...</p>
   {:else if error}
-    <p class="error">{error}</p>
+    <p class="error" role="alert">{error}</p>
   {:else}
     <div class="daemon-list-wrap">
       <ul class="daemon-list">
@@ -167,7 +167,7 @@
           <li>
             {#if editingId === daemon.id}
               <form class="daemon-rename-form" on:submit={(e) => saveRename(e, daemon.id)}>
-                <input type="text" bind:value={editLabel} class="daemon-rename-input" />
+                <input type="text" bind:value={editLabel} class="daemon-rename-input" aria-label="new name for {daemon.label}" />
                 <button type="submit" class="primary" disabled={!editLabel.trim()}>save</button>
                 <button type="button" class="secondary" on:click={() => { editingId = null; editLabel = ''; }}>cancel</button>
               </form>
@@ -179,8 +179,8 @@
                   {formatBytes(daemon.disk_free)} free
                 </span>
               {/if}
-              <button type="button" class="link-button" on:click={() => { editingId = daemon.id; editLabel = daemon.label; }} title="rename">rename</button>
-              <button type="button" class="link-button delete-btn" on:click={() => deleteDaemon(daemon)} disabled={deletingId !== null} title="delete">delete</button>
+              <button type="button" class="link-button" on:click={() => { editingId = daemon.id; editLabel = daemon.label; }} title="rename" aria-label="rename {daemon.label}">rename</button>
+              <button type="button" class="link-button delete-btn" on:click={() => deleteDaemon(daemon)} disabled={deletingId !== null} title="delete" aria-label="delete {daemon.label}">delete</button>
             {/if}
           </li>
         {/each}

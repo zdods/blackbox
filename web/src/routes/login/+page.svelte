@@ -111,7 +111,7 @@
           maxlength="8"
         />
       </div>
-      {#if error}<p class="error">{error}</p>{/if}
+      {#if error}<p class="error" role="alert">{error}</p>{/if}
       <button type="submit" class="primary" disabled={loading || !totpCode.trim()}>
         {loading ? '(´・ω・`) ...' : 'verify'}
       </button>
@@ -127,7 +127,7 @@
         <label for="password"><span class="prompt-prefix">$</span> password</label>
         <input id="password" name="password" type="password" autocomplete="current-password" bind:value={password} placeholder="••••••••" required />
       </div>
-      {#if error}<p class="error">{error}</p>{/if}
+      {#if error}<p class="error" role="alert">{error}</p>{/if}
       <button type="submit" class="primary" disabled={loading || !username.trim() || !password}>{loading ? '(´・ω・`) ...' : 'log in'}</button>
     </form>
     {#if !setupLoading && registrationOpen}

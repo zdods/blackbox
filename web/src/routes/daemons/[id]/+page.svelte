@@ -188,31 +188,31 @@
   <p class="term-muted"><a href="/dashboard">← dashboard</a></p>
   <h1 class="term-h1"><span class="kaomoji">[▪‿▪]</span>files {#if daemonLabel}<span class="path-label">({daemonLabel})</span>{/if}</h1>
 
-  <div class="breadcrumb">
+  <nav class="breadcrumb" aria-label="file path">
     <button type="button" class="link" on:click={() => { path = ''; load(); }}>root</button>
     {#each pathSegments as segment}
-      <span class="breadcrumb-sep">/</span>
+      <span class="breadcrumb-sep" aria-hidden="true">/</span>
       <button type="button" class="link" on:click={() => goToSegment(segment)}>{segment}</button>
     {/each}
-  </div>
+  </nav>
 
-  {#if error}<p class="error">{error}</p>{/if}
+  {#if error}<p class="error" role="alert">{error}</p>{/if}
 
   {#if loading}
-    <p class="term-muted">loading...</p>
+    <p class="term-muted" role="status" aria-live="polite">loading...</p>
   {:else}
     <div class="file-list-wrap">
       <table class="file-list">
         <thead>
           <tr>
             <th scope="col" class="col-name sortable" class:sort-asc={sortBy === 'name' && sortDir === 'asc'} class:sort-desc={sortBy === 'name' && sortDir === 'desc'}>
-              <button type="button" class="th-sort" on:click={() => setSort('name')}>name</button>
+              <button type="button" class="th-sort" on:click={() => setSort('name')} aria-label="sort by name{sortBy === 'name' ? (sortDir === 'asc' ? ', sorted ascending' : ', sorted descending') : ''}">name</button>
             </th>
             <th scope="col" class="col-size sortable" class:sort-asc={sortBy === 'size' && sortDir === 'asc'} class:sort-desc={sortBy === 'size' && sortDir === 'desc'}>
-              <button type="button" class="th-sort" on:click={() => setSort('size')}>size</button>
+              <button type="button" class="th-sort" on:click={() => setSort('size')} aria-label="sort by size{sortBy === 'size' ? (sortDir === 'asc' ? ', sorted ascending' : ', sorted descending') : ''}">size</button>
             </th>
             <th scope="col" class="col-mtime sortable" class:sort-asc={sortBy === 'mtime' && sortDir === 'asc'} class:sort-desc={sortBy === 'mtime' && sortDir === 'desc'}>
-              <button type="button" class="th-sort" on:click={() => setSort('mtime')}>modified</button>
+              <button type="button" class="th-sort" on:click={() => setSort('mtime')} aria-label="sort by modified{sortBy === 'mtime' ? (sortDir === 'asc' ? ', sorted ascending' : ', sorted descending') : ''}">modified</button>
             </th>
             <th scope="col" class="col-actions"></th>
           </tr>
@@ -220,7 +220,7 @@
         <tbody>
         {#if pathSegments.length > 0}
           <tr>
-            <td colspan="4"><button type="button" class="link" on:click={goUp}>..</button></td>
+            <td colspan="4"><button type="button" class="link" on:click={goUp} aria-label="go to parent directory">..</button></td>
           </tr>
         {/if}
         {#each sortedEntries as entry}
@@ -235,7 +235,7 @@
             <td class="col-size">{entry.is_dir ? '—' : formatSize(entry.size)}</td>
             <td class="col-mtime">{entry.mtime || '—'}</td>
             <td class="col-actions">
-              <button type="button" class="link delete-btn" on:click={() => deleteEntry(entry)} disabled={deletingPath !== ''} title="delete">delete</button>
+              <button type="button" class="link delete-btn" on:click={() => deleteEntry(entry)} disabled={deletingPath !== ''} title="delete" aria-label="delete {entry.name}">delete</button>
             </td>
           </tr>
         {/each}
@@ -248,8 +248,8 @@
         <span class="upload-label">upload</span>
         <input type="text" bind:value={uploadPath} placeholder="optional subpath" class="upload-path" />
         <label class="upload-file-wrap">
-          <input type="file" multiple on:change={handleUpload} disabled={uploading} class="upload-file-input" />
-          <span class="upload-file-text">
+          <input type="file" multiple on:change={handleUpload} disabled={uploading} class="upload-file-input" aria-label="choose files to upload" />
+          <span class="upload-file-text" role="status" aria-live="polite">
             {#if uploading && uploadProgress.total > 0}
               uploading {uploadProgress.current} of {uploadProgress.total}…
             {:else}
