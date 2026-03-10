@@ -16,10 +16,9 @@ export function clearToken() {
 }
 
 export function apiFetch(path, options = {}) {
-  const token = getToken();
   const headers = { ...options.headers };
-  if (token) headers['Authorization'] = `Bearer ${token}`;
-  // Ensure fresh data on refresh (e.g. daemon connected status)
-  const fetchOptions = { ...options, headers, cache: 'no-store' };
+  // Rely on httpOnly session cookie set by the server.
+  // Send credentials so the browser includes the cookie.
+  const fetchOptions = { ...options, headers, cache: 'no-store', credentials: 'same-origin' };
   return fetch(path, fetchOptions);
 }

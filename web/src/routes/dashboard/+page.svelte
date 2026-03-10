@@ -66,7 +66,7 @@
       if (res.status === 401) return;
       if (!res.ok) return;
       daemons = await res.json();
-    } catch (_) {}
+    } catch (e) { console.error('poll failed:', e); }
   }
 
   async function createDaemon(e) {
@@ -87,7 +87,8 @@
         try {
           await navigator.clipboard.writeText(data.token);
           showToast('token copied to clipboard', 'success', 3000);
-        } catch (_) {
+        } catch (e) {
+          console.error('clipboard write failed:', e);
           showToast('copy failed — save token: ' + data.token, 'error', 8000);
         }
       }

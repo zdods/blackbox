@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"io"
+	"log"
 	"net/http"
 	"time"
 
@@ -14,6 +15,7 @@ import (
 )
 
 const proxyTimeout = 30 * time.Second
+const maxUploadSize = 512 << 20 // 512 MB
 
 func (s *Server) DaemonFiles(w http.ResponseWriter, r *http.Request) {
 	daemonID := r.PathValue("id")
@@ -72,7 +74,8 @@ func (s *Server) DaemonMeta(w http.ResponseWriter, r *http.Request) {
 	req := pkg.GetMetaRequest{Type: pkg.TypeGetMeta, RequestID: reqID, Path: path}
 	respData, err := ac.Request(ctx, reqID, req)
 	if err != nil {
-		writeJSONError(w, http.StatusBadGateway, err.Error())
+		log.Printf("daemon meta request: %v", err)
+		writeJSONError(w, http.StatusBadGateway, errMsgUnavailable)
 		return
 	}
 	var resp pkg.GetMetaResponse
@@ -81,7 +84,8 @@ func (s *Server) DaemonMeta(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if resp.Error != "" {
-		writeJSONError(w, http.StatusBadRequest, resp.Error)
+		log.Printf("daemon meta error: %s", resp.Error)
+		writeJSONError(w, http.StatusBadRequest, "operation failed")
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
@@ -97,7 +101,8 @@ func (s *Server) proxyListDir(ctx context.Context, w http.ResponseWriter, ac *Da
 	req := pkg.ListDirRequest{Type: pkg.TypeListDir, RequestID: reqID, Path: path}
 	respData, err := ac.Request(ctx, reqID, req)
 	if err != nil {
-		writeJSONError(w, http.StatusBadGateway, err.Error())
+		log.Printf("daemon list-dir request: %v", err)
+		writeJSONError(w, http.StatusBadGateway, errMsgUnavailable)
 		return
 	}
 	var resp pkg.ListDirResponse
@@ -106,7 +111,8 @@ func (s *Server) proxyListDir(ctx context.Context, w http.ResponseWriter, ac *Da
 		return
 	}
 	if resp.Error != "" {
-		writeJSONError(w, http.StatusBadRequest, resp.Error)
+		log.Printf("daemon list-dir error: %s", resp.Error)
+		writeJSONError(w, http.StatusBadRequest, "operation failed")
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
@@ -118,7 +124,8 @@ func (s *Server) proxyReadFile(ctx context.Context, w http.ResponseWriter, ac *D
 	req := pkg.ReadFileRequest{Type: pkg.TypeReadFile, RequestID: reqID, Path: path}
 	respData, err := ac.Request(ctx, reqID, req)
 	if err != nil {
-		writeJSONError(w, http.StatusBadGateway, err.Error())
+		log.Printf("daemon read-file request: %v", err)
+		writeJSONError(w, http.StatusBadGateway, errMsgUnavailable)
 		return
 	}
 	var resp pkg.ReadFileResponse
@@ -127,7 +134,8 @@ func (s *Server) proxyReadFile(ctx context.Context, w http.ResponseWriter, ac *D
 		return
 	}
 	if resp.Error != "" {
-		writeJSONError(w, http.StatusBadRequest, resp.Error)
+		log.Printf("daemon read-file error: %s", resp.Error)
+		writeJSONError(w, http.StatusBadRequest, "operation failed")
 		return
 	}
 	data, err := base64.StdEncoding.DecodeString(resp.Data)
@@ -140,6 +148,7 @@ func (s *Server) proxyReadFile(ctx context.Context, w http.ResponseWriter, ac *D
 }
 
 func (s *Server) proxyWriteFile(ctx context.Context, w http.ResponseWriter, r *http.Request, ac *DaemonConn, path string) {
+	r.Body = http.MaxBytesReader(w, r.Body, maxUploadSize)
 	data, err := io.ReadAll(r.Body)
 	if err != nil {
 		writeJSONError(w, http.StatusBadRequest, "failed to read body")
@@ -154,7 +163,8 @@ func (s *Server) proxyWriteFile(ctx context.Context, w http.ResponseWriter, r *h
 	}
 	respData, err := ac.Request(ctx, reqID, req)
 	if err != nil {
-		writeJSONError(w, http.StatusBadGateway, err.Error())
+		log.Printf("daemon write-file request: %v", err)
+		writeJSONError(w, http.StatusBadGateway, errMsgUnavailable)
 		return
 	}
 	var resp pkg.WriteFileResponse
@@ -163,7 +173,8 @@ func (s *Server) proxyWriteFile(ctx context.Context, w http.ResponseWriter, r *h
 		return
 	}
 	if resp.Error != "" {
-		writeJSONError(w, http.StatusBadRequest, resp.Error)
+		log.Printf("daemon write-file error: %s", resp.Error)
+		writeJSONError(w, http.StatusBadRequest, "operation failed")
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -174,7 +185,8 @@ func (s *Server) proxyDeleteFile(ctx context.Context, w http.ResponseWriter, ac 
 	req := pkg.DeleteFileRequest{Type: pkg.TypeDeleteFile, RequestID: reqID, Path: path}
 	respData, err := ac.Request(ctx, reqID, req)
 	if err != nil {
-		writeJSONError(w, http.StatusBadGateway, err.Error())
+		log.Printf("daemon delete-file request: %v", err)
+		writeJSONError(w, http.StatusBadGateway, errMsgUnavailable)
 		return
 	}
 	var resp pkg.DeleteFileResponse
@@ -183,7 +195,8 @@ func (s *Server) proxyDeleteFile(ctx context.Context, w http.ResponseWriter, ac 
 		return
 	}
 	if resp.Error != "" {
-		writeJSONError(w, http.StatusBadRequest, resp.Error)
+		log.Printf("daemon delete-file error: %s", resp.Error)
+		writeJSONError(w, http.StatusBadRequest, "operation failed")
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)

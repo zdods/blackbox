@@ -2,9 +2,8 @@
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
   import { getToken } from '$lib/auth.js';
+  import { getRegisterCredentials, clearRegisterCredentials } from '$lib/register-state.js';
   import QRCode from 'qrcode';
-
-  const REGISTER_KEY = 'blackbox_register';
 
   let totpCode = '';
   let error = '';
@@ -20,12 +19,8 @@
   }
 
   onMount(async () => {
-    if (typeof sessionStorage === 'undefined') {
-      goto('/register', { replaceState: true });
-      return;
-    }
-    const stored = sessionStorage.getItem(REGISTER_KEY);
-    if (!stored) {
+    const credentials = getRegisterCredentials();
+    if (!credentials) {
       goto('/register', { replaceState: true });
       return;
     }
@@ -35,12 +30,12 @@
       if (res.ok) {
         const data = await res.json();
         if (data.registration_open !== true) {
-          sessionStorage.removeItem(REGISTER_KEY);
+          clearRegisterCredentials();
           goto('/login?registration=closed', { replaceState: true });
           return;
         }
       } else {
-        sessionStorage.removeItem(REGISTER_KEY);
+        clearRegisterCredentials();
         goto('/login?registration=closed', { replaceState: true });
         return;
       }
@@ -69,28 +64,22 @@
     if (!secret) return;
     try {
       await navigator.clipboard.writeText(secret);
-    } catch (_) {}
+    } catch (e) {
+      console.error('clipboard write failed:', e);
+    }
   }
 
   async function handleSubmit(e) {
     e.preventDefault();
     error = '';
-    const stored = typeof sessionStorage !== 'undefined' ? sessionStorage.getItem(REGISTER_KEY) : null;
-    if (!stored) {
-      goto('/register', { replaceState: true });
-      return;
-    }
-    let credentials;
-    try {
-      credentials = JSON.parse(stored);
-    } catch (_) {
-      sessionStorage.removeItem(REGISTER_KEY);
+    const credentials = getRegisterCredentials();
+    if (!credentials) {
       goto('/register', { replaceState: true });
       return;
     }
     const { username: u, password: p } = credentials;
     if (!u || !p) {
-      sessionStorage.removeItem(REGISTER_KEY);
+      clearRegisterCredentials();
       goto('/register', { replaceState: true });
       return;
     }
@@ -111,13 +100,13 @@
       if (!res.ok) {
         error = data.error || res.statusText || 'Registration failed';
         if (res.status === 403) {
-          sessionStorage.removeItem(REGISTER_KEY);
+          clearRegisterCredentials();
           goto('/login?registration=closed', { replaceState: true });
           return;
         }
         return;
       }
-      sessionStorage.removeItem(REGISTER_KEY);
+      clearRegisterCredentials();
       goto('/login');
     } finally {
       loading = false;

@@ -17,7 +17,7 @@
           return;
         }
       }
-    } catch (_) {}
+    } catch (e) { console.error('setup check failed:', e); }
     goto('/login');
   });
 </script>

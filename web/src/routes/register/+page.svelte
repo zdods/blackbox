@@ -2,8 +2,7 @@
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
   import { getToken } from '$lib/auth.js';
-
-  const REGISTER_KEY = 'blackbox_register';
+  import { setRegisterCredentials, clearRegisterCredentials } from '$lib/register-state.js';
 
   let username = '';
   let password = '';
@@ -17,9 +16,7 @@
   }
 
   onMount(async () => {
-    if (typeof sessionStorage !== 'undefined') {
-      sessionStorage.removeItem(REGISTER_KEY);
-    }
+    clearRegisterCredentials();
     try {
       const res = await fetch('/api/setup');
       if (res.ok) {
@@ -33,7 +30,8 @@
         goto('/login?registration=closed', { replaceState: true });
         return;
       }
-    } catch (_) {
+    } catch (e) {
+      console.error('setup check failed:', e);
       goto('/login?registration=closed', { replaceState: true });
       return;
     }
@@ -49,9 +47,7 @@
       error = 'Username and password are required';
       return;
     }
-    if (typeof sessionStorage !== 'undefined') {
-      sessionStorage.setItem(REGISTER_KEY, JSON.stringify({ username: u, password: p }));
-    }
+    setRegisterCredentials(u, p);
     goto('/register/totp');
   }
 </script>

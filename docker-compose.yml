@@ -9,6 +9,7 @@ services:
       - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "PGPASSWORD=\"${POSTGRES_PASSWORD:-postgres}\" psql -U \"${POSTGRES_USER:-postgres}\" -d \"${POSTGRES_DB:-blackbox}\" -w -c 'SELECT 1' || exit 1"]
       interval: 2s
@@ -34,6 +35,7 @@ services:
       JWT_SECRET: ${JWT_SECRET:-dev-secret-change-in-production}
     ports:
       - "${BASTION_PORT:-8080}:8080"
+    restart: unless-stopped
     depends_on:
       postgres:
         condition: service_healthy

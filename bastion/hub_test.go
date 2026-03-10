@@ -202,12 +202,21 @@ func TestWsCheckOriginAllowAll(t *testing.T) {
 	}
 }
 
-func TestWsCheckOriginEmpty(t *testing.T) {
+func TestWsCheckOriginEmptyRejectsBrowserOrigin(t *testing.T) {
 	check := wsCheckOrigin("")
 	req := httptest.NewRequest("GET", "/ws", nil)
 	req.Header.Set("Origin", "https://evil.com")
+	if check(req) {
+		t.Error("empty CORS_ORIGIN should reject browser origins")
+	}
+}
+
+func TestWsCheckOriginEmptyAllowsNoOrigin(t *testing.T) {
+	check := wsCheckOrigin("")
+	req := httptest.NewRequest("GET", "/ws", nil)
+	// No Origin header (daemon client)
 	if !check(req) {
-		t.Error("empty should allow any origin (current behavior)")
+		t.Error("empty CORS_ORIGIN should allow requests with no Origin header")
 	}
 }
 

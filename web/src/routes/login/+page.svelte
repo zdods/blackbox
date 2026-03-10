@@ -28,7 +28,7 @@
           return;
         }
       }
-    } catch (_) {}
+    } catch (e) { console.error('setup check failed:', e); }
     setupLoading = false;
   });
 
@@ -53,7 +53,8 @@
         totpCode = '';
         return;
       }
-      if (data.token) setToken(data.token);
+      // Server sets httpOnly session cookie; store a flag for client-side auth checks.
+      setToken('session');
       goto('/dashboard');
     } finally {
       loading = false;
@@ -78,7 +79,8 @@
         error = data.error || res.statusText || 'Verification failed';
         return;
       }
-      if (data.token) setToken(data.token);
+      // Server sets httpOnly session cookie; store a flag for client-side auth checks.
+      setToken('session');
       goto('/dashboard');
     } finally {
       loading = false;

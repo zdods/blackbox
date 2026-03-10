@@ -1,4 +1,4 @@
-.PHONY: build-bastion build-daemon up dev test
+.PHONY: build-bastion build-daemon up dev test clean logs down
 
 build-bastion:
 	docker compose build bastion
@@ -14,3 +14,13 @@ dev:
 
 test:
 	go test ./bastion/ ./daemon/ ./pkg/...
+
+clean:
+	rm -f blackbox-daemon
+	docker compose down -v --remove-orphans
+
+logs:
+	docker compose logs -f
+
+down:
+	docker compose down

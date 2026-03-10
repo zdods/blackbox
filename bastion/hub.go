@@ -14,10 +14,18 @@ import (
 // wsCheckOrigin returns true if the request origin is allowed. allowed is from config (CORSOrigin); "" or "*" allows all.
 func wsCheckOrigin(allowed string) func(*http.Request) bool {
 	return func(r *http.Request) bool {
-		if allowed == "" || allowed == "*" {
+		if allowed == "*" {
 			return true
 		}
 		origin := r.Header.Get("Origin")
+		// No origin header (e.g. non-browser clients like the daemon) — allow.
+		if origin == "" {
+			return true
+		}
+		// If CORS_ORIGIN is not configured, reject browser origins.
+		if allowed == "" {
+			return false
+		}
 		for _, o := range strings.Split(allowed, ",") {
 			if strings.TrimSpace(o) == origin {
 				return true

@@ -20,7 +20,7 @@ type Server struct {
 
 func main() {
 	cfg := LoadConfig()
-	if cfg.JWTSecret == "poc-secret-change-in-production" {
+	if cfg.JWTSecret == "dev-secret-change-in-production" {
 		log.Printf("warning: JWT_SECRET is default; set JWT_SECRET in production")
 	}
 	ctx := context.Background()
@@ -85,11 +85,10 @@ func main() {
 
 func corsThenMux(cfg Config, mux http.Handler) http.Handler {
 	origin := cfg.CORSOrigin
-	if origin == "" {
-		origin = "*"
-	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", origin)
+		if origin != "" {
+			w.Header().Set("Access-Control-Allow-Origin", origin)
+		}
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
 		if r.Method == "OPTIONS" {
