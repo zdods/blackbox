@@ -45,9 +45,10 @@ type Hub struct {
 type DaemonConn struct {
 	DaemonID string
 	conn    *websocket.Conn
-	mu     sync.Mutex
+	mu      sync.Mutex // guards pending map
+	writeMu sync.Mutex // serializes WebSocket writes
 	pending map[string]chan json.RawMessage
-	done   chan struct{}
+	done    chan struct{}
 }
 
 func NewHub() *Hub {
@@ -122,7 +123,56 @@ func (ac *DaemonConn) Request(ctx context.Context, requestID string, req interfa
 		delete(ac.pending, requestID)
 		ac.mu.Unlock()
 	}()
-	if err := ac.conn.WriteMessage(websocket.TextMessage, data); err != nil {
+	ac.writeMu.Lock()
+	err = ac.conn.WriteMessage(websocket.TextMessage, data)
+	ac.writeMu.Unlock()
+	if err != nil {
+		return nil, err
+	}
+	select {
+	case resp := <-ch:
+		if resp == nil {
+			return nil, errConnClosed
+		}
+		return resp, nil
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	case <-ac.done:
+		return nil, errConnClosed
+	}
+}
+
+// RequestWithBinary sends a JSON text frame followed by a binary frame atomically,
+// then waits for the response. Used for chunked uploads to avoid base64 overhead.
+func (ac *DaemonConn) RequestWithBinary(ctx context.Context, requestID string, req interface{}, payload []byte) (json.RawMessage, error) {
+	if requestID == "" {
+		return nil, errNoRequestID
+	}
+	data, err := json.Marshal(req)
+	if err != nil {
+		return nil, err
+	}
+	ch := make(chan json.RawMessage, 1)
+	ac.mu.Lock()
+	if ac.pending == nil {
+		ac.mu.Unlock()
+		return nil, errConnClosed
+	}
+	ac.pending[requestID] = ch
+	ac.mu.Unlock()
+	defer func() {
+		ac.mu.Lock()
+		delete(ac.pending, requestID)
+		ac.mu.Unlock()
+	}()
+	// Atomic two-frame write: JSON control + binary payload
+	ac.writeMu.Lock()
+	err = ac.conn.WriteMessage(websocket.TextMessage, data)
+	if err == nil {
+		err = ac.conn.WriteMessage(websocket.BinaryMessage, payload)
+	}
+	ac.writeMu.Unlock()
+	if err != nil {
 		return nil, err
 	}
 	select {

@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"blackbox/pkg"
@@ -216,6 +217,135 @@ func resolveDir(path string) (string, error) {
 	return filepath.Abs(path)
 }
 
+// uploadState tracks an in-progress chunked upload.
+type uploadState struct {
+	path       string
+	totalChunks int
+	received   map[int]bool
+	tmpDir     string
+	lastActive time.Time
+	mu         sync.Mutex
+}
+
+// activeUploads tracks in-progress chunked uploads by upload_id.
+var activeUploads = struct {
+	sync.Mutex
+	m map[string]*uploadState
+}{m: make(map[string]*uploadState)}
+
+const tmpDirPrefix = ".blackbox-tmp"
+const uploadTimeout = 10 * time.Minute
+
+func init() {
+	// Background goroutine to clean up stale uploads
+	go func() {
+		for {
+			time.Sleep(2 * time.Minute)
+			activeUploads.Lock()
+			for id, u := range activeUploads.m {
+				u.mu.Lock()
+				if time.Since(u.lastActive) > uploadTimeout {
+					os.RemoveAll(u.tmpDir)
+					delete(activeUploads.m, id)
+					log.Printf("cleaned up stale upload %s", id)
+				}
+				u.mu.Unlock()
+			}
+			activeUploads.Unlock()
+		}
+	}()
+}
+
+func handleWriteChunk(root string, req *pkg.WriteChunkRequest, chunkData []byte) pkg.WriteChunkResponse {
+	errResp := func(msg string) pkg.WriteChunkResponse {
+		return pkg.WriteChunkResponse{
+			Type:       pkg.TypeWriteChunk,
+			RequestID:  req.RequestID,
+			UploadID:   req.UploadID,
+			ChunkIndex: req.ChunkIndex,
+			Error:      msg,
+		}
+	}
+
+	destPath := safePath(root, req.Path)
+	if destPath == "" {
+		return errResp("invalid path")
+	}
+
+	// Get or create upload state
+	activeUploads.Lock()
+	u, exists := activeUploads.m[req.UploadID]
+	if !exists {
+		tmpDir := filepath.Join(root, tmpDirPrefix, req.UploadID)
+		if err := os.MkdirAll(tmpDir, 0755); err != nil {
+			activeUploads.Unlock()
+			return errResp("failed to create temp dir")
+		}
+		u = &uploadState{
+			path:        req.Path,
+			totalChunks: req.TotalChunks,
+			received:    make(map[int]bool),
+			tmpDir:      tmpDir,
+			lastActive:  time.Now(),
+		}
+		activeUploads.m[req.UploadID] = u
+	}
+	activeUploads.Unlock()
+
+	u.mu.Lock()
+	defer u.mu.Unlock()
+	u.lastActive = time.Now()
+
+	// Write chunk to temp file
+	chunkFile := filepath.Join(u.tmpDir, fmt.Sprintf("chunk_%d", req.ChunkIndex))
+	if err := os.WriteFile(chunkFile, chunkData, 0644); err != nil {
+		return errResp("failed to write chunk")
+	}
+	u.received[req.ChunkIndex] = true
+
+	// If all chunks received, assemble the file
+	if len(u.received) == u.totalChunks {
+		if dir := filepath.Dir(destPath); dir != destPath {
+			if err := os.MkdirAll(dir, 0755); err != nil {
+				return errResp("failed to create directory")
+			}
+		}
+		outFile, err := os.Create(destPath)
+		if err != nil {
+			return errResp("failed to create output file")
+		}
+		for i := 0; i < u.totalChunks; i++ {
+			cf := filepath.Join(u.tmpDir, fmt.Sprintf("chunk_%d", i))
+			data, err := os.ReadFile(cf)
+			if err != nil {
+				outFile.Close()
+				os.Remove(destPath)
+				return errResp("missing chunk during assembly")
+			}
+			if _, err := outFile.Write(data); err != nil {
+				outFile.Close()
+				os.Remove(destPath)
+				return errResp("failed to write assembled file")
+			}
+		}
+		outFile.Close()
+
+		// Clean up temp dir and upload state
+		os.RemoveAll(u.tmpDir)
+		activeUploads.Lock()
+		delete(activeUploads.m, req.UploadID)
+		activeUploads.Unlock()
+		log.Printf("assembled chunked upload: %s (%d chunks)", req.Path, u.totalChunks)
+	}
+
+	return pkg.WriteChunkResponse{
+		Type:       pkg.TypeWriteChunk,
+		RequestID:  req.RequestID,
+		UploadID:   req.UploadID,
+		ChunkIndex: req.ChunkIndex,
+	}
+}
+
 func runDaemon(bastionURL, token, root string) error {
 	header := http.Header{}
 	conn, _, err := websocket.DefaultDialer.Dial(bastionURL, header)
@@ -321,6 +451,35 @@ func runDaemon(bastionURL, token, root string) error {
 					return nil
 				}
 			}
+		case pkg.TypeWriteChunk:
+			var req pkg.WriteChunkRequest
+			if json.Unmarshal(data, &req) == nil {
+				// Read the next message which should be the binary chunk data
+				msgType, chunkData, err := conn.ReadMessage()
+				if err != nil {
+					log.Printf("read chunk data: %v", err)
+					return nil
+				}
+				if msgType != websocket.BinaryMessage {
+					resp := pkg.WriteChunkResponse{
+						Type:       pkg.TypeWriteChunk,
+						RequestID:  req.RequestID,
+						UploadID:   req.UploadID,
+						ChunkIndex: req.ChunkIndex,
+						Error:      "expected binary frame",
+					}
+					if err := conn.WriteJSON(resp); err != nil {
+						log.Printf("write: %v", err)
+						return nil
+					}
+					continue
+				}
+				resp := handleWriteChunk(root, &req, chunkData)
+				if err := conn.WriteJSON(resp); err != nil {
+					log.Printf("write: %v", err)
+					return nil
+				}
+			}
 		}
 	}
 }
@@ -350,6 +509,9 @@ func handleListDir(root string, req *pkg.ListDirRequest) pkg.ListDirResponse {
 	}
 	var out []pkg.FileEntry
 	for _, e := range entries {
+		if e.Name() == tmpDirPrefix {
+			continue
+		}
 		info, err := e.Info()
 		var size int64
 		var mtime string

@@ -13,7 +13,7 @@
   let uploadPath = '';
   let uploading = false;
   let selectedFileName = '';
-  let uploadProgress = { current: 0, total: 0 };
+  let uploadProgress = { current: 0, total: 0, chunkCurrent: 0, chunkTotal: 0 };
   let deletingPath = '';
   let sortBy = 'name'; // 'name' | 'size' | 'mtime'
   let sortDir = 'asc';  // 'asc' | 'desc'
@@ -111,27 +111,66 @@
     URL.revokeObjectURL(a.href);
   }
 
+  const CHUNK_SIZE = 5 * 1024 * 1024; // 5 MB per chunk
+
+  function generateUploadId() {
+    return crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2) + Date.now().toString(36);
+  }
+
+  async function uploadFile(file, targetPath) {
+    if (file.size <= CHUNK_SIZE) {
+      // Small file — single PUT
+      const res = await apiFetch(`/api/daemons/${daemonId}/files?path=${encodeURIComponent(targetPath)}`, {
+        method: 'PUT',
+        body: file
+      });
+      if (!res.ok) {
+        const msg = await res.text();
+        throw new Error(msg ? `${file.name}: ${msg}` : `Upload failed for ${file.name}`);
+      }
+      return;
+    }
+    // Large file — chunked upload
+    const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+    const uploadId = generateUploadId();
+    uploadProgress = { ...uploadProgress, chunkCurrent: 0, chunkTotal: totalChunks };
+
+    for (let i = 0; i < totalChunks; i++) {
+      const start = i * CHUNK_SIZE;
+      const end = Math.min(start + CHUNK_SIZE, file.size);
+      const chunk = file.slice(start, end);
+      const params = new URLSearchParams({
+        path: targetPath,
+        upload_id: uploadId,
+        chunk_index: String(i),
+        total_chunks: String(totalChunks)
+      });
+      const res = await apiFetch(`/api/daemons/${daemonId}/files?${params}`, {
+        method: 'PUT',
+        body: chunk
+      });
+      if (!res.ok) {
+        const msg = await res.text();
+        throw new Error(msg ? `${file.name}: ${msg}` : `Chunk ${i + 1}/${totalChunks} failed for ${file.name}`);
+      }
+      uploadProgress = { ...uploadProgress, chunkCurrent: i + 1 };
+    }
+  }
+
   async function handleUpload(e) {
     const files = e.target.files;
     if (!files?.length) return;
     const total = files.length;
     uploading = true;
-    uploadProgress = { current: 0, total };
+    uploadProgress = { current: 0, total, chunkCurrent: 0, chunkTotal: 0 };
     error = '';
     try {
       for (let i = 0; i < total; i++) {
-        uploadProgress = { current: i + 1, total };
+        uploadProgress = { ...uploadProgress, current: i + 1, chunkCurrent: 0, chunkTotal: 0 };
         selectedFileName = total > 1 ? `Uploading ${i + 1} of ${total}…` : files[i].name;
         const file = files[i];
         const targetPath = uploadPath ? `${uploadPath}/${file.name}` : file.name;
-        const res = await apiFetch(`/api/daemons/${daemonId}/files?path=${encodeURIComponent(targetPath)}`, {
-          method: 'PUT',
-          body: file
-        });
-        if (!res.ok) {
-          const msg = await res.text();
-          throw new Error(msg ? `${file.name}: ${msg}` : `Upload failed for ${file.name}`);
-        }
+        await uploadFile(file, targetPath);
       }
       uploadPath = '';
       selectedFileName = '';
@@ -141,7 +180,7 @@
       error = err.message || 'Upload failed';
     } finally {
       uploading = false;
-      uploadProgress = { current: 0, total: 0 };
+      uploadProgress = { current: 0, total: 0, chunkCurrent: 0, chunkTotal: 0 };
       selectedFileName = '';
       e.target.value = '';
     }
@@ -251,7 +290,7 @@
           <input type="file" multiple on:change={handleUpload} disabled={uploading} class="upload-file-input" aria-label="choose files to upload" />
           <span class="upload-file-text" role="status" aria-live="polite">
             {#if uploading && uploadProgress.total > 0}
-              uploading {uploadProgress.current} of {uploadProgress.total}…
+              uploading {uploadProgress.current} of {uploadProgress.total}{#if uploadProgress.chunkTotal > 0} (chunk {uploadProgress.chunkCurrent}/{uploadProgress.chunkTotal}){/if}…
             {:else}
               {selectedFileName || 'choose files…'}
             {/if}
