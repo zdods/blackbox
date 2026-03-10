@@ -1,4 +1,4 @@
-.PHONY: build-bastion build-daemon up dev
+.PHONY: build-bastion build-daemon up dev test
 
 build-bastion:
 	docker compose build bastion
@@ -11,3 +11,6 @@ up:
 
 dev:
 	docker compose up --build --watch
+
+test:
+	go test ./bastion/ ./daemon/ ./pkg/...
