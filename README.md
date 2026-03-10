@@ -163,9 +163,18 @@ Then use **https://** for the console and **wss://** for daemons, e.g. `--bastio
 
 ## Roadmap
 
-- Rate limiting and audit log (who accessed which host/path when)
-- File and directory rename
-- File preview for common types (images, text, PDFs) in the browser
-- Live daemon status via WebSocket push instead of polling
-- Daemon grouping to create volumes (combine multiple daemons into one logical volume)
-- Further out: sharding files in a volume across daemons (distribute file storage across grouped daemons)
+- [ ] Rename/move files and directories
+- [ ] Explicit directory creation (mkdir)
+- [ ] Drag-and-drop file upload
+- [ ] File search across hosted directories
+- [ ] File preview for common types (images, text, PDFs) in the browser
+- [ ] Batch operations (multi-select delete, download, move)
+- [ ] Folder upload (upload entire directory trees)
+- [ ] Rate limiting on auth endpoints
+- [ ] Audit logging (who accessed which host/path when)
+- [ ] Daemon heartbeat/health checks
+- [ ] Graceful daemon shutdown (signal handling, in-progress upload protection)
+- [ ] CSP (Content-Security-Policy) headers
+- [ ] Live daemon status via WebSocket push instead of polling
+- [ ] Daemon grouping to create volumes (combine multiple daemons into one logical volume)
+- [ ] Sharding files in a volume across daemons (distribute file storage across grouped daemons)

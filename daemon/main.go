@@ -346,6 +346,28 @@ func handleWriteChunk(root string, req *pkg.WriteChunkRequest, chunkData []byte)
 	}
 }
 
+func handleReadChunk(root string, req *pkg.ReadChunkRequest) (*pkg.ReadChunkResponse, []byte) {
+	path := safePath(root, req.Path)
+	if path == "" {
+		return &pkg.ReadChunkResponse{Type: pkg.TypeReadChunk, RequestID: req.RequestID, Error: "invalid path"}, nil
+	}
+	f, err := os.Open(path)
+	if err != nil {
+		return &pkg.ReadChunkResponse{Type: pkg.TypeReadChunk, RequestID: req.RequestID, Error: err.Error()}, nil
+	}
+	defer f.Close()
+	buf := make([]byte, req.Size)
+	n, err := f.ReadAt(buf, req.Offset)
+	if err != nil && n == 0 {
+		return &pkg.ReadChunkResponse{Type: pkg.TypeReadChunk, RequestID: req.RequestID, Error: err.Error()}, nil
+	}
+	return &pkg.ReadChunkResponse{
+		Type:      pkg.TypeReadChunk,
+		RequestID: req.RequestID,
+		ChunkSize: n,
+	}, buf[:n]
+}
+
 func runDaemon(bastionURL, token, root string) error {
 	header := http.Header{}
 	conn, _, err := websocket.DefaultDialer.Dial(bastionURL, header)
@@ -449,6 +471,28 @@ func runDaemon(bastionURL, token, root string) error {
 				if err := conn.WriteJSON(resp); err != nil {
 					log.Printf("write: %v", err)
 					return nil
+				}
+			}
+		case pkg.TypeReadChunk:
+			var req pkg.ReadChunkRequest
+			if json.Unmarshal(data, &req) == nil {
+				resp, chunkData := handleReadChunk(root, &req)
+				if resp.Error != "" {
+					// Error — send JSON only, no binary follow-up
+					if err := conn.WriteJSON(resp); err != nil {
+						log.Printf("write: %v", err)
+						return nil
+					}
+				} else {
+					// Send JSON control + binary data atomically
+					if err := conn.WriteJSON(resp); err != nil {
+						log.Printf("write: %v", err)
+						return nil
+					}
+					if err := conn.WriteMessage(websocket.BinaryMessage, chunkData); err != nil {
+						log.Printf("write chunk: %v", err)
+						return nil
+					}
 				}
 			}
 		case pkg.TypeWriteChunk:

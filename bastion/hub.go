@@ -41,13 +41,20 @@ type Hub struct {
 	daemons map[string]*DaemonConn
 }
 
+// binaryResponse pairs a JSON control frame with an optional binary data frame.
+type binaryResponse struct {
+	JSON   json.RawMessage
+	Binary []byte
+}
+
 // DaemonConn is a single daemon WebSocket with request/response pairing.
 type DaemonConn struct {
 	DaemonID string
 	conn    *websocket.Conn
-	mu      sync.Mutex // guards pending map
+	mu      sync.Mutex // guards pending and pendingBinary maps
 	writeMu sync.Mutex // serializes WebSocket writes
-	pending map[string]chan json.RawMessage
+	pending       map[string]chan json.RawMessage
+	pendingBinary map[string]chan binaryResponse
 	done    chan struct{}
 }
 
@@ -57,10 +64,11 @@ func NewHub() *Hub {
 
 func (h *Hub) Register(daemonID string, conn *websocket.Conn) *DaemonConn {
 	ac := &DaemonConn{
-		DaemonID: daemonID,
-		conn:     conn,
-		pending:  make(map[string]chan json.RawMessage),
-		done:     make(chan struct{}),
+		DaemonID:      daemonID,
+		conn:          conn,
+		pending:       make(map[string]chan json.RawMessage),
+		pendingBinary: make(map[string]chan binaryResponse),
+		done:          make(chan struct{}),
 	}
 	h.mu.Lock()
 	if old, ok := h.daemons[daemonID]; ok {
@@ -96,6 +104,13 @@ func (ac *DaemonConn) close() {
 		}
 	}
 	ac.pending = nil
+	for _, ch := range ac.pendingBinary {
+		select {
+		case ch <- binaryResponse{}:
+		default:
+		}
+	}
+	ac.pendingBinary = nil
 	ac.mu.Unlock()
 	ac.conn.Close()
 	close(ac.done)
@@ -188,6 +203,48 @@ func (ac *DaemonConn) RequestWithBinary(ctx context.Context, requestID string, r
 	}
 }
 
+// RequestExpectBinary sends a JSON request and waits for a JSON control frame
+// followed by a binary data frame. Used for streaming downloads.
+func (ac *DaemonConn) RequestExpectBinary(ctx context.Context, requestID string, req interface{}) (json.RawMessage, []byte, error) {
+	if requestID == "" {
+		return nil, nil, errNoRequestID
+	}
+	data, err := json.Marshal(req)
+	if err != nil {
+		return nil, nil, err
+	}
+	ch := make(chan binaryResponse, 1)
+	ac.mu.Lock()
+	if ac.pendingBinary == nil {
+		ac.mu.Unlock()
+		return nil, nil, errConnClosed
+	}
+	ac.pendingBinary[requestID] = ch
+	ac.mu.Unlock()
+	defer func() {
+		ac.mu.Lock()
+		delete(ac.pendingBinary, requestID)
+		ac.mu.Unlock()
+	}()
+	ac.writeMu.Lock()
+	err = ac.conn.WriteMessage(websocket.TextMessage, data)
+	ac.writeMu.Unlock()
+	if err != nil {
+		return nil, nil, err
+	}
+	select {
+	case resp := <-ch:
+		if resp.JSON == nil {
+			return nil, nil, errConnClosed
+		}
+		return resp.JSON, resp.Binary, nil
+	case <-ctx.Done():
+		return nil, nil, ctx.Err()
+	case <-ac.done:
+		return nil, nil, errConnClosed
+	}
+}
+
 var errNoRequestID = fmt.Errorf("request_id required")
 var errConnClosed = fmt.Errorf("connection closed")
 
@@ -198,20 +255,46 @@ func (ac *DaemonConn) readLoop(hub *Hub) {
 		ac.close()
 	}()
 	for {
-		_, data, err := ac.conn.ReadMessage()
+		msgType, data, err := ac.conn.ReadMessage()
 		if err != nil {
 			return
 		}
+		if msgType == websocket.BinaryMessage {
+			// Unexpected standalone binary frame — skip
+			continue
+		}
 		var envelope struct {
 			RequestID string `json:"request_id"`
+			Error     string `json:"error,omitempty"`
 		}
 		if json.Unmarshal(data, &envelope) != nil {
 			continue
 		}
 		ac.mu.Lock()
+		bch := ac.pendingBinary[envelope.RequestID]
 		ch := ac.pending[envelope.RequestID]
 		ac.mu.Unlock()
-		if ch != nil {
+
+		if bch != nil {
+			// This request expects a binary follow-up frame
+			if envelope.Error != "" {
+				// Error response — no binary frame follows
+				select {
+				case bch <- binaryResponse{JSON: data}:
+				default:
+				}
+			} else {
+				// Read the binary data frame
+				_, binData, err := ac.conn.ReadMessage()
+				if err != nil {
+					return
+				}
+				select {
+				case bch <- binaryResponse{JSON: data, Binary: binData}:
+				default:
+				}
+			}
+		} else if ch != nil {
 			select {
 			case ch <- data:
 			default:

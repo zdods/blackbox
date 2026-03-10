@@ -125,7 +125,82 @@ func (s *Server) proxyListDir(ctx context.Context, w http.ResponseWriter, ac *Da
 	_ = json.NewEncoder(w).Encode(resp.Entries)
 }
 
+const downloadChunkSize = 5 * 1024 * 1024 // 5 MB
+
 func (s *Server) proxyReadFile(ctx context.Context, w http.ResponseWriter, ac *DaemonConn, path string) {
+	// Get file size first
+	metaReqID := uuid.New().String()
+	metaReq := pkg.GetMetaRequest{Type: pkg.TypeGetMeta, RequestID: metaReqID, Path: path}
+	metaData, err := ac.Request(ctx, metaReqID, metaReq)
+	if err != nil {
+		log.Printf("daemon read-file meta: %v", err)
+		writeJSONError(w, http.StatusBadGateway, errMsgUnavailable)
+		return
+	}
+	var meta pkg.GetMetaResponse
+	if json.Unmarshal(metaData, &meta) != nil {
+		writeJSONError(w, http.StatusBadGateway, "invalid response")
+		return
+	}
+	if meta.Error != "" {
+		log.Printf("daemon read-file meta error: %s", meta.Error)
+		writeJSONError(w, http.StatusBadRequest, "operation failed")
+		return
+	}
+	if meta.IsDir {
+		writeJSONError(w, http.StatusBadRequest, "cannot download a directory")
+		return
+	}
+
+	// Small files: use legacy single-request path (avoids overhead of chunked protocol)
+	if meta.Size <= int64(downloadChunkSize) {
+		s.proxyReadFileSmall(ctx, w, ac, path)
+		return
+	}
+
+	// Large files: stream via read_chunk with binary frames
+	w.Header().Set("Content-Disposition", "attachment")
+	w.Header().Set("Content-Length", strconv.FormatInt(meta.Size, 10))
+	flusher, _ := w.(http.Flusher)
+	var offset int64
+	for offset < meta.Size {
+		chunkSize := downloadChunkSize
+		if remaining := meta.Size - offset; remaining < int64(chunkSize) {
+			chunkSize = int(remaining)
+		}
+		chunkCtx, cancel := context.WithTimeout(ctx, chunkTimeout)
+		reqID := uuid.New().String()
+		req := pkg.ReadChunkRequest{
+			Type:      pkg.TypeReadChunk,
+			RequestID: reqID,
+			Path:      path,
+			Offset:    offset,
+			Size:      chunkSize,
+		}
+		respJSON, chunkData, err := ac.RequestExpectBinary(chunkCtx, reqID, req)
+		cancel()
+		if err != nil {
+			log.Printf("daemon read-chunk: %v", err)
+			return // headers already sent, can't write JSON error
+		}
+		var resp pkg.ReadChunkResponse
+		if json.Unmarshal(respJSON, &resp) != nil || resp.Error != "" {
+			if resp.Error != "" {
+				log.Printf("daemon read-chunk error: %s", resp.Error)
+			}
+			return
+		}
+		if _, err := w.Write(chunkData); err != nil {
+			return
+		}
+		if flusher != nil {
+			flusher.Flush()
+		}
+		offset += int64(len(chunkData))
+	}
+}
+
+func (s *Server) proxyReadFileSmall(ctx context.Context, w http.ResponseWriter, ac *DaemonConn, path string) {
 	reqID := uuid.New().String()
 	req := pkg.ReadFileRequest{Type: pkg.TypeReadFile, RequestID: reqID, Path: path}
 	respData, err := ac.Request(ctx, reqID, req)

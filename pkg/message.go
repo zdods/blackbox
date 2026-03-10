@@ -12,6 +12,7 @@ const (
 	TypeDeleteFile = "delete_file"
 	TypeGetDisk    = "get_disk"
 	TypeWriteChunk = "write_chunk"
+	TypeReadChunk  = "read_chunk"
 )
 
 // Auth is sent by daemon to bastion after WebSocket connect.
@@ -136,6 +137,23 @@ type WriteChunkResponse struct {
 	UploadID   string `json:"upload_id"`
 	ChunkIndex int    `json:"chunk_index"`
 	Error      string `json:"error,omitempty"`
+}
+
+// ReadChunkRequest is sent by bastion to daemon to read a chunk of a file.
+type ReadChunkRequest struct {
+	Type      string `json:"type"`       // "read_chunk"
+	RequestID string `json:"request_id"`
+	Path      string `json:"path"`
+	Offset    int64  `json:"offset"`
+	Size      int    `json:"size"` // requested chunk size in bytes
+}
+
+// ReadChunkResponse is a JSON control frame sent by daemon before a binary WebSocket frame containing chunk data.
+type ReadChunkResponse struct {
+	Type      string `json:"type"` // "read_chunk"
+	RequestID string `json:"request_id"`
+	ChunkSize int    `json:"chunk_size"` // actual bytes in following binary frame
+	Error     string `json:"error,omitempty"`
 }
 
 // GetDiskRequest is sent by bastion to daemon (disk stats for hosted root volume).
