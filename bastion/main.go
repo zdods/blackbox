@@ -44,6 +44,7 @@ func main() {
 	mux.HandleFunc("POST /api/register/totp-setup", srv.RegisterTOTPSetup)
 	mux.HandleFunc("POST /api/login", srv.Login)
 	mux.HandleFunc("POST /api/login/totp", srv.LoginTOTP)
+	mux.HandleFunc("POST /api/logout", srv.AuthMiddleware(srv.Logout))
 	// Protected (placeholder until step 5)
 	mux.HandleFunc("GET /api/me", srv.AuthMiddleware(srv.Me))
 	mux.HandleFunc("GET /api/daemons", srv.AuthMiddleware(srv.ListDaemons))
