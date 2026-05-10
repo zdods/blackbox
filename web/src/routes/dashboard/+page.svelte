@@ -99,7 +99,8 @@
     }
   }
 
-  function logout() {
+  async function logout() {
+    try { await apiFetch('/api/logout', { method: 'POST' }); } catch (_) {}
     clearToken();
     goto('/login');
   }

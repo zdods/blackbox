@@ -226,6 +226,19 @@ func (s *Server) LoginTOTP(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func (s *Server) Logout(w http.ResponseWriter, r *http.Request) {
+	http.SetCookie(w, &http.Cookie{
+		Name:     "session",
+		Value:    "",
+		Path:     "/",
+		MaxAge:   -1,
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
+		Secure:   s.cfg.TLSCertFile != "" && s.cfg.TLSKeyFile != "",
+	})
+	w.WriteHeader(http.StatusNoContent)
+}
+
 func (s *Server) AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		token := ""
