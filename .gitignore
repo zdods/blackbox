@@ -5,6 +5,7 @@
 !/bastion/**
 daemon/blackbox-daemon
 bastion/bastion
+web/bastion
 *.exe
 *.exe~
 *.dll
