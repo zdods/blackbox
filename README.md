@@ -2,6 +2,8 @@
 
 # blackbox
 
+[![CI](https://github.com/zdods/blackbox/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/zdods/blackbox/actions/workflows/ci.yml)
+
 Self-hosted, single-user cloud storage. Run a server, log in with username/password, and run daemons on your machines to expose directories. Browse, upload, and download from one place.
 
 **Requirements:** Go 1.22+, Node 20+ (for building blackbox-console), Docker (optional), Postgres. The daemon can be built for Linux, macOS, and Windows.
@@ -178,3 +180,7 @@ Then use **https://** for the console and **wss://** for daemons, e.g. `--bastio
 - [ ] Live daemon status via WebSocket push instead of polling
 - [ ] Daemon grouping to create volumes (combine multiple daemons into one logical volume)
 - [ ] Sharding files in a volume across daemons (distribute file storage across grouped daemons)
+
+## License
+
+[MIT](LICENSE)
