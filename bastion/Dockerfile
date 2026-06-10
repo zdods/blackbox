@@ -1,18 +1,23 @@
-# Stage 1: build web app
-FROM node:20-alpine AS web
+# Build stages run natively on the build host ($BUILDPLATFORM) and
+# cross-compile for the target — emulating Node/Go under QEMU for arm64 is
+# orders of magnitude slower. Only the tiny runtime stage runs emulated.
+
+# Stage 1: build web app (output is platform-independent static files)
+FROM --platform=$BUILDPLATFORM node:20-alpine AS web
 WORKDIR /app/web
 COPY web/package.json web/package-lock.json ./
 RUN npm ci
 COPY web/ ./
 RUN npm run build
 
-# Stage 2: build bastion binary
-FROM golang:1.25-alpine AS builder
+# Stage 2: cross-compile bastion binary for the target platform
+FROM --platform=$BUILDPLATFORM golang:1.25-alpine AS builder
+ARG TARGETOS TARGETARCH
 WORKDIR /app
 COPY go.mod go.sum ./
 COPY pkg/ pkg/
 COPY bastion/ bastion/
-RUN CGO_ENABLED=0 go build -o /bastion ./bastion
+RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -o /bastion ./bastion
 
 # Stage 3: runtime
 FROM alpine:3.21

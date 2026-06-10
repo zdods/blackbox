@@ -30,6 +30,14 @@ The **Hosts** view lists hosts and connection status; add a host with a label an
 docker compose up --build
 ```
 
+Or use the prebuilt multi-arch image (amd64/arm64) published to GHCR on every release tag:
+
+```bash
+docker pull ghcr.io/zdods/blackbox-bastion:0.0.1
+```
+
+Images are tagged `X.Y.Z`, `X.Y`, and `latest`, and ship with an SBOM and a signed build-provenance attestation (verify with `gh attestation verify oci://ghcr.io/zdods/blackbox-bastion:X.Y.Z --owner zdods`).
+
 Or use the Makefile / PowerShell script from the repo root:
 
 - **Start once:** `make up` (macOS/Linux) or `.\make.ps1 up` (Windows PowerShell).
