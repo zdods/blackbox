@@ -3,7 +3,7 @@
 # orders of magnitude slower. Only the tiny runtime stage runs emulated.
 
 # Stage 1: build web app (output is platform-independent static files)
-FROM --platform=$BUILDPLATFORM node:22-alpine AS web
+FROM --platform=$BUILDPLATFORM node:26-alpine AS web
 WORKDIR /app/web
 COPY web/package.json web/package-lock.json ./
 RUN npm ci
