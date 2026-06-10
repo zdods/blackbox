@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-06-10
+
+### Fixed
+
+- Homebrew cask publishing from the release pipeline (the v0.1.0 cask had
+  to be published manually due to a template bug in the tap token).
+
 ## [0.1.0] - 2026-06-10
 
 ### Added
@@ -56,6 +63,7 @@ console.
 - Compose binds Postgres to `127.0.0.1`; bastion container runs as
   non-root.
 
-[Unreleased]: https://github.com/zdods/blackbox/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/zdods/blackbox/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/zdods/blackbox/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/zdods/blackbox/compare/v0.0.1...v0.1.0
 [0.0.1]: https://github.com/zdods/blackbox/releases/tag/v0.0.1
