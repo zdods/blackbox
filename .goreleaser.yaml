@@ -68,12 +68,14 @@ release:
 # write on zdods/homebrew-tap) in this repo's Actions secrets.
 homebrew_casks:
   - name: blackbox-daemon
-    skip_upload: '{{ if envOrDefault "TAP_GITHUB_TOKEN" "" }}false{{ else }}true{{ end }}'
+    # NOTE: token is evaluated in env-only template mode — plain {{ .Env.X }}
+    # only, no template functions (envOrDefault broke the v0.1.0 release).
+    skip_upload: "{{ if .Env.TAP_GITHUB_TOKEN }}false{{ else }}true{{ end }}"
     repository:
       owner: zdods
       name: homebrew-tap
       branch: main
-      token: '{{ envOrDefault "TAP_GITHUB_TOKEN" "" }}'
+      token: "{{ .Env.TAP_GITHUB_TOKEN }}"
     homepage: https://github.com/zdods/blackbox
     description: Outbound-only file daemon for blackbox — browse your machines from a hosted console with zero network config
     commit_msg_template: "blackbox-daemon {{ .Tag }}"
