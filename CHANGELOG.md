@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-06-10
+
 ### Added
 
 - `--version` flag on both binaries; version embedded at build time
@@ -17,8 +19,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   checksums.
 - One-line daemon installer: `curl -fsSL https://raw.githubusercontent.com/zdods/blackbox/main/install.sh | sh`
   — detects OS/arch, verifies checksums, installs to `/usr/local/bin`.
-- Homebrew tap publishing for the daemon (`zdods/homebrew-tap`), wired into
-  the release pipeline.
+- Homebrew tap for the daemon: `brew install zdods/tap/blackbox-daemon`.
+- Security policy ([SECURITY.md](SECURITY.md)) with private vulnerability
+  reporting, plus contributor docs and issue/PR templates.
+
+### Security
+
+- Patched web console dependency advisories; bumped base images
+  (alpine 3.24, golang 1.26) and Go dependencies.
 
 ## [0.0.1] - 2026-06-09
 
@@ -48,5 +56,6 @@ console.
 - Compose binds Postgres to `127.0.0.1`; bastion container runs as
   non-root.
 
-[Unreleased]: https://github.com/zdods/blackbox/compare/v0.0.1...HEAD
+[Unreleased]: https://github.com/zdods/blackbox/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/zdods/blackbox/compare/v0.0.1...v0.1.0
 [0.0.1]: https://github.com/zdods/blackbox/releases/tag/v0.0.1
