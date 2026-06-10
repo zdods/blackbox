@@ -57,12 +57,26 @@ For production, set `JWT_SECRET` (e.g. in `.env`; generate one with `openssl ran
 
 ### 2. Run blackbox-daemon (on each host)
 
-The daemon runs on **Linux**, **macOS**, and **Windows**. Build the binary for your platform, then run it.
+The daemon runs on **Linux**, **macOS**, and **Windows**. Install a prebuilt binary (no Go toolchain needed):
+
+```bash
+# Linux / macOS — detects OS/arch, verifies checksums, installs to /usr/local/bin
+curl -fsSL https://raw.githubusercontent.com/zdods/blackbox/main/install.sh | sh
+
+# macOS (Homebrew)
+brew install zdods/tap/blackbox-daemon
+```
+
+On **Windows**, download the zip from the [latest release](https://github.com/zdods/blackbox/releases/latest) and see [packaging/windows/README.md](packaging/windows/README.md).
+
+Or build from source:
 
 | Platform | Build | Run |
 |----------|-------|-----|
 | **Linux / macOS** | `go build -o blackbox-daemon ./daemon` | `./blackbox-daemon` |
 | **Windows** | `go build -o blackbox-daemon.exe ./daemon` | `.\blackbox-daemon.exe` |
+
+Verify the install with `blackbox-daemon --version`.
 
 Without arguments the daemon starts an interactive setup (bastion URL, directory to serve, token). At the end it offers to save those values to a config file (`~/.blackbox-daemon` on Linux/macOS, `%USERPROFILE%\.blackbox-daemon` on Windows, permissions `0600`). On subsequent runs it reads the config automatically — no prompts needed.
 
