@@ -11,7 +11,7 @@ COPY web/ ./
 RUN npm run build
 
 # Stage 2: cross-compile bastion binary for the target platform
-FROM --platform=$BUILDPLATFORM golang:1.25-alpine AS builder
+FROM --platform=$BUILDPLATFORM golang:1.26-alpine AS builder
 ARG TARGETOS TARGETARCH
 WORKDIR /app
 COPY go.mod go.sum ./
