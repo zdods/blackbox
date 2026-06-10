@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"blackbox/pkg"
+	"blackbox/pkg/version"
 
 	"github.com/gorilla/websocket"
 	"github.com/zalando/go-keyring"
@@ -31,7 +32,13 @@ func main() {
 	token := flag.String("token", "", "blackbox daemon token (from blackbox-console)")
 	hostedPath := flag.String("hosted-path", "", "Root directory to expose (e.g. /path/to/dir or C:\\Users\\you\\files)")
 	configPath := flag.String("config", "", "Path to config file (default: ~/.blackbox-daemon)")
+	showVersion := flag.Bool("version", false, "Print version and exit")
 	flag.Parse()
+
+	if *showVersion {
+		fmt.Println("blackbox-daemon " + version.Version)
+		return
+	}
 
 	// Resolve config file path (expand ~ for both default and user-supplied paths)
 	cfgPath := *configPath

@@ -2,12 +2,16 @@ package main
 
 import (
 	"context"
+	"flag"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
+
+	"blackbox/pkg/version"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -22,6 +26,13 @@ type Server struct {
 }
 
 func main() {
+	showVersion := flag.Bool("version", false, "Print version and exit")
+	flag.Parse()
+	if *showVersion {
+		fmt.Println("blackbox-bastion " + version.Version)
+		return
+	}
+	log.Printf("blackbox-bastion %s", version.Version)
 	cfg := LoadConfig()
 	secret, warning, err := resolveJWTSecret(cfg.JWTSecret, cfg.DevMode)
 	if err != nil {
