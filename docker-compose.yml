@@ -6,7 +6,9 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       POSTGRES_DB: ${POSTGRES_DB:-blackbox}
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      # Bound to localhost: Postgres is reachable from the host for dev tooling
+      # but never exposed to the network.
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
@@ -32,7 +34,11 @@ services:
     environment:
       DATABASE_URL: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-blackbox}?sslmode=disable
       SERVER_ADDR: :8080
-      JWT_SECRET: ${JWT_SECRET:-dev-secret-change-in-production}
+      # Unset JWT_SECRET = random ephemeral secret (secure, but sessions reset
+      # on restart). Set JWT_SECRET in .env for production, or DEV_MODE=1 for a
+      # stable dev secret across rebuilds (make dev does this).
+      JWT_SECRET: ${JWT_SECRET:-}
+      DEV_MODE: ${DEV_MODE:-}
     ports:
       - "${BASTION_PORT:-8080}:8080"
     restart: unless-stopped

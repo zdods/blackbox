@@ -31,7 +31,7 @@ func TestHashPasswordUniqueness(t *testing.T) {
 
 func TestIssueAndValidateToken(t *testing.T) {
 	secret := "test-secret-key"
-	token, err := IssueToken("user-123", "alice", secret, time.Hour)
+	token, err := IssueToken("user-123", "alice", 3, secret, time.Hour)
 	if err != nil {
 		t.Fatalf("IssueToken: %v", err)
 	}
@@ -51,10 +51,13 @@ func TestIssueAndValidateToken(t *testing.T) {
 	if claims.Purpose != "" {
 		t.Errorf("Purpose = %q, want empty", claims.Purpose)
 	}
+	if claims.Ver != 3 {
+		t.Errorf("Ver = %d, want 3", claims.Ver)
+	}
 }
 
 func TestValidateTokenWrongSecret(t *testing.T) {
-	token, _ := IssueToken("user-123", "alice", "secret-a", time.Hour)
+	token, _ := IssueToken("user-123", "alice", 1, "secret-a", time.Hour)
 	_, err := ValidateToken(token, "secret-b")
 	if err == nil {
 		t.Error("ValidateToken should fail with wrong secret")
@@ -62,7 +65,7 @@ func TestValidateTokenWrongSecret(t *testing.T) {
 }
 
 func TestValidateTokenExpired(t *testing.T) {
-	token, _ := IssueToken("user-123", "alice", "secret", -time.Hour)
+	token, _ := IssueToken("user-123", "alice", 1, "secret", -time.Hour)
 	_, err := ValidateToken(token, "secret")
 	if err == nil {
 		t.Error("ValidateToken should fail with expired token")

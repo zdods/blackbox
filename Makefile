@@ -10,7 +10,7 @@ up:
 	docker compose up --build
 
 dev:
-	docker compose up --build --watch
+	DEV_MODE=1 docker compose up --build --watch
 
 test:
 	go test ./bastion/ ./daemon/ ./pkg/...

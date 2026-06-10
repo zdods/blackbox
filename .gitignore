@@ -46,3 +46,4 @@ docker-compose.override.yml
 
 # dev
 PLAN.md
+GTM.md

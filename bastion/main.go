@@ -7,22 +7,30 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type Server struct {
-	pool      *pgxpool.Pool
-	cfg       Config
-	hub       *Hub
-	totpCache *TotpSetupCache
+	pool            *pgxpool.Pool
+	cfg             Config
+	hub             *Hub
+	totpCache       *TotpSetupCache
+	authLimiter     *RateLimiter // per-IP gate on auth endpoints
+	totpFailLimiter *RateLimiter // per-user lockout on failed TOTP codes
 }
 
 func main() {
 	cfg := LoadConfig()
-	if cfg.JWTSecret == "dev-secret-change-in-production" {
-		log.Printf("warning: JWT_SECRET is default; set JWT_SECRET in production")
+	secret, warning, err := resolveJWTSecret(cfg.JWTSecret, cfg.DevMode)
+	if err != nil {
+		log.Fatalf("jwt secret: %v", err)
 	}
+	if warning != "" {
+		log.Printf("warning: %s", warning)
+	}
+	cfg.JWTSecret = secret
 	ctx := context.Background()
 	pool, err := OpenDB(ctx, cfg.DatabaseURL)
 	if err != nil {
@@ -36,8 +44,17 @@ func main() {
 	log.Print("migrations applied")
 	hub := NewHub()
 	totpCache := NewTotpSetupCache()
-	srv := &Server{pool: pool, cfg: cfg, hub: hub, totpCache: totpCache}
+	srv := &Server{
+		pool:            pool,
+		cfg:             cfg,
+		hub:             hub,
+		totpCache:       totpCache,
+		authLimiter:     NewRateLimiter(10, time.Minute),
+		totpFailLimiter: NewRateLimiter(5, 15*time.Minute),
+	}
 	mux := http.NewServeMux()
+	// Health (public; used by Docker HEALTHCHECK and uptime monitors)
+	mux.HandleFunc("GET /healthz", srv.Healthz)
 	// Auth (public)
 	mux.HandleFunc("GET /api/setup", srv.Setup)
 	mux.HandleFunc("POST /api/register", srv.Register)
@@ -82,6 +99,18 @@ func main() {
 	} else {
 		log.Print("server stopped")
 	}
+}
+
+// Healthz reports liveness: 200 when the server is up and the DB responds.
+func (s *Server) Healthz(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
+	defer cancel()
+	if err := s.pool.Ping(ctx); err != nil {
+		writeJSONError(w, http.StatusServiceUnavailable, "database unreachable")
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	_, _ = w.Write([]byte(`{"status":"ok"}`))
 }
 
 func corsThenMux(cfg Config, mux http.Handler) http.Handler {

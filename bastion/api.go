@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
 	"net/http"
@@ -118,8 +119,8 @@ func (s *Server) CreateDaemon(w http.ResponseWriter, r *http.Request) {
 	}
 	var id string
 	err = s.pool.QueryRow(r.Context(),
-		`INSERT INTO daemons (label, token, hosted_path) VALUES ($1, $2, $3) RETURNING id::text`,
-		req.Label, token, hostedPath,
+		`INSERT INTO daemons (label, token_hash, hosted_path) VALUES ($1, $2, $3) RETURNING id::text`,
+		req.Label, HashDaemonToken(token), hostedPath,
 	).Scan(&id)
 	if err != nil {
 		writeJSONError(w, http.StatusInternalServerError, "internal error")
@@ -192,4 +193,12 @@ func generateDaemonToken() (string, error) {
 		return "", err
 	}
 	return base64.RawURLEncoding.EncodeToString(b), nil
+}
+
+// HashDaemonToken hashes a daemon token for at-rest storage. SHA-256 is
+// sufficient (no bcrypt needed): tokens carry 32 bytes of entropy, so
+// brute-forcing the hash is infeasible.
+func HashDaemonToken(token string) string {
+	sum := sha256.Sum256([]byte(token))
+	return base64.RawURLEncoding.EncodeToString(sum[:])
 }

@@ -7,7 +7,7 @@ import (
 
 func TestLoadConfigDefaults(t *testing.T) {
 	// Clear env vars that would override defaults
-	for _, key := range []string{"DATABASE_URL", "SERVER_ADDR", "JWT_SECRET", "STATIC_DIR", "TLS_CERT_FILE", "TLS_KEY_FILE", "CORS_ORIGIN"} {
+	for _, key := range []string{"DATABASE_URL", "SERVER_ADDR", "JWT_SECRET", "STATIC_DIR", "TLS_CERT_FILE", "TLS_KEY_FILE", "CORS_ORIGIN", "DEV_MODE", "TRUST_PROXY"} {
 		t.Setenv(key, "")
 	}
 
@@ -19,8 +19,11 @@ func TestLoadConfigDefaults(t *testing.T) {
 	if cfg.ServerAddr != ":8080" {
 		t.Errorf("ServerAddr = %q", cfg.ServerAddr)
 	}
-	if cfg.JWTSecret != "dev-secret-change-in-production" {
-		t.Errorf("JWTSecret = %q", cfg.JWTSecret)
+	if cfg.JWTSecret != "" {
+		t.Errorf("JWTSecret = %q, want empty (resolved at startup)", cfg.JWTSecret)
+	}
+	if cfg.DevMode || cfg.TrustProxy {
+		t.Errorf("DevMode = %v, TrustProxy = %v, want false", cfg.DevMode, cfg.TrustProxy)
 	}
 	if cfg.StaticDir != "" {
 		t.Errorf("StaticDir = %q, want empty", cfg.StaticDir)
@@ -69,5 +72,54 @@ func TestLoadConfigFromEnv(t *testing.T) {
 	}
 	if cfg.CORSOrigin != "https://myapp.com" {
 		t.Errorf("CORSOrigin = %q", cfg.CORSOrigin)
+	}
+}
+
+func TestResolveJWTSecretExplicit(t *testing.T) {
+	secret, warning, err := resolveJWTSecret("real-production-secret", false)
+	if err != nil {
+		t.Fatalf("resolveJWTSecret: %v", err)
+	}
+	if secret != "real-production-secret" {
+		t.Errorf("secret = %q, want explicit secret unchanged", secret)
+	}
+	if warning != "" {
+		t.Errorf("warning = %q, want empty", warning)
+	}
+}
+
+func TestResolveJWTSecretDevMode(t *testing.T) {
+	for _, in := range []string{"", devJWTSecret} {
+		secret, warning, err := resolveJWTSecret(in, true)
+		if err != nil {
+			t.Fatalf("resolveJWTSecret(%q): %v", in, err)
+		}
+		if secret != devJWTSecret {
+			t.Errorf("secret = %q, want dev secret in DEV_MODE", secret)
+		}
+		if warning == "" {
+			t.Error("DEV_MODE should produce a warning")
+		}
+	}
+}
+
+func TestResolveJWTSecretEphemeral(t *testing.T) {
+	// Unset or default secret outside DEV_MODE must never be used as-is.
+	for _, in := range []string{"", devJWTSecret} {
+		secret, warning, err := resolveJWTSecret(in, false)
+		if err != nil {
+			t.Fatalf("resolveJWTSecret(%q): %v", in, err)
+		}
+		if secret == "" || secret == devJWTSecret {
+			t.Errorf("secret = %q, want random ephemeral secret", secret)
+		}
+		if warning == "" {
+			t.Error("ephemeral secret should produce a warning")
+		}
+	}
+	a, _, _ := resolveJWTSecret("", false)
+	b, _, _ := resolveJWTSecret("", false)
+	if a == b {
+		t.Error("ephemeral secrets should be random, got identical values")
 	}
 }

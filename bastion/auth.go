@@ -14,6 +14,7 @@ type User struct {
 	Username     string
 	PasswordHash string
 	TotpSecret   string
+	TokenVersion int
 }
 
 type SessionClaims struct {
@@ -21,6 +22,7 @@ type SessionClaims struct {
 	UserID   string `json:"user_id"`
 	Username string `json:"username"`
 	Purpose  string `json:"purpose,omitempty"` // "totp_challenge" for login 2FA step
+	Ver      int    `json:"ver,omitempty"`     // user's token_version at issue time; mismatch = revoked
 }
 
 func HashPassword(password string) (string, error) {
@@ -79,9 +81,9 @@ func HasAnyUser(ctx context.Context, pool *pgxpool.Pool) (bool, error) {
 func GetUserByUsername(ctx context.Context, pool *pgxpool.Pool, username string) (*User, error) {
 	var u User
 	err := pool.QueryRow(ctx,
-		`SELECT id, username, password_hash, COALESCE(totp_secret, '') FROM users WHERE username = $1`,
+		`SELECT id, username, password_hash, COALESCE(totp_secret, ''), token_version FROM users WHERE username = $1`,
 		username,
-	).Scan(&u.ID, &u.Username, &u.PasswordHash, &u.TotpSecret)
+	).Scan(&u.ID, &u.Username, &u.PasswordHash, &u.TotpSecret, &u.TokenVersion)
 	if err != nil {
 		return nil, err
 	}
@@ -91,16 +93,29 @@ func GetUserByUsername(ctx context.Context, pool *pgxpool.Pool, username string)
 func GetUserByID(ctx context.Context, pool *pgxpool.Pool, userID string) (*User, error) {
 	var u User
 	err := pool.QueryRow(ctx,
-		`SELECT id, username, password_hash, COALESCE(totp_secret, '') FROM users WHERE id = $1`,
+		`SELECT id, username, password_hash, COALESCE(totp_secret, ''), token_version FROM users WHERE id = $1`,
 		userID,
-	).Scan(&u.ID, &u.Username, &u.PasswordHash, &u.TotpSecret)
+	).Scan(&u.ID, &u.Username, &u.PasswordHash, &u.TotpSecret, &u.TokenVersion)
 	if err != nil {
 		return nil, err
 	}
 	return &u, nil
 }
 
-func IssueToken(userID, username, jwtSecret string, expiresIn time.Duration) (string, error) {
+// GetTokenVersion returns the user's current token_version (for session validation).
+func GetTokenVersion(ctx context.Context, pool *pgxpool.Pool, userID string) (int, error) {
+	var v int
+	err := pool.QueryRow(ctx, `SELECT token_version FROM users WHERE id = $1`, userID).Scan(&v)
+	return v, err
+}
+
+// BumpTokenVersion invalidates all outstanding session tokens for the user.
+func BumpTokenVersion(ctx context.Context, pool *pgxpool.Pool, userID string) error {
+	_, err := pool.Exec(ctx, `UPDATE users SET token_version = token_version + 1 WHERE id = $1`, userID)
+	return err
+}
+
+func IssueToken(userID, username string, tokenVersion int, jwtSecret string, expiresIn time.Duration) (string, error) {
 	claims := SessionClaims{
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(expiresIn)),
@@ -108,6 +123,7 @@ func IssueToken(userID, username, jwtSecret string, expiresIn time.Duration) (st
 		},
 		UserID:   userID,
 		Username: username,
+		Ver:      tokenVersion,
 	}
 	t := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return t.SignedString([]byte(jwtSecret))

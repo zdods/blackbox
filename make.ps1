@@ -21,6 +21,7 @@ switch ($Target) {
         docker compose up --build
     }
     "dev" {
+        $env:DEV_MODE = "1"
         docker compose up --build --watch
     }
 }

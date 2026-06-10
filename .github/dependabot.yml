@@ -9,9 +9,17 @@ updates:
         patterns: ["*"]
 
   - package-ecosystem: docker
-    directory: "/"
+    directory: "/bastion"
     schedule:
       interval: weekly
+
+  - package-ecosystem: npm
+    directory: "/web"
+    schedule:
+      interval: weekly
+    groups:
+      npm-deps:
+        patterns: ["*"]
 
   - package-ecosystem: github-actions
     directory: "/"

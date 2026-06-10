@@ -17,6 +17,17 @@ const sessionExpiry = 24 * time.Hour
 const errMsgAuthFailed = "invalid credentials"
 const errMsgBadRequest = "invalid request"
 const errMsgUnavailable = "unavailable"
+const errMsgRateLimited = "too many attempts, try again later"
+
+// rateLimitAuth gates an auth endpoint by client IP. Returns false (and writes
+// 429) when the caller is over the limit.
+func (s *Server) rateLimitAuth(w http.ResponseWriter, r *http.Request) bool {
+	if s.authLimiter.Allow(clientIP(r, s.cfg.TrustProxy)) {
+		return true
+	}
+	writeJSONError(w, http.StatusTooManyRequests, errMsgRateLimited)
+	return false
+}
 
 // writeJSONError sends a JSON error response {"error": "message"} with the given status code.
 func writeJSONError(w http.ResponseWriter, code int, message string) {
@@ -39,6 +50,9 @@ func (s *Server) Setup(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) Register(w http.ResponseWriter, r *http.Request) {
+	if !s.rateLimitAuth(w, r) {
+		return
+	}
 	ctx := r.Context()
 	hasUser, err := HasAnyUser(ctx, s.pool)
 	if err != nil {
@@ -87,6 +101,9 @@ func (s *Server) Register(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) RegisterTOTPSetup(w http.ResponseWriter, r *http.Request) {
+	if !s.rateLimitAuth(w, r) {
+		return
+	}
 	hasUser, err := HasAnyUser(r.Context(), s.pool)
 	if err != nil {
 		writeJSONError(w, http.StatusInternalServerError, "internal error")
@@ -116,6 +133,9 @@ func isDuplicate(err error) bool {
 }
 
 func (s *Server) Login(w http.ResponseWriter, r *http.Request) {
+	if !s.rateLimitAuth(w, r) {
+		return
+	}
 	var req struct {
 		Username string `json:"username"`
 		Password string `json:"password"`
@@ -151,28 +171,24 @@ func (s *Server) Login(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-	token, err := IssueToken(user.ID, user.Username, s.cfg.JWTSecret, sessionExpiry)
+	token, err := IssueToken(user.ID, user.Username, user.TokenVersion, s.cfg.JWTSecret, sessionExpiry)
 	if err != nil {
 		writeJSONError(w, http.StatusInternalServerError, "internal error")
 		return
 	}
-	http.SetCookie(w, &http.Cookie{
-		Name:     "session",
-		Value:    token,
-		Path:     "/",
-		MaxAge:   int(sessionExpiry.Seconds()),
-		HttpOnly: true,
-		SameSite: http.SameSiteLaxMode,
-		Secure:   s.cfg.TLSCertFile != "" && s.cfg.TLSKeyFile != "",
-	})
+	s.setSessionCookie(w, token)
+	w.Header().Set("Content-Type", "application/json")
+	// Session token travels only in the httpOnly cookie, never the body.
 	_ = json.NewEncoder(w).Encode(map[string]string{
-		"token":   token,
-		"user_id": user.ID,
+		"user_id":  user.ID,
 		"username": user.Username,
 	})
 }
 
 func (s *Server) LoginTOTP(w http.ResponseWriter, r *http.Request) {
+	if !s.rateLimitAuth(w, r) {
+		return
+	}
 	var req struct {
 		LoginToken string `json:"login_token"`
 		Code      string `json:"code"`
@@ -200,15 +216,33 @@ func (s *Server) LoginTOTP(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusUnauthorized, errMsgAuthFailed)
 		return
 	}
+	// Lock out brute-forced 6-digit codes: a few failures per account, then 429.
+	if s.totpFailLimiter.Blocked(user.ID) {
+		writeJSONError(w, http.StatusTooManyRequests, errMsgRateLimited)
+		return
+	}
 	if user.TotpSecret == "" || !ValidateTOTP(req.Code, user.TotpSecret) {
+		s.totpFailLimiter.Record(user.ID)
 		writeJSONError(w, http.StatusUnauthorized, errMsgAuthFailed)
 		return
 	}
-	token, err := IssueToken(user.ID, user.Username, s.cfg.JWTSecret, sessionExpiry)
+	s.totpFailLimiter.Reset(user.ID)
+	token, err := IssueToken(user.ID, user.Username, user.TokenVersion, s.cfg.JWTSecret, sessionExpiry)
 	if err != nil {
 		writeJSONError(w, http.StatusInternalServerError, "internal error")
 		return
 	}
+	s.setSessionCookie(w, token)
+	w.Header().Set("Content-Type", "application/json")
+	// Session token travels only in the httpOnly cookie, never the body.
+	_ = json.NewEncoder(w).Encode(map[string]string{
+		"user_id":  user.ID,
+		"username": user.Username,
+	})
+}
+
+// setSessionCookie attaches the session JWT as an httpOnly cookie.
+func (s *Server) setSessionCookie(w http.ResponseWriter, token string) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     "session",
 		Value:    token,
@@ -218,15 +252,17 @@ func (s *Server) LoginTOTP(w http.ResponseWriter, r *http.Request) {
 		SameSite: http.SameSiteLaxMode,
 		Secure:   s.cfg.TLSCertFile != "" && s.cfg.TLSKeyFile != "",
 	})
-	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(map[string]string{
-		"token":   token,
-		"user_id": user.ID,
-		"username": user.Username,
-	})
 }
 
 func (s *Server) Logout(w http.ResponseWriter, r *http.Request) {
+	// Bump token_version so every outstanding JWT for this user is revoked,
+	// not just the cookie we clear below.
+	if claims := ClaimsFromContext(r.Context()); claims != nil {
+		if err := BumpTokenVersion(r.Context(), s.pool, claims.UserID); err != nil {
+			writeJSONError(w, http.StatusInternalServerError, "internal error")
+			return
+		}
+	}
 	http.SetCookie(w, &http.Cookie{
 		Name:     "session",
 		Value:    "",
@@ -261,6 +297,12 @@ func (s *Server) AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 		}
 		// Reject tokens that are not full session tokens (e.g. login_token with purpose totp_challenge).
 		if claims.Purpose != "" {
+			writeJSONError(w, http.StatusUnauthorized, "unauthorized")
+			return
+		}
+		// Reject revoked tokens: version must match the user's current token_version.
+		ver, err := GetTokenVersion(r.Context(), s.pool, claims.UserID)
+		if err != nil || claims.Ver != ver {
 			writeJSONError(w, http.StatusUnauthorized, "unauthorized")
 			return
 		}

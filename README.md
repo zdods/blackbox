@@ -42,7 +42,7 @@ Or use the Makefile / PowerShell script from the repo root:
 - Register once at http://localhost:8080/register  
 - Log in, add a host (label); the daemon token is copied to your clipboard automatically.
 
-For production, set `JWT_SECRET` (e.g. in `.env`). Ports, Postgres credentials, and other options can be overridden via environment variables; see [.env.example](.env.example).
+For production, set `JWT_SECRET` (e.g. in `.env`; generate one with `openssl rand -base64 32`). If unset, the server generates a random ephemeral secret at startup — secure by default, but all sessions reset on restart. Ports, Postgres credentials, and other options can be overridden via environment variables; see [.env.example](.env.example).
 
 ### 2. Run blackbox-daemon (on each host)
 
@@ -172,7 +172,7 @@ Then use **https://** for the console and **wss://** for daemons, e.g. `--bastio
 - [ ] File preview for common types (images, text, PDFs) in the browser
 - [ ] Batch operations (multi-select delete, download, move)
 - [ ] Folder upload (upload entire directory trees)
-- [ ] Rate limiting on auth endpoints
+- [x] Rate limiting on auth endpoints
 - [ ] Audit logging (who accessed which host/path when)
 - [ ] Daemon heartbeat/health checks
 - [ ] Graceful daemon shutdown (signal handling, in-progress upload protection)

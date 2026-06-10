@@ -35,7 +35,7 @@ func (s *Server) HandleDaemonWS(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var daemonID string
-	err = s.pool.QueryRow(r.Context(), `SELECT id::text FROM daemons WHERE token = $1`, auth.Token).Scan(&daemonID)
+	err = s.pool.QueryRow(r.Context(), `SELECT id::text FROM daemons WHERE token_hash = $1`, HashDaemonToken(auth.Token)).Scan(&daemonID)
 	if err != nil {
 		if err := conn.WriteJSON(pkg.AuthError{Type: pkg.TypeAuthError, Error: "invalid token"}); err != nil {
 			log.Printf("daemon ws: write auth error: %v", err)
