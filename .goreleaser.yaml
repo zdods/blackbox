@@ -1,0 +1,87 @@
+# GoReleaser v2 — releases the daemon binaries on semver tags.
+# The bastion ships as a Docker image (see .github/workflows/release.yml);
+# only the daemon needs prebuilt binaries, since it runs on end-user machines.
+version: 2
+
+project_name: blackbox
+
+builds:
+  - id: blackbox-daemon
+    main: ./daemon
+    binary: blackbox-daemon
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w -X blackbox/pkg/version.Version=v{{ .Version }}
+    mod_timestamp: "{{ .CommitTimestamp }}"
+
+archives:
+  - ids:
+      - blackbox-daemon
+    name_template: "blackbox-daemon_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    formats:
+      - tar.gz
+    format_overrides:
+      - goos: windows
+        formats:
+          - zip
+    files:
+      - LICENSE
+      - packaging/systemd/blackbox-daemon.service
+      - packaging/launchd/io.github.blackbox.daemon.plist
+      - packaging/windows/README.md
+
+checksum:
+  name_template: checksums.txt
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^chore\\(deps\\):"
+      - "^docs:"
+  groups:
+    - title: Features
+      regexp: "^feat"
+      order: 0
+    - title: Fixes
+      regexp: "^fix"
+      order: 1
+    - title: Other
+      order: 999
+
+release:
+  footer: |
+    ---
+    **Server image:** `docker pull ghcr.io/zdods/blackbox-bastion:{{ .Version }}`
+    **Daemon install:** `curl -fsSL https://raw.githubusercontent.com/zdods/blackbox/main/install.sh | sh`
+
+# Homebrew tap (macOS). Skipped automatically until the tap repo + token
+# exist: set the TAP_GITHUB_TOKEN secret (a fine-grained PAT with contents
+# write on zdods/homebrew-tap) in this repo's Actions secrets.
+homebrew_casks:
+  - name: blackbox-daemon
+    skip_upload: '{{ if envOrDefault "TAP_GITHUB_TOKEN" "" }}false{{ else }}true{{ end }}'
+    repository:
+      owner: zdods
+      name: homebrew-tap
+      branch: main
+      token: '{{ envOrDefault "TAP_GITHUB_TOKEN" "" }}'
+    homepage: https://github.com/zdods/blackbox
+    description: Outbound-only file daemon for blackbox — browse your machines from a hosted console with zero network config
+    commit_msg_template: "blackbox-daemon {{ .Tag }}"
+    # The binaries are not signed/notarized; strip the quarantine flag so
+    # Gatekeeper does not block them (recommended by GoReleaser docs).
+    hooks:
+      post:
+        install: |
+          if system_command("/usr/bin/xattr", args: ["-h"]).exit_status == 0
+            system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/blackbox-daemon"]
+          end

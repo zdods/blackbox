@@ -15,6 +15,9 @@ web/bastion
 # Go
 /vendor/
 
+# GoReleaser output
+/dist/
+
 # Node / SvelteKit
 web/node_modules/
 web/build/
