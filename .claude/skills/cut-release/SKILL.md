@@ -1,13 +1,19 @@
 ---
 name: cut-release
-description: Propose and cut a new release. Reviews all changes between the latest semver tag and main, decides whether they warrant a release, proposes the next version per semver + conventional commits, and on approval tags and pushes (which triggers the Docker image release workflow). Use when the user asks to cut/prepare/propose a release or asks "should we release?"
+description: Propose and cut a new release. Reviews all changes between the latest semver tag and main, decides whether they warrant a release, proposes the next version per semver + conventional commits, rolls the CHANGELOG, and on approval tags and pushes (which triggers the image + daemon-binary release workflow). Use when the user asks to cut/prepare/propose a release or asks "should we release?"
 ---
 
 # Cut a release
 
 Releases are driven by semver git tags (`vX.Y.Z`). Pushing a tag triggers
-`.github/workflows/release.yml`, which builds and pushes the multi-arch
-bastion image to `ghcr.io/<owner>/blackbox-bastion` with SBOM + provenance.
+`.github/workflows/release.yml`, which:
+
+- builds and pushes the multi-arch bastion image to
+  `ghcr.io/<owner>/blackbox-bastion` with SBOM + provenance, and
+- runs **GoReleaser** (`.goreleaser.yaml`): daemon binaries for
+  linux/darwin/windows × amd64/arm64, archives + `checksums.txt` attached to
+  a **GitHub Release it creates itself**, and a Homebrew cask pushed to
+  `zdods/homebrew-tap` (auto-skipped when `TAP_GITHUB_TOKEN` is unset).
 
 ## 1. Establish the range
 
@@ -53,30 +59,61 @@ Present to the user:
 **Stop and get explicit approval before tagging.** Never tag or push
 without it.
 
-## 4. Cut it (after approval)
+## 4. Roll the CHANGELOG (after approval, before tagging)
+
+`CHANGELOG.md` (keep-a-changelog) must be rolled **before** the tag so the
+release commit ships with an accurate changelog:
+
+1. Cross-check `[Unreleased]` against the commit range — add any
+   user-visible change that's missing (contributors sometimes forget;
+   the PR template asks but doesn't enforce).
+2. Rename `[Unreleased]` to `[X.Y.Z] - YYYY-MM-DD` and add a fresh, empty
+   `[Unreleased]` section above it.
+3. Update the link references at the bottom (`[Unreleased]: …compare/vX.Y.Z...HEAD`
+   and the new version's compare/tag link).
+4. Commit and push:
 
 ```bash
-git tag -a vX.Y.Z -m "vX.Y.Z" <sha-of-origin-main>
+git add CHANGELOG.md
+git commit -m "docs: roll changelog for vX.Y.Z"
+git push origin main
+```
+
+The tag goes on this commit.
+
+## 5. Cut it
+
+```bash
+git tag -a vX.Y.Z -m "vX.Y.Z" <sha-of-changelog-commit-on-origin-main>
 git push origin vX.Y.Z
 ```
 
-Then watch the release workflow and confirm the image landed:
+Then watch the workflow and verify **both** jobs' artifacts:
 
 ```bash
 gh run watch --exit-status $(gh run list --workflow=release.yml --limit 1 --json databaseId --jq '.[0].databaseId')
-docker pull ghcr.io/<owner>/blackbox-bastion:X.Y.Z   # spot-check (or inspect via gh api)
+
+# Image landed
+docker pull ghcr.io/<owner>/blackbox-bastion:X.Y.Z   # or inspect via gh api
+
+# Release assets: 4 tar.gz + 2 zip + checksums.txt
+gh release view vX.Y.Z --json assets --jq '.assets[].name'
+
+# Cask updated (only if TAP_GITHUB_TOKEN is configured)
+gh api repos/<owner>/homebrew-tap/contents/Casks/blackbox-daemon.rb --jq '.size' 2>/dev/null
 ```
 
 If the workflow fails, report the failure and do NOT delete/re-push the tag
 until the user decides; a moved tag breaks anyone who already fetched it.
 
-## 5. GitHub Release notes
+## 6. Release notes
 
-Offer to create a GitHub Release with the grouped changelog from step 3:
+GoReleaser **creates the GitHub Release itself** with commit-grouped notes
+and a footer (image pull + installer one-liner) — do **not** `gh release
+create`. Offer to polish the generated notes instead, e.g. prepend the
+curated changelog section from step 4:
 
 ```bash
-gh release create vX.Y.Z --title "vX.Y.Z" --notes "<grouped changelog>"
+gh release view vX.Y.Z --json body --jq .body   # inspect
+gh release edit vX.Y.Z --notes "<improved notes>"
 ```
-
-Mention the published image (`ghcr.io/<owner>/blackbox-bastion:X.Y.Z`) in
-the notes.

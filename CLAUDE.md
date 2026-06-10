@@ -62,6 +62,15 @@ Use Conventional Commits: `<type>(<scope>): <short description>`
 - Max ~72 characters for subject line
 - Optional body (wrap at 72 chars) explaining what and why
 
+## Changelog
+
+`CHANGELOG.md` follows [keep-a-changelog](https://keepachangelog.com). When a
+change is **user-visible** (feature, fix, security, behavior change), add an
+entry under `[Unreleased]` in the same commit/PR. Internal-only changes
+(refactors, CI, deps, docs) don't get entries. At release time the
+`cut-release` skill (`.claude/skills/cut-release/`) rolls `[Unreleased]` into
+the new version section before tagging — never tag with stale changelog.
+
 ## Dev workflow
 
 ```bash
