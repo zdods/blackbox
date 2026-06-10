@@ -19,7 +19,7 @@
     "qrcode": "^1.5.4"
   },
   "optionalDependencies": {
-    "@rollup/rollup-linux-arm64-musl": "4.59.0"
+    "@rollup/rollup-linux-arm64-musl": "4.61.1"
   },
   "overrides": {
     "cookie": "^0.7.0"
