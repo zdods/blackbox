@@ -10,15 +10,15 @@
   },
   "devDependencies": {
     "@sveltejs/adapter-static": "^3.0.1",
-    "@sveltejs/kit": "^2.0.0",
-    "@sveltejs/vite-plugin-svelte": "^7.0.0",
-    "svelte": "^5.55.1",
-    "vite": "^8.0.8"
+    "@sveltejs/kit": "^2.64.0",
+    "@sveltejs/vite-plugin-svelte": "^7.1.2",
+    "svelte": "^5.56.3",
+    "vite": "^8.0.16"
   },
   "dependencies": {
     "qrcode": "^1.5.4"
   },
   "optionalDependencies": {
-    "@rollup/rollup-linux-arm64-musl": "4.59.0"
+    "@rollup/rollup-linux-arm64-musl": "4.61.1"
   }
 }
