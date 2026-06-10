@@ -20,7 +20,7 @@ COPY bastion/ bastion/
 RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -o /bastion ./bastion
 
 # Stage 3: runtime
-FROM alpine:3.21
+FROM alpine:3.24
 RUN apk add --no-cache ca-certificates && adduser -D -H blackbox
 WORKDIR /app
 COPY --from=builder /bastion .
