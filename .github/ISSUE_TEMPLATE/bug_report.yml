@@ -1,0 +1,58 @@
+name: Bug report
+description: Something doesn't work the way it should
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report! **Security issues:** please do not file them here —
+        see [SECURITY.md](https://github.com/zdods/blackbox/blob/main/SECURITY.md)
+        for private reporting.
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      options:
+        - bastion (server)
+        - daemon
+        - web console
+        - install script / packaging
+        - not sure
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Output of `blackbox-daemon --version` / the bastion image tag, or the commit SHA for source builds.
+      placeholder: v0.1.0
+    validations:
+      required: true
+  - type: input
+    id: platform
+    attributes:
+      label: Platform
+      description: OS and architecture, and how blackbox is deployed.
+      placeholder: e.g. daemon on macOS 15 (arm64), bastion via docker compose on Debian 12
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What you did, what you expected, and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. ...
+        2. ...
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs
+      description: Bastion/daemon log output around the failure. Redact tokens and hostnames as needed — this will be public.
+      render: text
