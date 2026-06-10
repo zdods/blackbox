@@ -12,6 +12,11 @@ updates:
     directory: "/bastion"
     schedule:
       interval: weekly
+    ignore:
+      # Node majors are pinned via .nvmrc and bumped deliberately across
+      # .nvmrc, CI, and this Dockerfile at once — not by dependabot.
+      - dependency-name: "node"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: npm
     directory: "/web"
