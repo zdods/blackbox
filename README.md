@@ -3,6 +3,9 @@
 # blackbox
 
 [![CI](https://github.com/zdods/blackbox/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/zdods/blackbox/actions/workflows/ci.yml)
+[![Dependencies](https://github.com/zdods/blackbox/actions/workflows/deps.yml/badge.svg?branch=main)](https://github.com/zdods/blackbox/actions/workflows/deps.yml)
+[![Image Build](https://github.com/zdods/blackbox/actions/workflows/image.yml/badge.svg?branch=main)](https://github.com/zdods/blackbox/actions/workflows/image.yml)
+[![Release](https://github.com/zdods/blackbox/actions/workflows/release.yml/badge.svg)](https://github.com/zdods/blackbox/releases/latest)
 
 Self-hosted, single-user cloud storage. Run a server, log in with username/password, and run daemons on your machines to expose directories. Browse, upload, and download from one place.
 
