@@ -7,6 +7,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"net/http"
+	"sync"
 	"time"
 
 	"blackbox/pkg"
@@ -52,19 +53,29 @@ func (s *Server) ListDaemons(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		connected := s.hub.Connected(id)
-		row := daemonRow{ID: id, Label: label, HostedPath: hostedPath, Connected: connected}
-		if connected {
-			if free, total := s.getDaemonDisk(r.Context(), id); free >= 0 && total >= 0 {
-				row.DiskFree = &free
-				row.DiskTotal = &total
-			}
-		}
-		list = append(list, row)
+		list = append(list, daemonRow{ID: id, Label: label, HostedPath: hostedPath, Connected: connected})
 	}
 	if err := rows.Err(); err != nil {
 		writeJSONError(w, http.StatusInternalServerError, "internal error")
 		return
 	}
+	// Fan out disk-stat requests concurrently: done serially, each connected
+	// daemon adds a full round-trip (up to 2s on timeout) to the response.
+	var wg sync.WaitGroup
+	for i := range list {
+		if !list[i].Connected {
+			continue
+		}
+		wg.Add(1)
+		go func(row *daemonRow) {
+			defer wg.Done()
+			if free, total := s.getDaemonDisk(r.Context(), row.ID); free >= 0 && total >= 0 {
+				row.DiskFree = &free
+				row.DiskTotal = &total
+			}
+		}(&list[i])
+	}
+	wg.Wait()
 	if list == nil {
 		list = []daemonRow{}
 	}
