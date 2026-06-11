@@ -1,0 +1,519 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<meta name="theme-color" content="#0c0d0f" />
+		<title>blackbox — self-hosted cloud storage for your own machines</title>
+		<meta
+			name="description"
+			content="blackbox is self-hosted, single-user cloud storage. Run a server, connect daemons on your machines, and browse everything from one console."
+		/>
+		<meta property="og:title" content="blackbox [▪‿▪]" />
+		<meta
+			property="og:description"
+			content="Self-hosted, single-user cloud storage. Your machines, one box."
+		/>
+		<style>
+			@font-face {
+				font-family: 'JetBrains Mono';
+				font-style: normal;
+				font-weight: 400;
+				font-display: swap;
+				src: url('fonts/jetbrains-mono-latin-400-normal.woff2') format('woff2');
+			}
+			@font-face {
+				font-family: 'JetBrains Mono';
+				font-style: normal;
+				font-weight: 500;
+				font-display: swap;
+				src: url('fonts/jetbrains-mono-latin-500-normal.woff2') format('woff2');
+			}
+			@font-face {
+				font-family: 'JetBrains Mono';
+				font-style: normal;
+				font-weight: 600;
+				font-display: swap;
+				src: url('fonts/jetbrains-mono-latin-600-normal.woff2') format('woff2');
+			}
+
+			:root {
+				--bg: #0c0d0f;
+				--surface: #131517;
+				--inset: #0a0b0c;
+				--border: #26292d;
+				--border-strong: #3a3e44;
+				--text: #e8e9eb;
+				--text-muted: #9da2aa;
+				--text-faint: #5c6168;
+				--accent: #3fd68c;
+				--accent-contrast: #0a0f0c;
+				--accent-soft: rgba(63, 214, 140, 0.12);
+				--font-mono:
+					'JetBrains Mono', ui-monospace, 'Cascadia Code', 'SF Mono', Consolas, Monaco,
+					'Courier New', monospace;
+			}
+
+			* {
+				box-sizing: border-box;
+			}
+
+			body {
+				margin: 0;
+				font-family: var(--font-mono);
+				font-size: 15px;
+				line-height: 1.7;
+				background: var(--bg);
+				color: var(--text);
+				-webkit-font-smoothing: antialiased;
+			}
+
+			/* Fine engineering grid, fading out below the hero */
+			.grid-bg {
+				position: absolute;
+				inset: 0 0 auto;
+				height: 42rem;
+				background-image:
+					linear-gradient(var(--border) 1px, transparent 1px),
+					linear-gradient(90deg, var(--border) 1px, transparent 1px);
+				background-size: 48px 48px;
+				opacity: 0.35;
+				mask-image: radial-gradient(ellipse 90% 80% at 50% 0%, black 30%, transparent 75%);
+				-webkit-mask-image: radial-gradient(ellipse 90% 80% at 50% 0%, black 30%, transparent 75%);
+				pointer-events: none;
+			}
+
+			a {
+				color: var(--text);
+				text-decoration: underline;
+				text-decoration-color: var(--border-strong);
+				text-underline-offset: 4px;
+			}
+			a:hover {
+				color: var(--accent);
+				text-decoration-color: var(--accent);
+			}
+
+			.wrap {
+				position: relative;
+				max-width: 60rem;
+				margin: 0 auto;
+				padding: 0 1.5rem;
+			}
+
+			/* ---- Nav ---- */
+			nav {
+				display: flex;
+				align-items: center;
+				justify-content: space-between;
+				padding: 1.25rem 0;
+			}
+			.brand {
+				display: inline-flex;
+				align-items: baseline;
+				gap: 0.6rem;
+				font-weight: 600;
+				text-decoration: none;
+			}
+			.brand:hover {
+				color: var(--text);
+			}
+			.face {
+				color: var(--accent);
+				letter-spacing: -0.04em;
+			}
+			.nav-links {
+				display: flex;
+				gap: 1.5rem;
+				font-size: 0.85rem;
+			}
+			.nav-links a {
+				color: var(--text-muted);
+				text-decoration: none;
+			}
+			.nav-links a:hover {
+				color: var(--accent);
+			}
+
+			/* ---- Hero ---- */
+			.hero {
+				padding: 6rem 0 5rem;
+				text-align: center;
+			}
+			.hero .face-xl {
+				font-size: clamp(2.5rem, 7vw, 4.5rem);
+				font-weight: 600;
+				color: var(--accent);
+				letter-spacing: -0.04em;
+				display: block;
+				text-shadow: 0 0 48px rgba(63, 214, 140, 0.35);
+			}
+			.hero h1 {
+				font-size: clamp(2rem, 5.5vw, 3.25rem);
+				font-weight: 600;
+				letter-spacing: -0.02em;
+				margin: 1.25rem 0 0;
+				line-height: 1.15;
+			}
+			.hero .tagline {
+				margin: 1.5rem auto 0;
+				max-width: 34rem;
+				color: var(--text-muted);
+				font-size: 1.05rem;
+			}
+			.hero-cta {
+				margin-top: 2.5rem;
+				display: flex;
+				gap: 1rem;
+				justify-content: center;
+				flex-wrap: wrap;
+			}
+			.btn {
+				display: inline-flex;
+				align-items: center;
+				height: 2.75rem;
+				padding: 0 1.5rem;
+				border-radius: 8px;
+				font-size: 0.9rem;
+				font-weight: 600;
+				text-decoration: none;
+				transition: filter 0.15s, border-color 0.15s, color 0.15s;
+			}
+			.btn-primary {
+				background: var(--accent);
+				color: var(--accent-contrast);
+			}
+			.btn-primary:hover {
+				filter: brightness(1.1);
+				color: var(--accent-contrast);
+			}
+			.btn-ghost {
+				border: 1px solid var(--border-strong);
+				color: var(--text);
+			}
+			.btn-ghost:hover {
+				border-color: var(--accent);
+			}
+
+			@media (prefers-reduced-motion: no-preference) {
+				.hero > * {
+					animation: rise 0.6s ease-out backwards;
+				}
+				.hero h1 {
+					animation-delay: 0.08s;
+				}
+				.hero .tagline {
+					animation-delay: 0.16s;
+				}
+				.hero-cta {
+					animation-delay: 0.24s;
+				}
+			}
+			@keyframes rise {
+				from {
+					opacity: 0;
+					transform: translateY(14px);
+				}
+				to {
+					opacity: 1;
+					transform: translateY(0);
+				}
+			}
+
+			/* ---- Install block ---- */
+			.install {
+				margin: 0 auto 6rem;
+				max-width: 44rem;
+			}
+			.install-label {
+				font-size: 0.7rem;
+				font-weight: 600;
+				letter-spacing: 0.12em;
+				text-transform: uppercase;
+				color: var(--text-faint);
+				margin-bottom: 0.6rem;
+			}
+			.install-box {
+				display: flex;
+				align-items: center;
+				gap: 1rem;
+				background: var(--inset);
+				border: 1px solid var(--border);
+				border-radius: 10px;
+				padding: 1rem 1.25rem;
+				overflow-x: auto;
+			}
+			.install-box code {
+				flex: 1;
+				font-family: var(--font-mono);
+				font-size: 0.85rem;
+				color: var(--text);
+				white-space: nowrap;
+			}
+			.install-box code .dim {
+				color: var(--text-faint);
+			}
+			.copy-btn {
+				font-family: var(--font-mono);
+				font-size: 0.75rem;
+				background: transparent;
+				color: var(--text-muted);
+				border: 1px solid var(--border-strong);
+				border-radius: 6px;
+				padding: 0.35rem 0.8rem;
+				cursor: pointer;
+				flex-shrink: 0;
+				transition: color 0.15s, border-color 0.15s;
+			}
+			.copy-btn:hover {
+				color: var(--accent);
+				border-color: var(--accent);
+			}
+
+			/* ---- Sections ---- */
+			section {
+				padding: 0 0 6rem;
+			}
+			.section-label {
+				font-size: 0.7rem;
+				font-weight: 600;
+				letter-spacing: 0.12em;
+				text-transform: uppercase;
+				color: var(--accent);
+				margin: 0 0 2rem;
+			}
+
+			/* Features */
+			.features {
+				display: grid;
+				grid-template-columns: repeat(3, 1fr);
+				gap: 1rem;
+			}
+			.feature {
+				background: var(--surface);
+				border: 1px solid var(--border);
+				border-radius: 10px;
+				padding: 1.5rem;
+				transition: border-color 0.2s, transform 0.2s;
+			}
+			.feature:hover {
+				border-color: var(--border-strong);
+				transform: translateY(-2px);
+			}
+			.feature h3 {
+				margin: 0 0 0.5rem;
+				font-size: 0.95rem;
+				font-weight: 600;
+			}
+			.feature p {
+				margin: 0;
+				font-size: 0.85rem;
+				color: var(--text-muted);
+			}
+
+			/* Steps */
+			.steps {
+				display: grid;
+				grid-template-columns: repeat(3, 1fr);
+				gap: 1rem;
+				counter-reset: step;
+			}
+			.step {
+				border-left: 1px solid var(--border);
+				padding-left: 1.25rem;
+			}
+			.step::before {
+				counter-increment: step;
+				content: '0' counter(step);
+				display: block;
+				font-size: 0.8rem;
+				font-weight: 600;
+				color: var(--accent);
+				margin-bottom: 0.5rem;
+			}
+			.step h3 {
+				margin: 0 0 0.5rem;
+				font-size: 0.95rem;
+			}
+			.step p {
+				margin: 0;
+				font-size: 0.85rem;
+				color: var(--text-muted);
+			}
+			.step code {
+				font-size: 0.8rem;
+				color: var(--text);
+				background: var(--inset);
+				border: 1px solid var(--border);
+				border-radius: 4px;
+				padding: 0.1rem 0.4rem;
+			}
+
+			/* ---- Footer ---- */
+			footer {
+				border-top: 1px solid var(--border);
+				padding: 2.5rem 0 3rem;
+				display: flex;
+				align-items: center;
+				justify-content: space-between;
+				gap: 1rem;
+				flex-wrap: wrap;
+				font-size: 0.85rem;
+				color: var(--text-muted);
+			}
+			.footer-faces {
+				color: var(--text-faint);
+				letter-spacing: -0.02em;
+			}
+			.footer-faces span {
+				margin-right: 1rem;
+			}
+			.footer-faces .up {
+				color: var(--accent);
+			}
+
+			@media (max-width: 720px) {
+				.features,
+				.steps {
+					grid-template-columns: 1fr;
+				}
+				.hero {
+					padding: 4rem 0 3.5rem;
+				}
+				.install {
+					margin-bottom: 4rem;
+				}
+				section {
+					padding-bottom: 4rem;
+				}
+			}
+		</style>
+	</head>
+	<body>
+		<div class="grid-bg" aria-hidden="true"></div>
+		<div class="wrap">
+			<nav>
+				<a class="brand" href="#"><span class="face">[▪‿▪]</span><span>blackbox</span></a>
+				<div class="nav-links">
+					<a href="https://github.com/zdods/blackbox">github</a>
+					<a href="https://github.com/zdods/blackbox/releases/latest">releases</a>
+				</div>
+			</nav>
+
+			<header class="hero">
+				<span class="face-xl" aria-hidden="true">[▪‿▪]</span>
+				<h1>your machines,<br />one box.</h1>
+				<p class="tagline">
+					Self-hosted, single-user cloud storage. Run a server, connect daemons on the machines
+					you already own, and browse everything from one console.
+				</p>
+				<div class="hero-cta">
+					<a class="btn btn-primary" href="https://github.com/zdods/blackbox#quick-start"
+						>get started</a
+					>
+					<a class="btn btn-ghost" href="https://github.com/zdods/blackbox">view source</a>
+				</div>
+			</header>
+
+			<div class="install">
+				<p class="install-label">install the daemon</p>
+				<div class="install-box">
+					<code
+						><span class="dim">$</span> curl -fsSL
+						https://raw.githubusercontent.com/zdods/blackbox/main/install.sh | sh</code
+					>
+					<button class="copy-btn" type="button" data-copy>copy</button>
+				</div>
+			</div>
+
+			<section>
+				<h2 class="section-label">why blackbox</h2>
+				<div class="features">
+					<div class="feature">
+						<h3>yours, entirely</h3>
+						<p>
+							Single-user by design. Your files stay on your machines — no third-party storage,
+							no telemetry, no accounts but your own.
+						</p>
+					</div>
+					<div class="feature">
+						<h3>any machine</h3>
+						<p>
+							Daemons run on Linux, macOS, and Windows. One static binary each, installed with a
+							single command or Homebrew.
+						</p>
+					</div>
+					<div class="feature">
+						<h3>one console</h3>
+						<p>
+							Browse, upload, download, and preview files on every connected host from a fast web
+							console — desktop or phone.
+						</p>
+					</div>
+					<div class="feature">
+						<h3>locked down</h3>
+						<p>
+							Password + TOTP two-factor login, httpOnly sessions, TLS end-to-end, and
+							owner-read-only daemon configs.
+						</p>
+					</div>
+					<div class="feature">
+						<h3>boring stack</h3>
+						<p>
+							Go standard library, Postgres, WebSockets. Ships as a signed multi-arch container
+							with SBOM and provenance attestation.
+						</p>
+					</div>
+					<div class="feature">
+						<h3>open source</h3>
+						<p>MIT licensed. Read the code, run it forever, file issues, send patches.</p>
+					</div>
+				</div>
+			</section>
+
+			<section>
+				<h2 class="section-label">how it works</h2>
+				<div class="steps">
+					<div class="step">
+						<h3>run the server</h3>
+						<p><code>docker compose up</code> pulls the prebuilt image. Register once — that's your account.</p>
+					</div>
+					<div class="step">
+						<h3>connect a daemon</h3>
+						<p>
+							Add a host in the console, run the daemon with the copied token, and point it at a
+							directory.
+						</p>
+					</div>
+					<div class="step">
+						<h3>browse everything</h3>
+						<p>
+							Every connected machine shows up in one place. Upload, download, preview, delete.
+						</p>
+					</div>
+				</div>
+			</section>
+
+			<footer>
+				<span>MIT licensed · built for people who own their hardware</span>
+				<span class="footer-faces" aria-hidden="true">
+					<span class="up">[▪‿▪]</span><span>[▪‥▪]</span><span>[▪︿▪]</span><span>[–‿–]</span>
+				</span>
+			</footer>
+		</div>
+
+		<script>
+			document.querySelector('[data-copy]').addEventListener('click', async (e) => {
+				const cmd =
+					'curl -fsSL https://raw.githubusercontent.com/zdods/blackbox/main/install.sh | sh';
+				try {
+					await navigator.clipboard.writeText(cmd);
+					e.target.textContent = 'copied';
+					setTimeout(() => (e.target.textContent = 'copy'), 1500);
+				} catch (_) {
+					e.target.textContent = 'select & copy';
+				}
+			});
+		</script>
+	</body>
+</html>
