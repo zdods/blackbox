@@ -37,12 +37,12 @@ func (s *Server) ListDaemons(w http.ResponseWriter, r *http.Request) {
 	}
 	defer rows.Close()
 	type daemonRow struct {
-		ID         string  `json:"id"`
-		Label      string  `json:"label"`
-		HostedPath string  `json:"hosted_path"`
-		Connected  bool    `json:"connected"`
-		DiskFree   *int64  `json:"disk_free,omitempty"`
-		DiskTotal  *int64  `json:"disk_total,omitempty"`
+		ID         string `json:"id"`
+		Label      string `json:"label"`
+		HostedPath string `json:"hosted_path"`
+		Connected  bool   `json:"connected"`
+		DiskFree   *int64 `json:"disk_free,omitempty"`
+		DiskTotal  *int64 `json:"disk_total,omitempty"`
 	}
 	var list []daemonRow
 	for rows.Next() {

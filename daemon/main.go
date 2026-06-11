@@ -225,12 +225,12 @@ func resolveDir(path string) (string, error) {
 
 // uploadState tracks an in-progress chunked upload.
 type uploadState struct {
-	path       string
+	path        string
 	totalChunks int
-	received   map[int]bool
-	tmpDir     string
-	lastActive time.Time
-	mu         sync.Mutex
+	received    map[int]bool
+	tmpDir      string
+	lastActive  time.Time
+	mu          sync.Mutex
 }
 
 // activeUploads tracks in-progress chunked uploads by upload_id.

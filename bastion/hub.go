@@ -49,13 +49,13 @@ type binaryResponse struct {
 
 // DaemonConn is a single daemon WebSocket with request/response pairing.
 type DaemonConn struct {
-	DaemonID string
-	conn    *websocket.Conn
-	mu      sync.Mutex // guards pending and pendingBinary maps
-	writeMu sync.Mutex // serializes WebSocket writes
+	DaemonID      string
+	conn          *websocket.Conn
+	mu            sync.Mutex // guards pending and pendingBinary maps
+	writeMu       sync.Mutex // serializes WebSocket writes
 	pending       map[string]chan json.RawMessage
 	pendingBinary map[string]chan binaryResponse
-	done    chan struct{}
+	done          chan struct{}
 }
 
 func NewHub() *Hub {

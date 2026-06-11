@@ -64,10 +64,10 @@ func (s *Server) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req struct {
-		Username  string `json:"username"`
-		Password  string `json:"password"`
-		TotpCode  string `json:"totp_code"`
-		SetupID   string `json:"setup_id"`
+		Username string `json:"username"`
+		Password string `json:"password"`
+		TotpCode string `json:"totp_code"`
+		SetupID  string `json:"setup_id"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeJSONError(w, http.StatusBadRequest, errMsgBadRequest)
@@ -121,9 +121,9 @@ func (s *Server) RegisterTOTPSetup(w http.ResponseWriter, r *http.Request) {
 	s.totpCache.Set(setupID, secret)
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(map[string]string{
-		"setup_id":          setupID,
-		"secret":            secret,
-		"provisioning_uri":  provisioningURI,
+		"setup_id":         setupID,
+		"secret":           secret,
+		"provisioning_uri": provisioningURI,
 	})
 }
 
@@ -191,7 +191,7 @@ func (s *Server) LoginTOTP(w http.ResponseWriter, r *http.Request) {
 	}
 	var req struct {
 		LoginToken string `json:"login_token"`
-		Code      string `json:"code"`
+		Code       string `json:"code"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeJSONError(w, http.StatusBadRequest, errMsgBadRequest)

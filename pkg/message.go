@@ -2,12 +2,12 @@ package pkg
 
 // Message types for daemon-bastion WebSocket protocol.
 const (
-	TypeAuth      = "auth"
-	TypeAuthOK    = "auth_ok"
-	TypeAuthError = "auth_error"
-	TypeListDir   = "list_dir"
-	TypeReadFile  = "read_file"
-	TypeWriteFile = "write_file"
+	TypeAuth       = "auth"
+	TypeAuthOK     = "auth_ok"
+	TypeAuthError  = "auth_error"
+	TypeListDir    = "list_dir"
+	TypeReadFile   = "read_file"
+	TypeWriteFile  = "write_file"
 	TypeGetMeta    = "get_meta"
 	TypeDeleteFile = "delete_file"
 	TypeGetDisk    = "get_disk"
@@ -23,7 +23,7 @@ type Auth struct {
 
 // AuthOK is sent by bastion to daemon after successful auth.
 type AuthOK struct {
-	Type    string `json:"type"` // "auth_ok"
+	Type     string `json:"type"` // "auth_ok"
 	DaemonID string `json:"daemon_id"`
 }
 
@@ -52,8 +52,8 @@ type FileEntry struct {
 type ListDirResponse struct {
 	Type      string      `json:"type"` // "list_dir"
 	RequestID string      `json:"request_id"`
-	Entries  []FileEntry  `json:"entries,omitempty"`
-	Error    string       `json:"error,omitempty"`
+	Entries   []FileEntry `json:"entries,omitempty"`
+	Error     string      `json:"error,omitempty"`
 }
 
 // ReadFileRequest is sent by bastion to daemon.
@@ -69,8 +69,8 @@ type ReadFileRequest struct {
 type ReadFileResponse struct {
 	Type      string `json:"type"` // "read_file"
 	RequestID string `json:"request_id"`
-	Data     string `json:"data,omitempty"` // base64
-	Error    string `json:"error,omitempty"`
+	Data      string `json:"data,omitempty"` // base64
+	Error     string `json:"error,omitempty"`
 }
 
 // WriteFileRequest is sent by bastion to daemon. Data is base64-encoded.
@@ -78,14 +78,14 @@ type WriteFileRequest struct {
 	Type      string `json:"type"` // "write_file"
 	RequestID string `json:"request_id"`
 	Path      string `json:"path"`
-	Data     string `json:"data"` // base64
+	Data      string `json:"data"` // base64
 }
 
 // WriteFileResponse is sent by daemon to bastion.
 type WriteFileResponse struct {
 	Type      string `json:"type"` // "write_file"
 	RequestID string `json:"request_id"`
-	Error    string `json:"error,omitempty"`
+	Error     string `json:"error,omitempty"`
 }
 
 // GetMetaRequest is sent by bastion to daemon.
@@ -99,10 +99,10 @@ type GetMetaRequest struct {
 type GetMetaResponse struct {
 	Type      string `json:"type"` // "get_meta"
 	RequestID string `json:"request_id"`
-	Size     int64  `json:"size,omitempty"`
-	Mtime    string `json:"mtime,omitempty"` // RFC3339
-	IsDir    bool   `json:"is_dir,omitempty"`
-	Error    string `json:"error,omitempty"`
+	Size      int64  `json:"size,omitempty"`
+	Mtime     string `json:"mtime,omitempty"` // RFC3339
+	IsDir     bool   `json:"is_dir,omitempty"`
+	Error     string `json:"error,omitempty"`
 }
 
 // DeleteFileRequest is sent by bastion to daemon.
@@ -116,12 +116,12 @@ type DeleteFileRequest struct {
 type DeleteFileResponse struct {
 	Type      string `json:"type"` // "delete_file"
 	RequestID string `json:"request_id"`
-	Error    string `json:"error,omitempty"`
+	Error     string `json:"error,omitempty"`
 }
 
 // WriteChunkRequest is a JSON control frame sent before a binary WebSocket frame containing chunk data.
 type WriteChunkRequest struct {
-	Type        string `json:"type"`         // "write_chunk"
+	Type        string `json:"type"` // "write_chunk"
 	RequestID   string `json:"request_id"`
 	UploadID    string `json:"upload_id"`
 	Path        string `json:"path"`
@@ -141,7 +141,7 @@ type WriteChunkResponse struct {
 
 // ReadChunkRequest is sent by bastion to daemon to read a chunk of a file.
 type ReadChunkRequest struct {
-	Type      string `json:"type"`       // "read_chunk"
+	Type      string `json:"type"` // "read_chunk"
 	RequestID string `json:"request_id"`
 	Path      string `json:"path"`
 	Offset    int64  `json:"offset"`
