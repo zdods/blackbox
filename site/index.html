@@ -4,15 +4,15 @@
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<meta name="theme-color" content="#0c0d0f" />
-		<title>blackbox — private cloud storage on your own machines</title>
+		<title>blackbox — your own private "cloud", on your own machines</title>
 		<meta
 			name="description"
-			content="blackbox turns the machines you already own into private cloud storage. Browse, upload, and download from one secure console — your files never leave your hardware."
+			content="There is no cloud — only someone else's hard drive. blackbox turns the machines you already own into a private &quot;cloud&quot;: one secure console, files that never leave home."
 		/>
 		<meta property="og:title" content="blackbox [▪‿▪]" />
 		<meta
 			property="og:description"
-			content="Private cloud storage on your own machines. Your files never leave your hardware."
+			content="There is no cloud. Only someone else's hard drive. blackbox turns your own machines into a private &quot;cloud&quot;."
 		/>
 		<style>
 			@font-face {
@@ -168,11 +168,20 @@
 				}
 			}
 			.hero h1 {
-				font-size: clamp(2rem, 5.5vw, 3.25rem);
+				font-size: clamp(1.75rem, 4.5vw, 2.85rem);
 				font-weight: 600;
 				letter-spacing: -0.02em;
 				margin: 1.25rem 0 0;
-				line-height: 1.15;
+				line-height: 1.2;
+				text-wrap: balance;
+			}
+			.hero-line {
+				display: block;
+			}
+			@media (max-width: 720px) {
+				.hero-line {
+					display: inline;
+				}
 			}
 			.hero .tagline {
 				margin: 1.5rem auto 0;
@@ -421,11 +430,14 @@
 
 			<header class="hero">
 				<span class="face-xl" id="hero-face" aria-hidden="true">[▪‿▪]</span>
-				<h1>Your machines,<br />one box.</h1>
+				<h1>
+					<span class="hero-line">There is no cloud.</span>
+					<span class="hero-line">Only someone else's hard&nbsp;drive.</span>
+				</h1>
 				<p class="tagline">
-					Private cloud storage on hardware you already own. blackbox links your computers to a
-					single secure console — browse, upload, and download from anywhere, while your files
-					never leave your machines.
+					blackbox turns the machines you already own into a "cloud" that's actually yours —
+					browse, upload, and download from one secure console, while your files never
+					leave home.
 				</p>
 				<div class="hero-cta">
 					<a class="btn btn-primary" href="https://github.com/zdods/blackbox#quick-start"
@@ -452,7 +464,7 @@
 					<div class="feature">
 						<h3>Your files stay home</h3>
 						<p>
-							blackbox never copies your data to someone else's cloud. The server only relays —
+							blackbox never copies your data to anyone else's hardware. The server only relays —
 							file content lives on your machines and nowhere else. No telemetry, ever.
 						</p>
 					</div>
