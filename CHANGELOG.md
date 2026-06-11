@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- A request racing the daemon's WebSocket auth handshake could corrupt
+  frames (unsynchronized `auth_ok` write); the daemon now registers in
+  the hub only after the handshake completes.
+
 ### Changed
 
 - `docker compose up` now pulls the published GHCR image by default (pin
