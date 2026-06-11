@@ -2,13 +2,13 @@
 let pending = null;
 
 export function setRegisterCredentials(username, password) {
-  pending = { username, password };
+	pending = { username, password };
 }
 
 export function getRegisterCredentials() {
-  return pending;
+	return pending;
 }
 
 export function clearRegisterCredentials() {
-  pending = null;
+	pending = null;
 }
