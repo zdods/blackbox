@@ -4,6 +4,7 @@ import (
 	"context"
 	"embed"
 	"fmt"
+	"log/slog"
 	"sort"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -24,7 +25,34 @@ func OpenDB(ctx context.Context, databaseURL string) (*pgxpool.Pool, error) {
 	return pool, nil
 }
 
+// RunMigrations applies pending migration files in filename order, tracking
+// applied versions in schema_migrations so each file runs exactly once. Each
+// migration executes inside a transaction together with its version record.
 func RunMigrations(ctx context.Context, pool *pgxpool.Pool) error {
+	if _, err := pool.Exec(ctx, `CREATE TABLE IF NOT EXISTS schema_migrations (
+		version TEXT PRIMARY KEY,
+		applied_at TIMESTAMPTZ NOT NULL DEFAULT now()
+	)`); err != nil {
+		return fmt.Errorf("schema_migrations table: %w", err)
+	}
+	applied := map[string]bool{}
+	rows, err := pool.Query(ctx, `SELECT version FROM schema_migrations`)
+	if err != nil {
+		return err
+	}
+	for rows.Next() {
+		var v string
+		if err := rows.Scan(&v); err != nil {
+			rows.Close()
+			return err
+		}
+		applied[v] = true
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return err
+	}
+
 	entries, err := migrationsFS.ReadDir("migrations")
 	if err != nil {
 		return err
@@ -34,14 +62,35 @@ func RunMigrations(ctx context.Context, pool *pgxpool.Pool) error {
 		names = append(names, e.Name())
 	}
 	sort.Strings(names)
+	ran := 0
 	for _, name := range names {
+		if applied[name] {
+			continue
+		}
 		sql, err := migrationsFS.ReadFile("migrations/" + name)
 		if err != nil {
 			return err
 		}
-		if _, err := pool.Exec(ctx, string(sql)); err != nil {
+		tx, err := pool.Begin(ctx)
+		if err != nil {
+			return err
+		}
+		if _, err := tx.Exec(ctx, string(sql)); err != nil {
+			_ = tx.Rollback(ctx)
 			return fmt.Errorf("migration %s: %w", name, err)
 		}
+		if _, err := tx.Exec(ctx, `INSERT INTO schema_migrations (version) VALUES ($1)`, name); err != nil {
+			_ = tx.Rollback(ctx)
+			return fmt.Errorf("record migration %s: %w", name, err)
+		}
+		if err := tx.Commit(ctx); err != nil {
+			return fmt.Errorf("commit migration %s: %w", name, err)
+		}
+		slog.Info("migration applied", "version", name)
+		ran++
+	}
+	if ran == 0 {
+		slog.Info("migrations up to date", "applied", len(applied))
 	}
 	return backfillDaemonTokenHashes(ctx, pool)
 }
