@@ -30,21 +30,15 @@ The **Hosts** view lists hosts and connection status; add a host with a label an
 ### 1. Run the blackbox-server (Docker)
 
 ```bash
-docker compose up --build
+docker compose up
 ```
 
-Or use the prebuilt multi-arch image (amd64/arm64) published to GHCR on every release tag:
-
-```bash
-docker pull ghcr.io/zdods/blackbox-bastion:0.0.1
-```
-
-Images are tagged `X.Y.Z`, `X.Y`, and `latest`, and ship with an SBOM and a signed build-provenance attestation (verify with `gh attestation verify oci://ghcr.io/zdods/blackbox-bastion:X.Y.Z --owner zdods`).
+This pulls the prebuilt multi-arch image (amd64/arm64) from GHCR — no toolchain needed. Pin a version with `BASTION_IMAGE_TAG=0.1.1` (in `.env` or the environment); images are tagged `X.Y.Z`, `X.Y`, and `latest`, and ship with an SBOM and a signed build-provenance attestation (verify with `gh attestation verify oci://ghcr.io/zdods/blackbox-bastion:X.Y.Z --owner zdods`).
 
 Or use the Makefile / PowerShell script from the repo root:
 
 - **Start once:** `make up` (macOS/Linux) or `.\make.ps1 up` (Windows PowerShell).
-- **Hot reload (dev):** `make dev` or `.\make.ps1 dev` — runs `docker compose up --build --watch` so you see container logs and changes under `bastion/`, `web/`, or `pkg/` rebuild the bastion container automatically. Requires Docker Compose v2.22+.
+- **Hot reload (dev, builds from source):** `make dev` or `.\make.ps1 dev` — applies the `docker-compose.dev.yml` overlay with `--build --watch` so changes under `bastion/`, `web/`, or `pkg/` rebuild the bastion container automatically. Requires Docker Compose v2.22+.
 - **Build only:** `make build-bastion` / `.\make.ps1 build-bastion` for the server image; `make build-daemon` / `.\make.ps1 build-daemon` for the daemon binary (outputs `blackbox-daemon.exe` on Windows when using make.ps1).
 
 **Windows (PowerShell):** If you get "cannot be loaded because running scripts is disabled", run once: `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser`. Or run a single command without changing policy: `powershell -ExecutionPolicy Bypass -File .\make.ps1 dev`.
@@ -192,11 +186,10 @@ Then use **https://** for the console and **wss://** for daemons, e.g. `--bastio
 
 - [ ] **Share links** — time-limited public download links, proxied through the bastion
 - [ ] Mobile-friendly console
-- [ ] Drag-and-drop and folder upload (entire directory trees)
+- [ ] Folder upload (entire directory trees)
 - [ ] Rename/move files and directories; create directories
 - [ ] Batch operations (multi-select delete, download, move)
 - [ ] File search across hosted directories
-- [ ] File preview for common types (images, text, PDFs) in the browser
 - [ ] Live daemon status via WebSocket push instead of polling
 - [ ] Volumes — group multiple daemons into one logical volume, with files sharded across them
 

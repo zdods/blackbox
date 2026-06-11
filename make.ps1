@@ -12,16 +12,16 @@ $ErrorActionPreference = "Stop"
 
 switch ($Target) {
     "build-bastion" {
-        docker compose build bastion
+        docker compose -f docker-compose.yml -f docker-compose.dev.yml build bastion
     }
     "build-daemon" {
         go build -o blackbox-daemon.exe ./daemon
     }
     "up" {
-        docker compose up --build
+        docker compose up
     }
     "dev" {
         $env:DEV_MODE = "1"
-        docker compose up --build --watch
+        docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build --watch
     }
 }

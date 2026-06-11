@@ -1,18 +1,19 @@
 .PHONY: build-bastion build-daemon up dev test clean logs down
 
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
+COMPOSE_DEV = docker compose -f docker-compose.yml -f docker-compose.dev.yml
 
 build-bastion:
-	docker compose build bastion
+	$(COMPOSE_DEV) build bastion
 
 build-daemon:
 	go build -ldflags "-X blackbox/pkg/version.Version=$(VERSION)" -o blackbox-daemon ./daemon
 
 up:
-	docker compose up --build
+	docker compose up
 
 dev:
-	DEV_MODE=1 docker compose up --build --watch
+	DEV_MODE=1 $(COMPOSE_DEV) up --build --watch
 
 test:
 	go test ./bastion/ ./daemon/ ./pkg/...

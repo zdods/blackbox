@@ -1,0 +1,19 @@
+# Dev overlay: build the bastion from source with hot reload instead of
+# pulling the published image.
+# Usage: make dev
+#   (or: docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build --watch)
+services:
+  bastion:
+    # Local tag so the source build never shadows the published GHCR image
+    image: blackbox-bastion:dev
+    build:
+      context: .
+      dockerfile: bastion/Dockerfile
+    develop:
+      watch:
+        - path: ./bastion
+          action: rebuild
+        - path: ./web
+          action: rebuild
+        - path: ./pkg
+          action: rebuild

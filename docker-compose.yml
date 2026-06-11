@@ -19,18 +19,10 @@ services:
       retries: 10
 
   # blackbox-server (serves blackbox-console + daemon hub)
+  # Default: published multi-arch image. To build from source with hot
+  # reload, use the dev overlay (make dev / docker-compose.dev.yml).
   bastion:
-    build:
-      context: .
-      dockerfile: bastion/Dockerfile
-    develop:
-      watch:
-        - path: ./bastion
-          action: rebuild
-        - path: ./web
-          action: rebuild
-        - path: ./pkg
-          action: rebuild
+    image: ghcr.io/zdods/blackbox-bastion:${BASTION_IMAGE_TAG:-latest}
     environment:
       DATABASE_URL: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-blackbox}?sslmode=disable
       SERVER_ADDR: :8080
