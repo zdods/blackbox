@@ -3,3 +3,6 @@ build/
 node_modules/
 package-lock.json
 static/fonts/
+test-results/
+playwright-report/
+e2e/screenshots/

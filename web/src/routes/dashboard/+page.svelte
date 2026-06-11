@@ -2,6 +2,7 @@
 	import { onMount, onDestroy } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { getToken, clearToken, apiFetch } from '$lib/auth.js';
+	import Face from '$lib/Face.svelte';
 
 	const POLL_INTERVAL_MS = 8000; // refreshes daemon list and disk space
 
@@ -101,14 +102,6 @@
 		}
 	}
 
-	async function logout() {
-		try {
-			await apiFetch('/api/logout', { method: 'POST' });
-		} catch (_) {}
-		clearToken();
-		goto('/login');
-	}
-
 	async function saveRename(e, id) {
 		e.preventDefault();
 		if (!editLabel.trim()) return;
@@ -156,93 +149,108 @@
 	}
 </script>
 
-<div class="container">
-	<header class="dashboard-header">
-		<h1 class="term-h1"><span class="kaomoji">[▪‿▪]</span>hosts</h1>
-		<button class="secondary" on:click={logout}>log out</button>
-	</header>
+<header class="page-header">
+	<div>
+		<h1 class="page-title">hosts</h1>
+		<p class="page-sub">Machines running the blackbox daemon.</p>
+	</div>
+</header>
 
-	{#if loading}
-		<p class="term-muted" role="status" aria-live="polite">loading...</p>
-	{:else if error}
-		<p class="error" role="alert">{error}</p>
-	{:else}
-		<div class="daemon-list-wrap">
-			<ul class="daemon-list">
-				{#each daemons as daemon}
-					<li>
-						{#if editingId === daemon.id}
-							<form class="daemon-rename-form" on:submit={(e) => saveRename(e, daemon.id)}>
-								<input
-									type="text"
-									bind:value={editLabel}
-									class="daemon-rename-input"
-									aria-label="new name for {daemon.label}"
-								/>
-								<button type="submit" class="primary" disabled={!editLabel.trim()}>save</button>
-								<button
-									type="button"
-									class="secondary"
-									on:click={() => {
-										editingId = null;
-										editLabel = '';
-									}}>cancel</button
-								>
-							</form>
-						{:else}
-							<a href="/daemons/{daemon.id}">{daemon.label}</a>
-							{#if daemon.connected}<span class="badge">connected</span>{:else}<span
-									class="badge off">offline</span
-								>{/if}
-							{#if daemon.disk_free != null}
-								<span
-									class="disk-free"
-									title={daemon.disk_total != null
-										? formatBytes(daemon.disk_free) + ' free of ' + formatBytes(daemon.disk_total)
-										: ''}
-								>
-									{formatBytes(daemon.disk_free)} free
-								</span>
+{#if loading}
+	<p class="muted" role="status" aria-live="polite"><Face state="loading" /> loading…</p>
+{:else if error}
+	<p class="error" role="alert"><Face state="error" /> {error}</p>
+{:else}
+	<ul class="host-list">
+		{#each daemons as daemon}
+			<li class="card host-card">
+				{#if editingId === daemon.id}
+					<form class="host-rename-form" on:submit={(e) => saveRename(e, daemon.id)}>
+						<input
+							type="text"
+							name="host-rename"
+							autocomplete="off"
+							bind:value={editLabel}
+							class="host-rename-input"
+							aria-label="new name for {daemon.label}"
+						/>
+						<button type="submit" class="primary" disabled={!editLabel.trim()}>save</button>
+						<button
+							type="button"
+							class="secondary"
+							on:click={() => {
+								editingId = null;
+								editLabel = '';
+							}}>cancel</button
+						>
+					</form>
+				{:else}
+					<span class="status-dot" class:on={daemon.connected} aria-hidden="true"></span>
+					<div class="host-card__id">
+						<a class="host-card__label" href="/daemons/{daemon.id}">{daemon.label}</a>
+						<span class="host-card__meta">
+							{#if daemon.connected}
+								connected{#if daemon.disk_free != null}{' · '}<span
+										title={daemon.disk_total != null
+											? formatBytes(daemon.disk_free) + ' free of ' + formatBytes(daemon.disk_total)
+											: ''}>{formatBytes(daemon.disk_free)} free</span
+									>{/if}
+							{:else}
+								<Face state="offline" /> offline
 							{/if}
-							<button
-								type="button"
-								class="link-button"
-								on:click={() => {
-									editingId = daemon.id;
-									editLabel = daemon.label;
-								}}
-								title="rename"
-								aria-label="rename {daemon.label}">rename</button
-							>
-							<button
-								type="button"
-								class="link-button delete-btn"
-								on:click={() => deleteDaemon(daemon)}
-								disabled={deletingId !== null}
-								title="delete"
-								aria-label="delete {daemon.label}">delete</button
-							>
-						{/if}
-					</li>
-				{/each}
-			</ul>
-			{#if daemons.length === 0}
-				<p class="term-muted">no hosts yet. add one below.</p>
-			{/if}
+						</span>
+					</div>
+					<div class="host-card__actions">
+						<button
+							type="button"
+							class="quiet"
+							on:click={() => {
+								editingId = daemon.id;
+								editLabel = daemon.label;
+							}}
+							aria-label="rename {daemon.label}">rename</button
+						>
+						<button
+							type="button"
+							class="quiet danger"
+							on:click={() => deleteDaemon(daemon)}
+							disabled={deletingId !== null}
+							aria-label="delete {daemon.label}">delete</button
+						>
+					</div>
+				{/if}
+			</li>
+		{/each}
+	</ul>
+	{#if daemons.length === 0}
+		<div class="card empty-state">
+			<p class="muted"><Face state="offline" /> no hosts yet — add one below.</p>
 		</div>
-
-		<h2 class="term-h2">add host</h2>
-		<form on:submit={createDaemon} class="term-form">
-			<div class="form-row">
-				<label for="daemon-label"><span class="prompt-prefix">$</span> label</label>
-				<input id="daemon-label" type="text" bind:value={newLabel} placeholder="e.g. my-mac" />
-			</div>
-			<button type="submit" class="primary" disabled={creating || !newLabel.trim()}
-				>{creating ? '(´・ω・`) ...' : 'add host'}</button
-			>
-		</form>
 	{/if}
-</div>
+
+	<section class="add-host">
+		<h2 class="microlabel">add host</h2>
+		<form on:submit={createDaemon} class="add-host-form card">
+			<div class="add-host-row">
+				<input
+					id="daemon-label"
+					name="host-label"
+					type="text"
+					autocomplete="off"
+					bind:value={newLabel}
+					placeholder="label, e.g. my-mac"
+					aria-label="host label"
+				/>
+				<button type="submit" class="primary" disabled={creating || !newLabel.trim()}
+					>{creating ? 'adding…' : 'add host'}</button
+				>
+			</div>
+			<p class="muted add-host-hint">
+				The daemon token is copied to your clipboard when the host is created.
+			</p>
+		</form>
+	</section>
+{/if}
 
 {#if toast.show}
 	<div class="toast toast-{toast.type}" role="status" aria-live="polite">
@@ -251,151 +259,108 @@
 {/if}
 
 <style>
-	.dashboard-header {
+	.page-header {
 		display: flex;
 		justify-content: space-between;
-		align-items: center;
-		margin-bottom: var(--space-lg);
+		align-items: flex-start;
+		margin-bottom: var(--space-xl);
 	}
-	.daemon-list-wrap {
-		overflow-y: auto;
-		min-height: 120px;
-		max-height: min(50vh, 400px);
-		margin-bottom: var(--space-lg);
-		padding: var(--space-md);
-		border: 1px solid var(--term-border);
-		border-radius: 4px;
-	}
-	.daemon-list {
+	.host-list {
 		list-style: none;
 		padding: 0;
-		margin: 0;
+		margin: 0 0 var(--space-xl);
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-sm);
 	}
-	.daemon-list li {
-		padding: var(--space-md) 0;
+	.host-card {
 		display: flex;
 		align-items: center;
 		gap: var(--space-md);
-		border-bottom: 1px solid var(--term-border);
-		flex-wrap: wrap;
+		padding: var(--space-md) var(--space-lg);
 	}
-	.daemon-list li:last-child {
-		border-bottom: none;
-	}
-	.daemon-list a {
-		color: var(--term-cyan);
+	.host-card__id {
 		flex: 1;
 		min-width: 0;
+		display: flex;
+		flex-direction: column;
+		gap: 0.1rem;
 	}
-	.daemon-list a:hover {
-		color: var(--term-green);
+	.host-card__label {
+		font-weight: 600;
+		font-size: 0.95rem;
+		text-decoration: none;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
 	}
-	.link-button {
-		background: none;
-		border: none;
-		color: var(--term-text-muted);
-		cursor: pointer;
-		font-size: 0.85rem;
-		padding: var(--space-sm) var(--space-md);
+	.host-card__label:hover {
+		color: var(--accent);
 	}
-	.link-button:hover {
-		color: var(--term-cyan);
+	.host-card__meta {
+		font-size: 0.8rem;
+		color: var(--text-muted);
 	}
-	.link-button.delete-btn:hover {
-		color: var(--term-red);
+	.host-card__actions {
+		display: flex;
+		gap: var(--space-xs);
+		flex-shrink: 0;
 	}
-	.daemon-rename-form {
+	.host-rename-form {
 		display: flex;
 		align-items: center;
 		gap: var(--space-sm);
 		flex: 1;
 		min-width: 0;
+		flex-wrap: wrap;
 	}
-	.daemon-rename-input {
+	.host-rename-input {
 		flex: 1;
 		min-width: 8rem;
 	}
-	.badge {
-		font-size: 0.7rem;
-		padding: var(--space-sm) var(--space-md);
-		background: rgba(126, 231, 135, 0.15);
-		color: var(--term-green);
-		border: 1px solid var(--term-green);
-		border-radius: 4px;
+	.empty-state {
+		padding: var(--space-xl);
+		text-align: center;
+		margin-bottom: var(--space-xl);
+		border-style: dashed;
 	}
-	.badge.off {
-		background: rgba(110, 118, 129, 0.2);
-		color: var(--term-text-muted);
-		border-color: var(--term-text-muted);
+	.empty-state .muted {
+		margin: 0;
 	}
-	.disk-free {
-		font-size: 0.8rem;
-		color: var(--term-text-muted);
-		min-width: 5rem;
+	.add-host {
+		margin-top: var(--space-2xl);
 	}
-	.term-form {
-		display: flex;
-		flex-direction: column;
-		gap: var(--space-lg);
-		max-width: 100%;
-		width: 100%;
+	.add-host-form {
 		margin-top: var(--space-md);
+		padding: var(--space-lg);
 	}
-	.term-form button[type='submit'] {
-		width: 100%;
+	.add-host-row {
+		display: flex;
+		gap: var(--space-md);
 	}
-	.form-row {
-		margin-bottom: var(--space-sm);
-		width: 100%;
+	.add-host-row input {
+		flex: 1;
+		min-width: 0;
 	}
-	.form-row label {
-		display: block;
-		font-size: 0.85rem;
-		color: var(--term-text-muted);
-		margin-bottom: var(--space-sm);
+	.add-host-row button {
+		flex-shrink: 0;
 	}
-	.term-muted {
-		color: var(--term-text-muted);
-		font-size: 0.9rem;
-		margin-top: var(--space-lg);
+	.add-host-hint {
+		margin: var(--space-md) 0 0;
+		font-size: 0.8rem;
 	}
 
-	.toast {
-		position: fixed;
-		bottom: var(--space-xl);
-		left: 50%;
-		transform: translateX(-50%) translateY(0);
-		padding: var(--space-md) var(--space-lg);
-		border-radius: 8px;
-		font-size: 0.9rem;
-		box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
-		z-index: 100;
-		max-width: min(90vw, 28rem);
-		text-align: center;
-	}
-	@media (prefers-reduced-motion: no-preference) {
-		.toast {
-			animation: toast-in 0.25s ease-out;
+	@media (max-width: 640px) {
+		.host-card {
+			padding: var(--space-md);
+			flex-wrap: wrap;
 		}
-	}
-	.toast-success {
-		background: var(--term-surface);
-		border: 1px solid var(--term-green);
-		color: var(--term-text-bright);
-	}
-	.toast-error {
-		background: var(--term-surface);
-		border: 1px solid var(--term-red);
-		color: var(--term-text-bright);
-	}
-	@keyframes toast-in {
-		from {
-			opacity: 0;
-			transform: translateX(-50%) translateY(10px);
+		.host-card__actions {
+			width: 100%;
+			justify-content: flex-end;
 		}
-		to {
-			opacity: 1;
-			transform: translateX(-50%) translateY(0);
+		.add-host-row {
+			flex-direction: column;
 		}
 	}
 </style>

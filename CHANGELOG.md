@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Theme system for the console: light, dark, and system themes plus the
+  previous Nord palette as a legacy option; the choice persists in the
+  browser and follows the OS setting by default.
+- Static landing page under `site/` for the project front door.
+
+### Changed
+
+- Console redesign: modern app shell with a sticky header (brand, theme
+  picker, log out), card-based hosts and file views, and refreshed
+  login/register pages. The terminal-window chrome and `$` prompt
+  prefixes are gone; the `[▪‿▪]` face now doubles as a status indicator
+  (loading, error, offline).
+- README no longer embeds console screenshots.
+
 ## [0.2.0] - 2026-06-10
 
 ### Added

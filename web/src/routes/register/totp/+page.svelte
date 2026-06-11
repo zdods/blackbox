@@ -3,9 +3,11 @@
 	import { goto } from '$app/navigation';
 	import { getToken } from '$lib/auth.js';
 	import { getRegisterCredentials, clearRegisterCredentials } from '$lib/register-state.js';
+	import Face from '$lib/Face.svelte';
 	import QRCode from 'qrcode';
 
 	let totpCode = '';
+	let regUsername = '';
 	let error = '';
 	let loading = false;
 	let setupLoading = true;
@@ -24,6 +26,7 @@
 			goto('/register', { replaceState: true });
 			return;
 		}
+		regUsername = credentials.username;
 
 		try {
 			const res = await fetch('/api/setup');
@@ -114,15 +117,15 @@
 	}
 </script>
 
-<div class="container login-container">
+<div class="card auth-card">
 	{#if setupLoading}
-		<p class="term-muted">loading...</p>
+		<p class="muted" role="status" aria-live="polite"><Face state="loading" /> loading…</p>
 	{:else if setupError}
-		<p class="error" role="alert">{setupError}</p>
-		<p class="term-muted"><a href="/register">retry</a></p>
+		<p class="error" role="alert"><Face state="error" /> {setupError}</p>
+		<p class="muted"><a href="/register">retry</a></p>
 	{:else}
-		<h1 class="term-h1"><span class="kaomoji">[▪‿▪]</span> set up 2FA</h1>
-		<p class="term-muted">Scan the QR code with your authenticator app, or copy the secret.</p>
+		<h1 class="page-title">set up 2FA</h1>
+		<p class="page-sub">Scan the QR code with your authenticator app, or copy the secret.</p>
 		{#if qrDataUrl}
 			<div class="qr-wrap">
 				<img src={qrDataUrl} alt="TOTP QR code" width="200" height="200" />
@@ -133,15 +136,26 @@
 				<code class="secret-text">{secret}</code>
 				<button
 					type="button"
-					class="link-button"
+					class="quiet"
 					on:click={copySecret}
-					aria-label="copy secret to clipboard">Copy</button
+					aria-label="copy secret to clipboard">copy</button
 				>
 			</div>
 		{/if}
-		<form on:submit={handleSubmit} class="term-form">
+		<form method="post" action="/register/totp" on:submit={handleSubmit} class="auth-form">
+			<!-- Hidden username keeps password managers oriented in the multi-step flow -->
+			<input
+				type="text"
+				name="username"
+				autocomplete="username"
+				value={regUsername}
+				readonly
+				hidden
+				tabindex="-1"
+				aria-hidden="true"
+			/>
 			<div class="form-row">
-				<label for="totp"><span class="prompt-prefix">$</span> authenticator code</label>
+				<label class="field-label" for="totp">authenticator code</label>
 				<input
 					id="totp"
 					name="totp"
@@ -153,43 +167,35 @@
 					maxlength="8"
 				/>
 			</div>
-			{#if error}<p class="error" role="alert">{error}</p>{/if}
+			{#if error}<p class="error" role="alert"><Face state="error" /> {error}</p>{/if}
 			<button type="submit" class="primary" disabled={loading || !totpCode.trim()}>
-				{loading ? '(´・ω・`) ...' : 'verify and register'}
+				{loading ? 'verifying…' : 'verify and register'}
 			</button>
-			<a href="/register" class="link-button">back</a>
+			<a href="/register" class="back-link">back</a>
 		</form>
 	{/if}
 </div>
 
 <style>
-	.login-container {
-		width: fit-content;
+	.auth-card {
+		width: 24rem;
 		max-width: 100%;
+		padding: var(--space-xl);
 	}
-	.term-form {
+	.auth-form {
 		display: flex;
 		flex-direction: column;
 		gap: var(--space-lg);
-		width: 22rem;
-		max-width: 100%;
-	}
-	.form-row label {
-		display: block;
-		font-size: 0.85rem;
-		color: var(--term-text-muted);
-		margin-bottom: var(--space-sm);
-	}
-	.term-muted {
-		margin-top: var(--space-xl);
-		font-size: 0.85rem;
-		color: var(--term-text-muted);
+		margin-top: var(--space-lg);
 	}
 	.qr-wrap {
-		margin: var(--space-md) 0;
+		margin: var(--space-lg) 0 var(--space-md);
 	}
 	.qr-wrap img {
 		display: block;
+		border-radius: var(--radius-sm);
+		border: 1px solid var(--border);
+		background: #fff;
 	}
 	.secret-row {
 		display: flex;
@@ -198,20 +204,17 @@
 		margin-bottom: var(--space-md);
 	}
 	.secret-text {
-		font-size: 0.85rem;
+		font-size: 0.8rem;
 		word-break: break-all;
-		color: var(--term-text-muted);
+		color: var(--text-muted);
 	}
-	.link-button {
-		background: none;
-		border: none;
-		color: var(--term-text-muted);
-		cursor: pointer;
-		font-size: 0.85rem;
-		padding: var(--space-sm) 0;
+	.back-link {
+		font-size: 0.8rem;
+		color: var(--text-muted);
 		text-decoration: none;
+		align-self: flex-start;
 	}
-	.link-button:hover {
-		color: var(--term-cyan);
+	.back-link:hover {
+		color: var(--accent);
 	}
 </style>

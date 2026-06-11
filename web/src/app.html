@@ -3,9 +3,31 @@
 	<head>
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
-		<meta name="theme-color" content="#2E3440" />
+		<meta name="theme-color" content="#0c0d0f" />
 		<meta name="description" content="blackbox console — manage hosts and files" />
-		<title>blackbox-console [▪‿▪]</title>
+		<title>blackbox [▪‿▪]</title>
+		<script>
+			// Apply the persisted theme before first paint (kept in sync by $lib/theme.js).
+			(function () {
+				try {
+					var choice = localStorage.getItem('blackbox-theme');
+					if (['light', 'dark', 'nord'].indexOf(choice) === -1) choice = 'system';
+					var resolved =
+						choice === 'system'
+							? window.matchMedia('(prefers-color-scheme: dark)').matches
+								? 'dark'
+								: 'light'
+							: choice;
+					document.documentElement.setAttribute('data-theme', resolved);
+					document.documentElement.style.colorScheme = resolved === 'light' ? 'light' : 'dark';
+					var colors = { light: '#f7f7f5', dark: '#0c0d0f', nord: '#2e3440' };
+					var meta = document.querySelector('meta[name="theme-color"]');
+					if (meta) meta.setAttribute('content', colors[resolved]);
+				} catch (e) {
+					document.documentElement.setAttribute('data-theme', 'dark');
+				}
+			})();
+		</script>
 		%sveltekit.head%
 	</head>
 	<body data-sveltekit-preload-data="hover">

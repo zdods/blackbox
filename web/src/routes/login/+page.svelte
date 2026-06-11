@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { setToken, getToken } from '$lib/auth.js';
+	import Face from '$lib/Face.svelte';
 
 	let username = '';
 	let password = '';
@@ -97,13 +98,24 @@
 	}
 </script>
 
-<div class="container login-container">
-	<h1 class="term-h1"><span class="kaomoji">[▪‿▪]</span> log in</h1>
+<div class="card auth-card">
 	{#if step === 'totp'}
-		<p class="term-muted">Enter the code from your authenticator app.</p>
-		<form on:submit={handleTotpSubmit} class="term-form">
+		<h1 class="page-title">two-factor</h1>
+		<p class="page-sub">Enter the code from your authenticator app.</p>
+		<form method="post" action="/login" on:submit={handleTotpSubmit} class="auth-form">
+			<!-- Hidden username keeps password managers oriented in the multi-step flow -->
+			<input
+				type="text"
+				name="username"
+				autocomplete="username"
+				value={username}
+				readonly
+				hidden
+				tabindex="-1"
+				aria-hidden="true"
+			/>
 			<div class="form-row">
-				<label for="totp"><span class="prompt-prefix">$</span> 2FA code</label>
+				<label class="field-label" for="totp">2FA code</label>
 				<input
 					id="totp"
 					name="totp"
@@ -115,28 +127,32 @@
 					maxlength="8"
 				/>
 			</div>
-			{#if error}<p class="error" role="alert">{error}</p>{/if}
+			{#if error}<p class="error" role="alert"><Face state="error" /> {error}</p>{/if}
 			<button type="submit" class="primary" disabled={loading || !totpCode.trim()}>
-				{loading ? '(´・ω・`) ...' : 'verify'}
+				{loading ? 'verifying…' : 'verify'}
 			</button>
-			<button type="button" class="link-button" on:click={backToPassword}>back</button>
+			<button type="button" class="quiet" on:click={backToPassword}>back</button>
 		</form>
 	{:else}
-		<form method="post" action="/login" on:submit={handleSubmit} class="term-form">
+		<h1 class="page-title">log in</h1>
+		<p class="page-sub">Welcome back.</p>
+		<form method="post" action="/login" on:submit={handleSubmit} class="auth-form">
 			<div class="form-row">
-				<label for="username"><span class="prompt-prefix">$</span> username</label>
+				<label class="field-label" for="username">username</label>
 				<input
 					id="username"
-					name="login"
+					name="username"
 					type="text"
 					autocomplete="username"
+					autocapitalize="none"
+					spellcheck="false"
 					bind:value={username}
 					placeholder="your-username"
 					required
 				/>
 			</div>
 			<div class="form-row">
-				<label for="password"><span class="prompt-prefix">$</span> password</label>
+				<label class="field-label" for="password">password</label>
 				<input
 					id="password"
 					name="password"
@@ -147,49 +163,30 @@
 					required
 				/>
 			</div>
-			{#if error}<p class="error" role="alert">{error}</p>{/if}
+			{#if error}<p class="error" role="alert"><Face state="error" /> {error}</p>{/if}
 			<button type="submit" class="primary" disabled={loading || !username.trim() || !password}
-				>{loading ? '(´・ω・`) ...' : 'log in'}</button
+				>{loading ? 'logging in…' : 'log in'}</button
 			>
 		</form>
 		{#if !setupLoading && registrationOpen}
-			<p class="term-muted"><a href="/register">register</a> (one-time setup)</p>
+			<p class="muted auth-footnote"><a href="/register">register</a> (one-time setup)</p>
 		{/if}
 	{/if}
 </div>
 
 <style>
-	.login-container {
-		width: fit-content;
+	.auth-card {
+		width: 24rem;
 		max-width: 100%;
+		padding: var(--space-xl);
 	}
-	.term-form {
+	.auth-form {
 		display: flex;
 		flex-direction: column;
 		gap: var(--space-lg);
-		width: 22rem;
-		max-width: 100%;
+		margin-top: var(--space-lg);
 	}
-	.form-row label {
-		display: block;
-		font-size: 0.85rem;
-		color: var(--term-text-muted);
-		margin-bottom: var(--space-sm);
-	}
-	.term-muted {
-		margin-top: var(--space-xl);
-		font-size: 0.85rem;
-		color: var(--term-text-muted);
-	}
-	.link-button {
-		background: none;
-		border: none;
-		color: var(--term-text-muted);
-		cursor: pointer;
-		font-size: 0.85rem;
-		padding: var(--space-sm) 0;
-	}
-	.link-button:hover {
-		color: var(--term-cyan);
+	.auth-footnote {
+		margin: var(--space-lg) 0 0;
 	}
 </style>

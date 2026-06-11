@@ -3,6 +3,7 @@
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
 	import { getToken, clearToken, apiFetch } from '$lib/auth.js';
+	import Face from '$lib/Face.svelte';
 
 	const daemonId = $page.params.id;
 	let path = '';
@@ -375,23 +376,24 @@
 
 <!-- svelte-ignore a11y-no-static-element-interactions -->
 <div
-	class="container"
+	class="files-page"
 	on:dragenter={handleDragEnter}
 	on:dragleave={handleDragLeave}
 	on:dragover={handleDragOver}
 	on:drop={handleDrop}
 >
-	<p class="term-muted"><a href="/dashboard">← dashboard</a></p>
-	<h1 class="term-h1">
-		<span class="kaomoji">[▪‿▪]</span>files {#if daemonLabel}<span class="path-label"
-				>({daemonLabel})</span
-			>{/if}
-	</h1>
+	<p class="back-link"><a href="/dashboard">← hosts</a></p>
+	<header class="page-header">
+		<h1 class="page-title">
+			{daemonLabel || 'files'}
+		</h1>
+		<p class="page-sub">Browse, upload, and download files on this host.</p>
+	</header>
 
 	<nav class="breadcrumb" aria-label="file path">
 		<button
 			type="button"
-			class="link"
+			class="crumb"
 			on:click={() => {
 				path = '';
 				load();
@@ -399,16 +401,16 @@
 		>
 		{#each pathSegments as segment}
 			<span class="breadcrumb-sep" aria-hidden="true">/</span>
-			<button type="button" class="link" on:click={() => goToSegment(segment)}>{segment}</button>
+			<button type="button" class="crumb" on:click={() => goToSegment(segment)}>{segment}</button>
 		{/each}
 	</nav>
 
-	{#if error}<p class="error" role="alert">{error}</p>{/if}
+	{#if error}<p class="error" role="alert"><Face state="error" /> {error}</p>{/if}
 
 	{#if loading}
-		<p class="term-muted" role="status" aria-live="polite">loading...</p>
+		<p class="muted" role="status" aria-live="polite"><Face state="loading" /> loading…</p>
 	{:else}
-		<div class="file-list-wrap" class:drop-target={draggingOver}>
+		<div class="card file-list-wrap" class:drop-target={draggingOver}>
 			{#if draggingOver}
 				<div class="drop-overlay" aria-hidden="true">drop files to upload</div>
 			{/if}
@@ -488,7 +490,7 @@
 								{#if entry.is_dir}
 									<button
 										type="button"
-										class="link"
+										class="link dir"
 										on:click={() => {
 											path = path ? `${path}/${entry.name}` : entry.name;
 											load();
@@ -529,9 +531,12 @@
 
 		<div class="upload">
 			<div class="upload-row">
-				<span class="upload-label">upload</span>
+				<span class="upload-label microlabel">upload</span>
 				<input
 					type="text"
+					name="upload-subpath"
+					autocomplete="off"
+					aria-label="optional upload subpath"
 					bind:value={uploadPath}
 					placeholder="optional subpath"
 					class="upload-path"
@@ -568,6 +573,7 @@
 		<div
 			class="preview-modal"
 			role="dialog"
+			tabindex="-1"
 			aria-modal="true"
 			aria-label="preview {previewEntry.name}"
 			on:click|stopPropagation
@@ -583,9 +589,9 @@
 			</div>
 			<div class="preview-body">
 				{#if previewLoading}
-					<p class="term-muted" role="status">loading...</p>
+					<p class="muted" role="status"><Face state="loading" /> loading…</p>
 				{:else if previewError}
-					<p class="error" role="alert">{previewError}</p>
+					<p class="error" role="alert"><Face state="error" /> {previewError}</p>
 				{:else if previewType === 'image'}
 					<img src={previewContent} alt={previewEntry.name} class="preview-image" />
 				{:else if previewType === 'text'}
@@ -597,34 +603,59 @@
 {/if}
 
 <style>
-	.path-label {
-		color: var(--term-text-muted);
-		font-weight: 500;
+	.back-link {
+		margin: 0 0 var(--space-sm);
+		font-size: 0.8rem;
+	}
+	.back-link a {
+		color: var(--text-muted);
+		text-decoration: none;
+	}
+	.back-link a:hover {
+		color: var(--accent);
+	}
+	.page-header {
+		margin-bottom: var(--space-lg);
 	}
 	.breadcrumb {
-		margin: var(--space-md) 0 var(--space-lg);
-		font-size: 0.9rem;
-		color: var(--term-text-muted);
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: var(--space-xs);
+		margin: 0 0 var(--space-md);
+		font-size: 0.85rem;
+	}
+	.crumb {
+		background: none;
+		border: none;
+		height: auto;
+		padding: var(--space-xs) var(--space-sm);
+		color: var(--text-muted);
+		font-size: 0.85rem;
+		border-radius: var(--radius-sm);
+	}
+	.crumb:hover {
+		color: var(--accent);
+		background: var(--accent-soft);
+		border: none;
 	}
 	.breadcrumb-sep {
-		margin: 0 var(--space-sm);
+		color: var(--text-faint);
 	}
+
 	.file-list-wrap {
 		position: relative;
 		overflow-y: auto;
 		min-height: 120px;
-		max-height: min(50vh, 400px);
+		max-height: min(58vh, 480px);
 		margin-bottom: var(--space-lg);
-		padding: var(--space-md);
-		border: 1px solid var(--term-border);
-		border-radius: 4px;
 		transition:
 			border-color 0.15s,
 			box-shadow 0.15s;
 	}
 	.file-list-wrap.drop-target {
-		border-color: var(--term-green);
-		box-shadow: 0 0 0 2px rgba(163, 190, 140, 0.2);
+		border-color: var(--accent);
+		box-shadow: 0 0 0 3px var(--accent-soft);
 	}
 	.drop-overlay {
 		position: absolute;
@@ -632,45 +663,47 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		background: rgba(46, 52, 64, 0.88);
-		color: var(--term-green);
-		font-size: 1rem;
+		background: var(--backdrop);
+		color: var(--accent);
+		font-size: 0.95rem;
 		font-weight: 600;
 		letter-spacing: 0.05em;
 		z-index: 10;
-		border-radius: 4px;
+		border-radius: var(--radius);
 		pointer-events: none;
 	}
 	.file-list {
 		width: 100%;
 		border-collapse: collapse;
-		font-size: 0.9rem;
+		font-size: 0.875rem;
 		margin: 0;
-	}
-	.file-list thead tr {
-		background: var(--term-surface);
 	}
 	.file-list th {
 		position: sticky;
 		top: 0;
 		z-index: 2;
-		background: var(--term-surface);
+		background: var(--surface);
 		padding: var(--space-sm) var(--space-md);
-		border-bottom: 1px solid var(--term-border);
+		border-bottom: 1px solid var(--border);
+		font-size: 0.7rem;
 		font-weight: 600;
-		font-size: 0.8rem;
-		color: var(--term-text-muted);
-		letter-spacing: 0.03em;
-		box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+		letter-spacing: 0.1em;
+		text-transform: uppercase;
+		color: var(--text-faint);
 	}
 	.file-list td {
-		padding: var(--space-sm) var(--space-md);
-		border-bottom: 1px solid var(--term-border);
+		padding: var(--space-xs) var(--space-md);
+		border-bottom: 1px solid var(--border);
 		vertical-align: middle;
+	}
+	.file-list tbody tr:last-child td {
+		border-bottom: none;
+	}
+	.file-list tbody tr:hover td {
+		background: var(--accent-soft);
 	}
 	.col-name {
 		min-width: 0;
-		text-align: left;
 	}
 	.file-list th.col-name,
 	.file-list td.col-name {
@@ -678,8 +711,7 @@
 	}
 	.col-size {
 		width: 7rem;
-		color: var(--term-text-muted);
-		text-align: right;
+		color: var(--text-muted);
 	}
 	.file-list th.col-size,
 	.file-list td.col-size {
@@ -687,9 +719,8 @@
 	}
 	.col-mtime {
 		width: 12rem;
-		color: var(--term-text-muted);
-		font-size: 0.85rem;
-		text-align: right;
+		color: var(--text-muted);
+		font-size: 0.8rem;
 	}
 	.file-list th.col-mtime,
 	.file-list td.col-mtime {
@@ -697,7 +728,6 @@
 	}
 	.col-actions {
 		width: 8rem;
-		text-align: center;
 	}
 	.file-list th.col-actions,
 	.file-list td.col-actions {
@@ -708,73 +738,74 @@
 		border: none;
 		color: inherit;
 		font: inherit;
+		letter-spacing: inherit;
+		text-transform: inherit;
 		cursor: pointer;
 		padding: 0;
+		height: auto;
 		width: 100%;
 		text-align: inherit;
 	}
 	.file-list th.sortable .th-sort:hover {
-		color: var(--term-cyan);
+		color: var(--text);
 	}
 	.file-list th.sort-asc .th-sort::after {
 		content: ' ↑';
-		opacity: 0.8;
+		color: var(--accent);
 	}
 	.file-list th.sort-desc .th-sort::after {
 		content: ' ↓';
-		opacity: 0.8;
-	}
-	.file-list td .link {
-		display: inline-block;
+		color: var(--accent);
 	}
 	.file-list .link {
+		display: inline-block;
 		background: none;
 		border: none;
-		color: var(--term-cyan);
+		height: auto;
+		color: var(--text);
 		cursor: pointer;
-		padding: var(--space-sm) var(--space-md);
+		padding: var(--space-sm) 0;
 		text-align: left;
 		font-family: var(--font-mono);
 		font-size: inherit;
 	}
 	.file-list .link:hover {
-		color: var(--term-green);
+		color: var(--accent);
+	}
+	.file-list .link.dir {
+		color: var(--accent);
+		font-weight: 500;
+	}
+	.file-list .link.dir:hover {
 		text-decoration: underline;
+		text-underline-offset: 3px;
 	}
 	.file-list .dl-btn {
-		color: var(--term-text-muted);
-		font-size: 0.9rem;
-		text-decoration: none;
+		color: var(--text-muted);
+		padding: var(--space-sm);
 	}
 	.file-list .dl-btn:hover {
-		color: var(--term-cyan);
-		text-decoration: none;
+		color: var(--accent);
 	}
 	.file-list .delete-btn {
-		color: var(--term-red);
-		font-size: 0.85rem;
+		color: var(--text-faint);
+		font-size: 0.8rem;
+		padding: var(--space-sm);
 	}
-	.file-list .delete-btn:hover {
-		color: var(--term-red);
-		text-decoration: underline;
+	.file-list .delete-btn:hover:not(:disabled) {
+		color: var(--err);
 	}
+
 	.upload {
-		margin-top: var(--space-xl);
-		padding-top: var(--space-lg);
-		border-top: 1px solid var(--term-border);
-		width: 100%;
+		margin-top: var(--space-lg);
 	}
 	.upload-row {
 		display: flex;
-		align-items: stretch;
+		align-items: center;
 		gap: var(--space-md);
 		width: 100%;
 	}
 	.upload-label {
-		display: flex;
-		align-items: center;
-		font-size: 0.9rem;
-		color: var(--term-text-muted);
 		flex-shrink: 0;
 	}
 	.upload-path {
@@ -786,17 +817,17 @@
 		align-items: center;
 		flex: 0 0 auto;
 		min-width: 14rem;
-		min-height: var(--input-height);
 		height: var(--input-height);
-		background: var(--term-bg);
-		border: 1px solid var(--term-border);
-		border-radius: 4px;
+		background: var(--inset);
+		border: 1px solid var(--border);
+		border-radius: var(--radius-sm);
 		cursor: pointer;
 		position: relative;
 		box-sizing: border-box;
+		transition: border-color 0.15s;
 	}
 	.upload-file-wrap:hover {
-		border-color: var(--term-green);
+		border-color: var(--accent);
 	}
 	.upload-file-input {
 		position: absolute;
@@ -810,24 +841,19 @@
 	}
 	.upload-file-text {
 		padding: 0 var(--space-md);
-		font-size: 13px;
-		color: var(--term-text-muted);
+		font-size: 0.8rem;
+		color: var(--text-muted);
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
 		pointer-events: none;
-	}
-	.term-muted {
-		color: var(--term-text-muted);
-		font-size: 0.9rem;
-		margin-bottom: var(--space-md);
 	}
 
 	/* Preview modal */
 	.preview-backdrop {
 		position: fixed;
 		inset: 0;
-		background: rgba(0, 0, 0, 0.72);
+		background: var(--backdrop);
 		z-index: 200;
 		display: flex;
 		align-items: center;
@@ -835,28 +861,28 @@
 		padding: var(--space-lg);
 	}
 	.preview-modal {
-		background: var(--term-surface);
-		border: 1px solid var(--term-border);
-		border-radius: 8px;
+		background: var(--surface);
+		border: 1px solid var(--border);
+		border-radius: var(--radius);
 		width: min(90vw, 56rem);
 		max-height: 85vh;
 		display: flex;
 		flex-direction: column;
 		overflow: hidden;
-		box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
+		box-shadow: var(--shadow);
 	}
 	.preview-header {
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
 		padding: var(--space-md) var(--space-lg);
-		border-bottom: 1px solid var(--term-border);
+		border-bottom: 1px solid var(--border);
 		gap: var(--space-md);
 		flex-shrink: 0;
 	}
 	.preview-filename {
-		font-size: 0.9rem;
-		color: var(--term-cyan);
+		font-size: 0.875rem;
+		font-weight: 500;
 		min-width: 0;
 		overflow: hidden;
 		text-overflow: ellipsis;
@@ -868,7 +894,6 @@
 		flex-shrink: 0;
 	}
 	.preview-actions button {
-		min-height: 2rem;
 		height: 2rem;
 		font-size: 0.8rem;
 		padding: 0 var(--space-md);
@@ -886,9 +911,9 @@
 	}
 	.preview-text {
 		font-family: var(--font-mono);
-		font-size: 0.85rem;
+		font-size: 0.8rem;
 		line-height: 1.6;
-		color: var(--term-text);
+		color: var(--text);
 		white-space: pre-wrap;
 		word-break: break-all;
 		margin: 0;
@@ -909,9 +934,6 @@
 		}
 		.file-list th,
 		.file-list td {
-			padding: var(--space-sm);
-		}
-		.file-list .link {
 			padding: var(--space-sm);
 		}
 		/* Wrap long names, but never mid-word on the action buttons */

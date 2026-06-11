@@ -3,6 +3,7 @@
 	import { goto } from '$app/navigation';
 	import { getToken } from '$lib/auth.js';
 	import { setRegisterCredentials, clearRegisterCredentials } from '$lib/register-state.js';
+	import Face from '$lib/Face.svelte';
 
 	let username = '';
 	let password = '';
@@ -52,26 +53,29 @@
 	}
 </script>
 
-<div class="container login-container">
+<div class="card auth-card">
 	{#if setupLoading}
-		<p class="term-muted">loading...</p>
+		<p class="muted" role="status" aria-live="polite"><Face state="loading" /> loading…</p>
 	{:else}
-		<h1 class="term-h1"><span class="kaomoji">[▪‿▪]</span> register</h1>
-		<form on:submit={handleContinue} class="term-form">
+		<h1 class="page-title">register</h1>
+		<p class="page-sub">One-time setup — create the owner account.</p>
+		<form method="post" action="/register" on:submit={handleContinue} class="auth-form">
 			<div class="form-row">
-				<label for="username"><span class="prompt-prefix">$</span> username</label>
+				<label class="field-label" for="username">username</label>
 				<input
 					id="username"
 					name="username"
 					type="text"
 					autocomplete="username"
+					autocapitalize="none"
+					spellcheck="false"
 					bind:value={username}
 					placeholder="pick-a-username"
 					required
 				/>
 			</div>
 			<div class="form-row">
-				<label for="password"><span class="prompt-prefix">$</span> password</label>
+				<label class="field-label" for="password">password</label>
 				<input
 					id="password"
 					name="password"
@@ -82,35 +86,24 @@
 					required
 				/>
 			</div>
-			{#if error}<p class="error" role="alert">{error}</p>{/if}
+			{#if error}<p class="error" role="alert"><Face state="error" /> {error}</p>{/if}
 			<button type="submit" class="primary" disabled={loading || !username.trim() || !password}>
-				{loading ? '(´・ω・`) ...' : 'continue'}
+				{loading ? 'continuing…' : 'continue'}
 			</button>
 		</form>
 	{/if}
 </div>
 
 <style>
-	.login-container {
-		width: fit-content;
+	.auth-card {
+		width: 24rem;
 		max-width: 100%;
+		padding: var(--space-xl);
 	}
-	.term-form {
+	.auth-form {
 		display: flex;
 		flex-direction: column;
 		gap: var(--space-lg);
-		width: 22rem;
-		max-width: 100%;
-	}
-	.form-row label {
-		display: block;
-		font-size: 0.85rem;
-		color: var(--term-text-muted);
-		margin-bottom: var(--space-sm);
-	}
-	.term-muted {
-		margin-top: var(--space-xl);
-		font-size: 0.85rem;
-		color: var(--term-text-muted);
+		margin-top: var(--space-lg);
 	}
 </style>
