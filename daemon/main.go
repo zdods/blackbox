@@ -134,6 +134,28 @@ func main() {
 	}
 }
 
+// dialFailureMessage explains a failed websocket dial, using the HTTP
+// response the server sent instead of the upgrade to point at common
+// reverse-proxy misconfigurations.
+func dialFailureMessage(bastionURL string, resp *http.Response, err error) string {
+	if resp == nil {
+		return fmt.Sprintf("dial %s: %v", bastionURL, err)
+	}
+	switch {
+	case resp.StatusCode >= 300 && resp.StatusCode < 400:
+		loc := resp.Header.Get("Location")
+		hint := ""
+		if strings.HasPrefix(bastionURL, "ws://") && strings.HasPrefix(loc, "https://") {
+			hint = " — the server redirects to HTTPS; use a wss:// URL"
+		}
+		return fmt.Sprintf("dial %s: %v (HTTP %d redirect to %s)%s", bastionURL, err, resp.StatusCode, loc, hint)
+	case resp.StatusCode == http.StatusBadRequest:
+		return fmt.Sprintf("dial %s: %v (HTTP 400 — if the server is behind a reverse proxy, the proxy must forward the Upgrade and Connection headers for /ws/; see docs/deployment.md)", bastionURL, err)
+	default:
+		return fmt.Sprintf("dial %s: %v (HTTP %d)", bastionURL, err, resp.StatusCode)
+	}
+}
+
 // firstNonEmpty returns the first non-empty string from vals.
 func firstNonEmpty(vals ...string) string {
 	for _, v := range vals {
@@ -376,9 +398,12 @@ func handleReadChunk(root string, req *pkg.ReadChunkRequest) (*pkg.ReadChunkResp
 
 func runDaemon(bastionURL, token, root string) error {
 	header := http.Header{}
-	conn, _, err := websocket.DefaultDialer.Dial(bastionURL, header)
+	conn, resp, err := websocket.DefaultDialer.Dial(bastionURL, header)
 	if err != nil {
-		log.Printf("dial: %v", err)
+		log.Print(dialFailureMessage(bastionURL, resp, err))
+		if resp != nil {
+			resp.Body.Close()
+		}
 		return errDialFailed
 	}
 	defer conn.Close()
