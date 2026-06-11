@@ -50,3 +50,8 @@ docker-compose.override.yml
 # dev
 PLAN.md
 GTM.md
+
+# Playwright
+web/test-results/
+web/playwright-report/
+web/e2e/screenshots/

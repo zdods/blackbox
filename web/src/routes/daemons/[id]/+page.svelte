@@ -913,7 +913,14 @@
 		}
 		.file-list .link {
 			padding: var(--space-sm);
+		}
+		/* Wrap long names, but never mid-word on the action buttons */
+		.file-list td.col-name .link {
 			word-break: break-all;
+		}
+		.file-list .dl-btn,
+		.file-list .delete-btn {
+			white-space: nowrap;
 		}
 		.upload-row {
 			flex-wrap: wrap;
