@@ -300,6 +300,11 @@
 				color: var(--accent);
 				border-color: var(--accent);
 			}
+			.install-hint {
+				margin: 0.75rem 0 0;
+				font-size: 0.8rem;
+				color: var(--text-faint);
+			}
 
 			/* ---- Sections ---- */
 			section {
@@ -535,8 +540,8 @@
 					<span class="hero-line">Only someone else's hard&nbsp;drive.</span>
 				</h1>
 				<p class="tagline">
-					blackbox turns the machines you already own into a "cloud" that's actually yours —
-					browse, upload, and download from one secure console, while your files never
+					blackbox turns the computers you already own into a "cloud" that's actually yours —
+					browse, upload, and download from one secure dashboard, while your files never
 					leave home.
 				</p>
 				<div class="hero-cta">
@@ -556,6 +561,10 @@
 					>
 					<button class="copy-btn" type="button" data-copy>copy</button>
 				</div>
+				<p class="install-hint">
+					Paste this into the terminal on any machine you want to reach. That's the whole
+					install.
+				</p>
 			</div>
 
 			<section>
@@ -566,8 +575,9 @@
 						<span class="ledger-index">01</span>
 						<h3><span class="row-face" aria-hidden="true">[▪‿▪]</span> Your files stay home</h3>
 						<p>
-							blackbox never copies your data to anyone else's hardware. The server only relays —
-							file content lives on your machines and nowhere else. No telemetry, ever.
+							blackbox never copies your data to anyone else's hardware. The server in the middle
+							just passes files through without keeping anything — your stuff lives on your
+							machines and nowhere else. No tracking, ever.
 						</p>
 					</div>
 					<div class="ledger-row">
@@ -576,9 +586,9 @@
 							<span class="row-face" aria-hidden="true">[▪ω▪]</span> Works with what you own
 						</h3>
 						<p>
-							A laptop, a NAS, the server in your closet — a small background service (the
-							blackbox daemon) runs on Linux, macOS, and Windows. One binary, installed with a
-							single command or Homebrew.
+							A laptop, an old desktop, a NAS, the server in your closet — blackbox runs a tiny
+							helper program (the daemon) quietly in the background on Linux, macOS, and Windows.
+							One command installs it.
 						</p>
 					</div>
 					<div class="ledger-row">
@@ -587,32 +597,33 @@
 							<span class="row-face" aria-hidden="true">[▪o▪]</span> Everything in one console
 						</h3>
 						<p>
-							Browse, upload, download, and preview files on all of your machines from a clean
-							web console that works just as well on your phone.
+							Browse, upload, download, and preview files on all of your machines from one clean
+							web dashboard that works just as well on your phone.
 						</p>
 					</div>
 					<div class="ledger-row">
 						<span class="ledger-index">04</span>
 						<h3><span class="row-face" aria-hidden="true">[–‿–]</span> No network gymnastics</h3>
 						<p>
-							Your machines connect outward to the server, so you never open a port, configure a
-							VPN, or touch your router. If it can reach the internet, it can join.
+							Your machines call out to the server — nothing on the internet can call in. No
+							router settings, no VPN, no port forwarding, no asking your ISP for anything. If
+							it can browse the web, it can join.
 						</p>
 					</div>
 					<div class="ledger-row">
 						<span class="ledger-index">05</span>
 						<h3><span class="row-face" aria-hidden="true">[▪_▪]</span> Secure by default</h3>
 						<p>
-							Two-factor authentication is built in, not bolted on. TLS end-to-end, hardened
-							sessions, rate-limited logins, and signed releases you can verify.
+							Two-factor login is part of setup, not an optional extra. Everything travels over
+							the same kind of encryption your bank uses, end to end.
 						</p>
 					</div>
 					<div class="ledger-row">
 						<span class="ledger-index">06</span>
 						<h3><span class="row-face" aria-hidden="true">[^‿^]</span> Open source</h3>
 						<p>
-							MIT licensed with a deliberately simple foundation — Go, PostgreSQL, WebSockets.
-							Read the code, run it forever, help shape the roadmap.
+							Free and open source (MIT), built on boring, proven technology. Anyone can read the
+							code, run it forever, and help shape where it goes.
 						</p>
 					</div>
 				</div>
@@ -621,8 +632,8 @@
 			<section>
 				<h2 class="section-label">The wiring</h2>
 				<p class="section-lede">
-					Your machines dial out; nothing dials in. The bastion relays bytes and stores none of
-					them.
+					Your machines call out; nothing calls in. The server in the middle (we call it the
+					bastion) passes your files through and keeps none of them.
 				</p>
 				<div class="wiring-panel" role="img" aria-label="Architecture diagram: your machines (laptop, NAS, PC) make outbound TLS connections to the bastion relay. Your browser connects to the bastion over HTTPS. The bastion stores nothing and relays everything. Offline machines simply show as offline.">
 					<pre aria-hidden="true">
@@ -633,7 +644,7 @@
 └──────────────┘  │
 ┌──────────────┐  │  outbound only       ┌───────────┐
 │ nas    <span class="wf">[▪‿▪]</span> │──┼─────────────────────▶│  bastion  │
-└──────────────┘  │   wss + tls          │   relay   │
+└──────────────┘  │   encrypted          │   relay   │
 ┌──────────────┐  │                      └─────▲─────┘
 │ pc     <span class="wd">[–‿–]</span> │<span class="wd">··┘</span>                            │  https
 └──────────────┘                               │
@@ -642,7 +653,7 @@
                                        │  any browser  │
                                        └───────────────┘</pre>
 				</div>
-				<p class="wiring-caption">stores nothing · relays everything · no open ports on your machines</p>
+				<p class="wiring-caption">keeps nothing · passes everything through · no doors left open</p>
 			</section>
 
 			<section>
@@ -653,29 +664,29 @@
 				</p>
 				<ul class="posture">
 					<li>
-						<span><strong>Two-factor from the first login.</strong> TOTP is part of setup, not an
-							upsell or an afterthought.</span>
+						<span><strong>Two-factor from the first login.</strong> Linking an authenticator app is
+							part of signing up — not an optional extra you forget to turn on.</span>
 					</li>
 					<li>
-						<span><strong>Outbound-only daemons.</strong> No open ports, no inbound rules, nothing
-							for the internet to knock on.</span>
+						<span><strong>Nothing to break into.</strong> Your machines only ever call out, so
+							there's no door on them for the internet to knock on.</span>
 					</li>
 					<li>
-						<span><strong>TLS end to end.</strong> Browser to server, server to daemon — encrypted
-							the whole way.</span>
+						<span><strong>Encrypted the whole way.</strong> Browser to server, server to your
+							machines — the same encryption your bank uses (TLS), end to end.</span>
 					</li>
 					<li>
-						<span><strong>Hardened sessions.</strong> httpOnly cookies, revocable everywhere,
-							rate-limited logins; daemon tokens hashed at rest.</span>
+						<span><strong>Careful with your keys.</strong> One click logs you out everywhere, and
+							access tokens are stored scrambled — never as plain text.</span>
 					</li>
 					<li>
-						<span><strong>Releases you can verify.</strong> Signed multi-arch images with SBOM and
-							build provenance.</span>
+						<span><strong>Downloads you can trust.</strong> Every release is cryptographically
+							signed, so you can check it really came from us, untouched.</span>
 					</li>
 					<li>
-						<span><strong>A real disclosure policy.</strong> Private reporting via
-							<a href="https://github.com/zdods/blackbox/blob/main/SECURITY.md">SECURITY.md</a> —
-							found something? Tell us quietly, we'll fix it loudly.</span>
+						<span><strong>A real way to report problems.</strong> Found something? Tell us quietly
+							via <a href="https://github.com/zdods/blackbox/blob/main/SECURITY.md">SECURITY.md</a>
+							and we'll fix it loudly.</span>
 					</li>
 				</ul>
 			</section>
