@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-06-10
+
 ### Added
 
 - Structured logs: one line per request with status, duration, and a
@@ -15,6 +17,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Mobile-friendly console: fluid login/register forms and a file
   browser that fits small screens (modified column hidden, upload row
   wraps, full-width preview modal under 640px).
+- The daemon explains failed connections: dial errors include the HTTP
+  status and a hint for common reverse-proxy mistakes (ws:// against an
+  HTTPS redirect, proxy not forwarding upgrade headers). New
+  [deployment guide](docs/deployment.md) with nginx/OpenResty, Caddy,
+  and Traefik configs.
 
 ### Changed
 
@@ -93,7 +100,8 @@ console.
 - Compose binds Postgres to `127.0.0.1`; bastion container runs as
   non-root.
 
-[Unreleased]: https://github.com/zdods/blackbox/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/zdods/blackbox/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/zdods/blackbox/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/zdods/blackbox/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/zdods/blackbox/compare/v0.0.1...v0.1.0
 [0.0.1]: https://github.com/zdods/blackbox/releases/tag/v0.0.1
