@@ -101,6 +101,13 @@
 				padding: 0 1.5rem;
 			}
 
+			.face {
+				color: var(--accent);
+				letter-spacing: -0.04em;
+				font-style: normal;
+				white-space: nowrap;
+			}
+
 			/* ---- Nav ---- */
 			nav {
 				display: flex;
@@ -117,10 +124,6 @@
 			}
 			.brand:hover {
 				color: var(--text);
-			}
-			.face {
-				color: var(--accent);
-				letter-spacing: -0.04em;
 			}
 			.nav-links {
 				display: flex;
@@ -250,7 +253,7 @@
 
 			/* ---- Install block ---- */
 			.install {
-				margin: 0 auto 6rem;
+				margin: 0 auto 7rem;
 				max-width: 44rem;
 			}
 			.install-label {
@@ -300,81 +303,168 @@
 
 			/* ---- Sections ---- */
 			section {
-				padding: 0 0 6rem;
+				padding: 0 0 7rem;
 			}
 			.section-label {
 				font-size: 0.7rem;
 				font-weight: 600;
-				letter-spacing: 0.12em;
+				letter-spacing: 0.14em;
 				text-transform: uppercase;
 				color: var(--accent);
-				margin: 0 0 2rem;
+				margin: 0 0 0.75rem;
+			}
+			.section-lede {
+				margin: 0 0 2.5rem;
+				color: var(--text-muted);
+				max-width: 36rem;
 			}
 
-			/* Features */
-			.features {
+			/* ---- Datasheet ledger ---- */
+			.ledger {
+				border-top: 1px solid var(--border);
+			}
+			.ledger-row {
 				display: grid;
-				grid-template-columns: repeat(3, 1fr);
-				gap: 1rem;
+				grid-template-columns: 3.5rem 17rem 1fr;
+				gap: 1.5rem;
+				padding: 1.5rem 0;
+				border-bottom: 1px solid var(--border);
 			}
-			.feature {
-				background: var(--surface);
-				border: 1px solid var(--border);
-				border-radius: 10px;
-				padding: 1.5rem;
-				transition: border-color 0.2s, transform 0.2s;
+			.ledger-index {
+				font-size: 0.8rem;
+				color: var(--text-faint);
+				padding-top: 0.15rem;
 			}
-			.feature:hover {
-				border-color: var(--border-strong);
-				transform: translateY(-2px);
-			}
-			.feature h3 {
-				margin: 0 0 0.5rem;
+			.ledger-row h3 {
+				margin: 0;
 				font-size: 0.95rem;
 				font-weight: 600;
+				display: flex;
+				align-items: baseline;
+				gap: 0.75rem;
 			}
-			.feature p {
+			.row-face {
+				color: var(--text-faint);
+				letter-spacing: -0.04em;
+				white-space: nowrap;
+				transition: color 0.2s;
+				font-weight: 500;
+			}
+			.ledger-row:hover .row-face {
+				color: var(--accent);
+			}
+			.ledger-row p {
 				margin: 0;
-				font-size: 0.85rem;
+				font-size: 0.875rem;
 				color: var(--text-muted);
 			}
 
-			/* Steps */
-			.steps {
+			/* ---- Wiring diagram ---- */
+			.wiring-panel {
+				background: var(--inset);
+				border: 1px solid var(--border);
+				border-radius: 10px;
+				padding: 2rem 1.5rem;
+				overflow-x: auto;
+			}
+			.wiring-panel pre {
+				margin: 0 auto;
+				width: max-content;
+				font-family: var(--font-mono);
+				font-size: 0.8rem;
+				line-height: 1.5;
+				color: var(--text-muted);
+			}
+			.wiring-panel .wf {
+				color: var(--accent);
+			}
+			.wiring-panel .wd {
+				color: var(--text-faint);
+			}
+			.wiring-panel .wl {
+				color: var(--text);
+				font-weight: 500;
+			}
+			.wiring-caption {
+				margin: 1.25rem 0 0;
+				font-size: 0.85rem;
+				color: var(--text-faint);
+				text-align: center;
+			}
+
+			/* ---- Security posture ---- */
+			.posture {
+				list-style: none;
+				margin: 0;
+				padding: 0;
 				display: grid;
-				grid-template-columns: repeat(3, 1fr);
+				grid-template-columns: 1fr 1fr;
+				gap: 1rem 3rem;
+			}
+			.posture li {
+				display: flex;
+				gap: 0.85rem;
+				font-size: 0.9rem;
+				color: var(--text-muted);
+				padding: 0.35rem 0;
+			}
+			.posture li::before {
+				content: '✓';
+				color: var(--accent);
+				font-weight: 600;
+				flex-shrink: 0;
+			}
+			.posture strong {
+				color: var(--text);
+				font-weight: 600;
+			}
+
+			/* ---- The faces ---- */
+			.crew {
+				display: grid;
+				grid-template-columns: repeat(4, 1fr);
 				gap: 1rem;
-				counter-reset: step;
 			}
-			.step {
-				border-left: 1px solid var(--border);
-				padding-left: 1.25rem;
+			.crew-member {
+				border: 1px solid var(--border);
+				border-radius: 10px;
+				padding: 1.75rem 1rem 1.4rem;
+				text-align: center;
+				transition: border-color 0.2s;
 			}
-			.step::before {
-				counter-increment: step;
-				content: '0' counter(step);
+			.crew-member:hover {
+				border-color: var(--border-strong);
+			}
+			.crew-face {
+				display: block;
+				font-size: 1.6rem;
+				font-weight: 600;
+				letter-spacing: -0.04em;
+				margin-bottom: 0.75rem;
+			}
+			.crew-member:nth-child(1) .crew-face {
+				color: var(--accent);
+			}
+			.crew-member:nth-child(2) .crew-face {
+				color: var(--text-muted);
+			}
+			.crew-member:nth-child(3) .crew-face {
+				color: #f0655a;
+			}
+			.crew-member:nth-child(4) .crew-face {
+				color: var(--text-faint);
+			}
+			.crew-name {
 				display: block;
 				font-size: 0.8rem;
 				font-weight: 600;
-				color: var(--accent);
-				margin-bottom: 0.5rem;
-			}
-			.step h3 {
-				margin: 0 0 0.5rem;
-				font-size: 0.95rem;
-			}
-			.step p {
-				margin: 0;
-				font-size: 0.85rem;
-				color: var(--text-muted);
-			}
-			.step code {
-				font-size: 0.8rem;
 				color: var(--text);
-				background: var(--inset);
-				border: 1px solid var(--border);
-				border-radius: 4px;
-				padding: 0.1rem 0.4rem;
+			}
+			.crew-desc {
+				display: block;
+				font-size: 0.75rem;
+				color: var(--text-faint);
+				margin-top: 0.2rem;
 			}
 
 			/* ---- Footer ---- */
@@ -389,30 +479,39 @@
 				font-size: 0.85rem;
 				color: var(--text-muted);
 			}
-			.footer-faces {
+			.footer-face {
 				color: var(--text-faint);
 				letter-spacing: -0.02em;
 			}
-			.footer-faces span {
-				margin-right: 1rem;
-			}
-			.footer-faces .up {
-				color: var(--accent);
-			}
 
 			@media (max-width: 720px) {
-				.features,
-				.steps {
-					grid-template-columns: 1fr;
-				}
 				.hero {
 					padding: 4rem 0 3.5rem;
 				}
 				.install {
-					margin-bottom: 4rem;
+					margin-bottom: 4.5rem;
 				}
 				section {
-					padding-bottom: 4rem;
+					padding-bottom: 4.5rem;
+				}
+				.ledger-row {
+					grid-template-columns: 2.5rem 1fr;
+					gap: 0.5rem 1rem;
+				}
+				.ledger-row p {
+					grid-column: 2;
+				}
+				.posture {
+					grid-template-columns: 1fr;
+				}
+				.crew {
+					grid-template-columns: repeat(2, 1fr);
+				}
+				.wiring-panel {
+					padding: 1.25rem 1rem;
+				}
+				.wiring-panel pre {
+					font-size: 0.65rem;
 				}
 			}
 		</style>
@@ -425,6 +524,7 @@
 				<div class="nav-links">
 					<a href="https://github.com/zdods/blackbox">github</a>
 					<a href="https://github.com/zdods/blackbox/releases/latest">releases</a>
+					<a href="https://github.com/zdods/blackbox/blob/main/SECURITY.md">security</a>
 				</div>
 			</nav>
 
@@ -459,46 +559,57 @@
 			</div>
 
 			<section>
-				<h2 class="section-label">Why blackbox</h2>
-				<div class="features">
-					<div class="feature">
-						<h3>Your files stay home</h3>
+				<h2 class="section-label">The datasheet</h2>
+				<p class="section-lede">What you get, line by line. No asterisks.</p>
+				<div class="ledger">
+					<div class="ledger-row">
+						<span class="ledger-index">01</span>
+						<h3><span class="row-face" aria-hidden="true">[▪‿▪]</span> Your files stay home</h3>
 						<p>
 							blackbox never copies your data to anyone else's hardware. The server only relays —
 							file content lives on your machines and nowhere else. No telemetry, ever.
 						</p>
 					</div>
-					<div class="feature">
-						<h3>Works with what you own</h3>
+					<div class="ledger-row">
+						<span class="ledger-index">02</span>
+						<h3>
+							<span class="row-face" aria-hidden="true">[▪ω▪]</span> Works with what you own
+						</h3>
 						<p>
 							A laptop, a NAS, the server in your closet — a small background service (the
 							blackbox daemon) runs on Linux, macOS, and Windows. One binary, installed with a
 							single command or Homebrew.
 						</p>
 					</div>
-					<div class="feature">
-						<h3>Everything in one console</h3>
+					<div class="ledger-row">
+						<span class="ledger-index">03</span>
+						<h3>
+							<span class="row-face" aria-hidden="true">[▪o▪]</span> Everything in one console
+						</h3>
 						<p>
 							Browse, upload, download, and preview files on all of your machines from a clean
 							web console that works just as well on your phone.
 						</p>
 					</div>
-					<div class="feature">
-						<h3>No network gymnastics</h3>
+					<div class="ledger-row">
+						<span class="ledger-index">04</span>
+						<h3><span class="row-face" aria-hidden="true">[–‿–]</span> No network gymnastics</h3>
 						<p>
 							Your machines connect outward to the server, so you never open a port, configure a
 							VPN, or touch your router. If it can reach the internet, it can join.
 						</p>
 					</div>
-					<div class="feature">
-						<h3>Secure by default</h3>
+					<div class="ledger-row">
+						<span class="ledger-index">05</span>
+						<h3><span class="row-face" aria-hidden="true">[▪_▪]</span> Secure by default</h3>
 						<p>
 							Two-factor authentication is built in, not bolted on. TLS end-to-end, hardened
 							sessions, rate-limited logins, and signed releases you can verify.
 						</p>
 					</div>
-					<div class="feature">
-						<h3>Open source</h3>
+					<div class="ledger-row">
+						<span class="ledger-index">06</span>
+						<h3><span class="row-face" aria-hidden="true">[^‿^]</span> Open source</h3>
 						<p>
 							MIT licensed with a deliberately simple foundation — Go, PostgreSQL, WebSockets.
 							Read the code, run it forever, help shape the roadmap.
@@ -508,37 +619,100 @@
 			</section>
 
 			<section>
-				<h2 class="section-label">How it works</h2>
-				<div class="steps">
-					<div class="step">
-						<h3>Run the server</h3>
-						<p>
-							One <code>docker compose up</code> on any box you trust pulls the prebuilt image.
-							Register once — the account is yours alone.
-						</p>
+				<h2 class="section-label">The wiring</h2>
+				<p class="section-lede">
+					Your machines dial out; nothing dials in. The bastion relays bytes and stores none of
+					them.
+				</p>
+				<div class="wiring-panel" role="img" aria-label="Architecture diagram: your machines (laptop, NAS, PC) make outbound TLS connections to the bastion relay. Your browser connects to the bastion over HTTPS. The bastion stores nothing and relays everything. Offline machines simply show as offline.">
+					<pre aria-hidden="true">
+ <span class="wl">YOUR MACHINES</span>                         <span class="wl">ANYWHERE</span>
+
+┌──────────────┐
+│ laptop <span class="wf">[▪‿▪]</span> │──┐
+└──────────────┘  │
+┌──────────────┐  │  outbound only       ┌───────────┐
+│ nas    <span class="wf">[▪‿▪]</span> │──┼─────────────────────▶│  bastion  │
+└──────────────┘  │   wss + tls          │   relay   │
+┌──────────────┐  │                      └─────▲─────┘
+│ pc     <span class="wd">[–‿–]</span> │<span class="wd">··┘</span>                            │  https
+└──────────────┘                               │
+   <span class="wd">offline — no drama</span>                  ┌───────┴───────┐
+                                       │  you    <span class="wf">[▪‿▪]</span> │
+                                       │  any browser  │
+                                       └───────────────┘</pre>
+				</div>
+				<p class="wiring-caption">stores nothing · relays everything · no open ports on your machines</p>
+			</section>
+
+			<section>
+				<h2 class="section-label">The security posture</h2>
+				<p class="section-lede">
+					Locked down, not locked in. The boring kind of secure — the kind you stop thinking
+					about.
+				</p>
+				<ul class="posture">
+					<li>
+						<span><strong>Two-factor from the first login.</strong> TOTP is part of setup, not an
+							upsell or an afterthought.</span>
+					</li>
+					<li>
+						<span><strong>Outbound-only daemons.</strong> No open ports, no inbound rules, nothing
+							for the internet to knock on.</span>
+					</li>
+					<li>
+						<span><strong>TLS end to end.</strong> Browser to server, server to daemon — encrypted
+							the whole way.</span>
+					</li>
+					<li>
+						<span><strong>Hardened sessions.</strong> httpOnly cookies, revocable everywhere,
+							rate-limited logins; daemon tokens hashed at rest.</span>
+					</li>
+					<li>
+						<span><strong>Releases you can verify.</strong> Signed multi-arch images with SBOM and
+							build provenance.</span>
+					</li>
+					<li>
+						<span><strong>A real disclosure policy.</strong> Private reporting via
+							<a href="https://github.com/zdods/blackbox/blob/main/SECURITY.md">SECURITY.md</a> —
+							found something? Tell us quietly, we'll fix it loudly.</span>
+					</li>
+				</ul>
+			</section>
+
+			<section>
+				<h2 class="section-label">The faces</h2>
+				<p class="section-lede">
+					The console speaks kaomoji. Four moods, no mystery meat — you always know how your
+					fleet is feeling.
+				</p>
+				<div class="crew">
+					<div class="crew-member">
+						<span class="crew-face" aria-hidden="true">[▪‿▪]</span>
+						<span class="crew-name">connected</span>
+						<span class="crew-desc">all good</span>
 					</div>
-					<div class="step">
-						<h3>Connect your machines</h3>
-						<p>
-							Add a host in the console, run the daemon with the token it hands you, and choose
-							which folder to share.
-						</p>
+					<div class="crew-member">
+						<span class="crew-face" aria-hidden="true">[▪‥▪]</span>
+						<span class="crew-name">working</span>
+						<span class="crew-desc">on it</span>
 					</div>
-					<div class="step">
-						<h3>Browse everything</h3>
-						<p>
-							Every connected machine appears in one place. Upload, download, preview, and manage
-							your files from anywhere.
-						</p>
+					<div class="crew-member">
+						<span class="crew-face" aria-hidden="true">[▪︿▪]</span>
+						<span class="crew-name">error</span>
+						<span class="crew-desc">needs you</span>
+					</div>
+					<div class="crew-member">
+						<span class="crew-face" aria-hidden="true">[–‿–]</span>
+						<span class="crew-name">offline</span>
+						<span class="crew-desc">taking a nap</span>
 					</div>
 				</div>
 			</section>
 
 			<footer>
 				<span>MIT licensed · made for people who own their hardware</span>
-				<span class="footer-faces" aria-hidden="true">
-					<span class="up">[▪‿▪]</span><span>[▪‥▪]</span><span>[▪︿▪]</span><span>[–‿–]</span>
-				</span>
+				<span class="footer-face" aria-hidden="true">[▪‿▪]</span>
 			</footer>
 		</div>
 
