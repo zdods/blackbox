@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- `docker compose up` now pulls the published GHCR image by default (pin
+  with `BASTION_IMAGE_TAG`); building from source moved to the
+  `docker-compose.dev.yml` overlay (`make dev`).
+- Console fonts (JetBrains Mono) are self-hosted — no Google Fonts CDN
+  request, works offline.
+- Hosts list responds faster with several connected daemons: disk stats
+  are fetched concurrently instead of serially.
+
 ## [0.1.1] - 2026-06-10
 
 ### Fixed
