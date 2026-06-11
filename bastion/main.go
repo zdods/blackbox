@@ -63,31 +63,7 @@ func main() {
 		authLimiter:     NewRateLimiter(10, time.Minute),
 		totpFailLimiter: NewRateLimiter(5, 15*time.Minute),
 	}
-	mux := http.NewServeMux()
-	// Health (public; used by Docker HEALTHCHECK and uptime monitors)
-	mux.HandleFunc("GET /healthz", srv.Healthz)
-	// Auth (public)
-	mux.HandleFunc("GET /api/setup", srv.Setup)
-	mux.HandleFunc("POST /api/register", srv.Register)
-	mux.HandleFunc("POST /api/register/totp-setup", srv.RegisterTOTPSetup)
-	mux.HandleFunc("POST /api/login", srv.Login)
-	mux.HandleFunc("POST /api/login/totp", srv.LoginTOTP)
-	mux.HandleFunc("POST /api/logout", srv.AuthMiddleware(srv.Logout))
-	// Protected (placeholder until step 5)
-	mux.HandleFunc("GET /api/me", srv.AuthMiddleware(srv.Me))
-	mux.HandleFunc("GET /api/daemons", srv.AuthMiddleware(srv.ListDaemons))
-	mux.HandleFunc("POST /api/daemons", srv.AuthMiddleware(srv.CreateDaemon))
-	mux.HandleFunc("PATCH /api/daemons/{id}", srv.AuthMiddleware(srv.UpdateDaemon))
-	mux.HandleFunc("DELETE /api/daemons/{id}", srv.AuthMiddleware(srv.DeleteDaemon))
-	mux.HandleFunc("GET /api/daemons/{id}/files", srv.AuthMiddleware(srv.DaemonFiles))
-	mux.HandleFunc("PUT /api/daemons/{id}/files", srv.AuthMiddleware(srv.DaemonFiles))
-	mux.HandleFunc("DELETE /api/daemons/{id}/files", srv.AuthMiddleware(srv.DaemonFiles))
-	mux.HandleFunc("GET /api/daemons/{id}/meta", srv.AuthMiddleware(srv.DaemonMeta))
-	// Daemon WebSocket (no session; daemon uses token)
-	mux.HandleFunc("GET /ws/daemon", srv.HandleDaemonWS)
-	// Static web app (SPA fallback to index.html); single pattern catches all GET requests not matched above
-	mux.Handle("GET /{path...}", staticHandler(cfg.StaticDir))
-	httpServer := &http.Server{Addr: cfg.ServerAddr, Handler: corsThenMux(cfg, mux)}
+	httpServer := &http.Server{Addr: cfg.ServerAddr, Handler: srv.routes()}
 	go func() {
 		var err error
 		if cfg.TLSCertFile != "" && cfg.TLSKeyFile != "" {
@@ -110,6 +86,37 @@ func main() {
 	} else {
 		log.Print("server stopped")
 	}
+}
+
+// routes builds the full HTTP surface (API, daemon WebSocket, static web
+// app) wrapped in the CORS middleware. Factored out of main so tests can
+// drive the real handler stack via httptest.
+func (s *Server) routes() http.Handler {
+	mux := http.NewServeMux()
+	// Health (public; used by Docker HEALTHCHECK and uptime monitors)
+	mux.HandleFunc("GET /healthz", s.Healthz)
+	// Auth (public)
+	mux.HandleFunc("GET /api/setup", s.Setup)
+	mux.HandleFunc("POST /api/register", s.Register)
+	mux.HandleFunc("POST /api/register/totp-setup", s.RegisterTOTPSetup)
+	mux.HandleFunc("POST /api/login", s.Login)
+	mux.HandleFunc("POST /api/login/totp", s.LoginTOTP)
+	mux.HandleFunc("POST /api/logout", s.AuthMiddleware(s.Logout))
+	// Protected
+	mux.HandleFunc("GET /api/me", s.AuthMiddleware(s.Me))
+	mux.HandleFunc("GET /api/daemons", s.AuthMiddleware(s.ListDaemons))
+	mux.HandleFunc("POST /api/daemons", s.AuthMiddleware(s.CreateDaemon))
+	mux.HandleFunc("PATCH /api/daemons/{id}", s.AuthMiddleware(s.UpdateDaemon))
+	mux.HandleFunc("DELETE /api/daemons/{id}", s.AuthMiddleware(s.DeleteDaemon))
+	mux.HandleFunc("GET /api/daemons/{id}/files", s.AuthMiddleware(s.DaemonFiles))
+	mux.HandleFunc("PUT /api/daemons/{id}/files", s.AuthMiddleware(s.DaemonFiles))
+	mux.HandleFunc("DELETE /api/daemons/{id}/files", s.AuthMiddleware(s.DaemonFiles))
+	mux.HandleFunc("GET /api/daemons/{id}/meta", s.AuthMiddleware(s.DaemonMeta))
+	// Daemon WebSocket (no session; daemon uses token)
+	mux.HandleFunc("GET /ws/daemon", s.HandleDaemonWS)
+	// Static web app (SPA fallback to index.html); single pattern catches all GET requests not matched above
+	mux.Handle("GET /{path...}", staticHandler(s.cfg.StaticDir))
+	return corsThenMux(s.cfg, mux)
 }
 
 // Healthz reports liveness: 200 when the server is up and the DB responds.

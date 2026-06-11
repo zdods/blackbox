@@ -42,11 +42,14 @@ func (s *Server) HandleDaemonWS(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	ac := s.hub.Register(daemonID, conn)
-	defer s.hub.Unregister(daemonID)
+	// Send auth_ok before registering: once the daemon is in the hub, proxied
+	// requests may write to the conn concurrently, and this direct write would
+	// race them (gorilla/websocket allows only one writer).
 	if err := conn.WriteJSON(pkg.AuthOK{Type: pkg.TypeAuthOK, DaemonID: daemonID}); err != nil {
 		log.Printf("daemon ws: write auth ok: %v", err)
 		return
 	}
+	ac := s.hub.Register(daemonID, conn)
+	defer s.hub.Unregister(daemonID)
 	ac.readLoop(s.hub)
 }
