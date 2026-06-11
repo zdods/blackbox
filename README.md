@@ -21,7 +21,7 @@ Self-hosted, single-user cloud storage. Run a server, log in with username/passw
 
 **file browser**
 
-![file browser](./assets/files.png)
+![file browser](./assets/file-browser.png)
 
 The **Hosts** view lists hosts and connection status; add a host with a label and the token is copied to your clipboard automatically (or shown if the browser blocks clipboard access). Open a host to browse **Files**, navigate directories, and upload, download, or delete. The console ships with light, dark, and Nord themes (follows your OS by default).
 
