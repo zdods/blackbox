@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Structured logs: one line per request with status, duration, and a
+  request ID (also returned as `X-Request-ID`); `LOG_FORMAT=json` for
+  JSON lines, `LOG_LEVEL=debug` to include static-asset requests.
+- Mobile-friendly console: fluid login/register forms and a file
+  browser that fits small screens (modified column hidden, upload row
+  wraps, full-width preview modal under 640px).
+
+### Changed
+
+- Database migrations are tracked in `schema_migrations` and each
+  applies exactly once (previously every migration re-ran on boot).
+
 ### Fixed
 
 - A request racing the daemon's WebSocket auth handshake could corrupt

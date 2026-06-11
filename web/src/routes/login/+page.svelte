@@ -168,6 +168,7 @@
 		flex-direction: column;
 		gap: var(--space-lg);
 		width: 22rem;
+		max-width: 100%;
 	}
 	.form-row label {
 		display: block;

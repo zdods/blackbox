@@ -300,3 +300,14 @@ button:focus-visible,
 	opacity: 0.75;
 	font-size: 0.9em;
 }
+
+/* Mobile — tighter chrome under 640px */
+@media (max-width: 640px) {
+	.container {
+		padding: var(--space-md);
+	}
+
+	.terminal.narrow {
+		width: 100%;
+	}
+}

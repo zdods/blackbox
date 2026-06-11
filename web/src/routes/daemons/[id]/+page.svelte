@@ -894,4 +894,43 @@
 		margin: 0;
 		tab-size: 2;
 	}
+
+	/* Mobile: drop the modified column, tighten paddings, wrap the upload row */
+	@media (max-width: 640px) {
+		.file-list th.col-mtime,
+		.file-list td.col-mtime {
+			display: none;
+		}
+		.col-size {
+			width: 4.5rem;
+		}
+		.col-actions {
+			width: 4.5rem;
+		}
+		.file-list th,
+		.file-list td {
+			padding: var(--space-sm);
+		}
+		.file-list .link {
+			padding: var(--space-sm);
+			word-break: break-all;
+		}
+		.upload-row {
+			flex-wrap: wrap;
+		}
+		.upload-path {
+			flex-basis: 100%;
+		}
+		.upload-file-wrap {
+			min-width: 0;
+			flex: 1 1 auto;
+		}
+		.preview-backdrop {
+			padding: var(--space-sm);
+		}
+		.preview-modal {
+			width: 100%;
+			max-height: 92vh;
+		}
+	}
 </style>
