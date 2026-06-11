@@ -225,7 +225,7 @@ func (s *Server) proxyReadFileSmall(ctx context.Context, w http.ResponseWriter, 
 		return
 	}
 	w.Header().Set("Content-Disposition", "attachment")
-	w.Write(data)
+	_, _ = w.Write(data) // client disconnect mid-download is not actionable
 }
 
 func (s *Server) proxyWriteFile(ctx context.Context, w http.ResponseWriter, r *http.Request, ac *DaemonConn, path string) {

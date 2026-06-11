@@ -215,11 +215,10 @@ func resolveDir(path string) (string, error) {
 		}
 		if path == "~" {
 			path = home
-		} else if path == "~/" || strings.HasPrefix(path, "~/") {
+		} else if strings.HasPrefix(path, "~/") {
 			path = filepath.Join(home, strings.TrimPrefix(path, "~/"))
-		} else {
-			// ~user not supported; treat as literal
 		}
+		// ~user not supported; treated as a literal path
 	}
 	return filepath.Abs(path)
 }

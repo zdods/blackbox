@@ -1,0 +1,20 @@
+version: "2"
+
+linters:
+  settings:
+    errcheck:
+      # Best-effort cleanup calls where the error has no actionable handling.
+      exclude-functions:
+        - (io.Closer).Close
+        - (*os.File).Close
+        - (*github.com/gorilla/websocket.Conn).Close
+        - os.Remove
+        - os.RemoveAll
+        - os.Unsetenv
+        - (*github.com/gorilla/websocket.Conn).SetReadDeadline
+  exclusions:
+    rules:
+      # Test setup/teardown: failures surface as test failures anyway.
+      - path: _test\.go
+        linters:
+          - errcheck
