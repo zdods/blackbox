@@ -25,6 +25,10 @@ type Config struct {
 	// TrustProxy: trust X-Forwarded-For for client IPs (TRUST_PROXY=1; set only
 	// behind a reverse proxy that overwrites the header).
 	TrustProxy bool
+	// LogFormat: "json" for JSON lines; anything else logs text.
+	LogFormat string
+	// LogLevel: "debug" to include static-asset access logs.
+	LogLevel string
 }
 
 func LoadConfig() Config {
@@ -46,6 +50,8 @@ func LoadConfig() Config {
 		CORSOrigin:  os.Getenv("CORS_ORIGIN"),
 		DevMode:     boolEnv("DEV_MODE"),
 		TrustProxy:  boolEnv("TRUST_PROXY"),
+		LogFormat:   os.Getenv("LOG_FORMAT"),
+		LogLevel:    os.Getenv("LOG_LEVEL"),
 	}
 }
 

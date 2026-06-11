@@ -5,7 +5,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"io"
-	"log"
 	"net/http"
 	"strconv"
 	"time"
@@ -80,7 +79,7 @@ func (s *Server) DaemonMeta(w http.ResponseWriter, r *http.Request) {
 	req := pkg.GetMetaRequest{Type: pkg.TypeGetMeta, RequestID: reqID, Path: path}
 	respData, err := ac.Request(ctx, reqID, req)
 	if err != nil {
-		log.Printf("daemon meta request: %v", err)
+		reqLog(ctx).Error("daemon meta request failed", "err", err)
 		writeJSONError(w, http.StatusBadGateway, errMsgUnavailable)
 		return
 	}
@@ -90,7 +89,7 @@ func (s *Server) DaemonMeta(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if resp.Error != "" {
-		log.Printf("daemon meta error: %s", resp.Error)
+		reqLog(ctx).Warn("daemon meta error", "daemon_err", resp.Error)
 		writeJSONError(w, http.StatusBadRequest, "operation failed")
 		return
 	}
@@ -107,7 +106,7 @@ func (s *Server) proxyListDir(ctx context.Context, w http.ResponseWriter, ac *Da
 	req := pkg.ListDirRequest{Type: pkg.TypeListDir, RequestID: reqID, Path: path}
 	respData, err := ac.Request(ctx, reqID, req)
 	if err != nil {
-		log.Printf("daemon list-dir request: %v", err)
+		reqLog(ctx).Error("daemon list-dir request failed", "err", err)
 		writeJSONError(w, http.StatusBadGateway, errMsgUnavailable)
 		return
 	}
@@ -117,7 +116,7 @@ func (s *Server) proxyListDir(ctx context.Context, w http.ResponseWriter, ac *Da
 		return
 	}
 	if resp.Error != "" {
-		log.Printf("daemon list-dir error: %s", resp.Error)
+		reqLog(ctx).Warn("daemon list-dir error", "daemon_err", resp.Error)
 		writeJSONError(w, http.StatusBadRequest, "operation failed")
 		return
 	}
@@ -133,7 +132,7 @@ func (s *Server) proxyReadFile(ctx context.Context, w http.ResponseWriter, ac *D
 	metaReq := pkg.GetMetaRequest{Type: pkg.TypeGetMeta, RequestID: metaReqID, Path: path}
 	metaData, err := ac.Request(ctx, metaReqID, metaReq)
 	if err != nil {
-		log.Printf("daemon read-file meta: %v", err)
+		reqLog(ctx).Error("daemon read-file meta failed", "err", err)
 		writeJSONError(w, http.StatusBadGateway, errMsgUnavailable)
 		return
 	}
@@ -143,7 +142,7 @@ func (s *Server) proxyReadFile(ctx context.Context, w http.ResponseWriter, ac *D
 		return
 	}
 	if meta.Error != "" {
-		log.Printf("daemon read-file meta error: %s", meta.Error)
+		reqLog(ctx).Warn("daemon read-file meta error", "daemon_err", meta.Error)
 		writeJSONError(w, http.StatusBadRequest, "operation failed")
 		return
 	}
@@ -180,13 +179,13 @@ func (s *Server) proxyReadFile(ctx context.Context, w http.ResponseWriter, ac *D
 		respJSON, chunkData, err := ac.RequestExpectBinary(chunkCtx, reqID, req)
 		cancel()
 		if err != nil {
-			log.Printf("daemon read-chunk: %v", err)
+			reqLog(ctx).Error("daemon read-chunk failed", "err", err)
 			return // headers already sent, can't write JSON error
 		}
 		var resp pkg.ReadChunkResponse
 		if json.Unmarshal(respJSON, &resp) != nil || resp.Error != "" {
 			if resp.Error != "" {
-				log.Printf("daemon read-chunk error: %s", resp.Error)
+				reqLog(ctx).Warn("daemon read-chunk error", "daemon_err", resp.Error)
 			}
 			return
 		}
@@ -205,7 +204,7 @@ func (s *Server) proxyReadFileSmall(ctx context.Context, w http.ResponseWriter, 
 	req := pkg.ReadFileRequest{Type: pkg.TypeReadFile, RequestID: reqID, Path: path}
 	respData, err := ac.Request(ctx, reqID, req)
 	if err != nil {
-		log.Printf("daemon read-file request: %v", err)
+		reqLog(ctx).Error("daemon read-file request failed", "err", err)
 		writeJSONError(w, http.StatusBadGateway, errMsgUnavailable)
 		return
 	}
@@ -215,7 +214,7 @@ func (s *Server) proxyReadFileSmall(ctx context.Context, w http.ResponseWriter, 
 		return
 	}
 	if resp.Error != "" {
-		log.Printf("daemon read-file error: %s", resp.Error)
+		reqLog(ctx).Warn("daemon read-file error", "daemon_err", resp.Error)
 		writeJSONError(w, http.StatusBadRequest, "operation failed")
 		return
 	}
@@ -244,7 +243,7 @@ func (s *Server) proxyWriteFile(ctx context.Context, w http.ResponseWriter, r *h
 	}
 	respData, err := ac.Request(ctx, reqID, req)
 	if err != nil {
-		log.Printf("daemon write-file request: %v", err)
+		reqLog(ctx).Error("daemon write-file request failed", "err", err)
 		writeJSONError(w, http.StatusBadGateway, errMsgUnavailable)
 		return
 	}
@@ -254,7 +253,7 @@ func (s *Server) proxyWriteFile(ctx context.Context, w http.ResponseWriter, r *h
 		return
 	}
 	if resp.Error != "" {
-		log.Printf("daemon write-file error: %s", resp.Error)
+		reqLog(ctx).Warn("daemon write-file error", "daemon_err", resp.Error)
 		writeJSONError(w, http.StatusBadRequest, "operation failed")
 		return
 	}
@@ -295,7 +294,7 @@ func (s *Server) proxyWriteChunk(ctx context.Context, w http.ResponseWriter, r *
 	}
 	respData, err := ac.RequestWithBinary(chunkCtx, reqID, req, chunkData)
 	if err != nil {
-		log.Printf("daemon write-chunk request: %v", err)
+		reqLog(ctx).Error("daemon write-chunk request failed", "err", err)
 		writeJSONError(w, http.StatusBadGateway, errMsgUnavailable)
 		return
 	}
@@ -305,7 +304,7 @@ func (s *Server) proxyWriteChunk(ctx context.Context, w http.ResponseWriter, r *
 		return
 	}
 	if resp.Error != "" {
-		log.Printf("daemon write-chunk error: %s", resp.Error)
+		reqLog(ctx).Warn("daemon write-chunk error", "daemon_err", resp.Error)
 		writeJSONError(w, http.StatusBadRequest, "operation failed")
 		return
 	}
@@ -321,7 +320,7 @@ func (s *Server) proxyDeleteFile(ctx context.Context, w http.ResponseWriter, ac 
 	req := pkg.DeleteFileRequest{Type: pkg.TypeDeleteFile, RequestID: reqID, Path: path}
 	respData, err := ac.Request(ctx, reqID, req)
 	if err != nil {
-		log.Printf("daemon delete-file request: %v", err)
+		reqLog(ctx).Error("daemon delete-file request failed", "err", err)
 		writeJSONError(w, http.StatusBadGateway, errMsgUnavailable)
 		return
 	}
@@ -331,7 +330,7 @@ func (s *Server) proxyDeleteFile(ctx context.Context, w http.ResponseWriter, ac 
 		return
 	}
 	if resp.Error != "" {
-		log.Printf("daemon delete-file error: %s", resp.Error)
+		reqLog(ctx).Warn("daemon delete-file error", "daemon_err", resp.Error)
 		writeJSONError(w, http.StatusBadRequest, "operation failed")
 		return
 	}

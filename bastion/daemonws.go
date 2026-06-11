@@ -2,7 +2,7 @@ package main
 
 import (
 	"encoding/json"
-	"log"
+	"log/slog"
 	"net/http"
 	"time"
 
@@ -30,7 +30,7 @@ func (s *Server) HandleDaemonWS(w http.ResponseWriter, r *http.Request) {
 	var auth pkg.Auth
 	if err := json.Unmarshal(data, &auth); err != nil || auth.Type != pkg.TypeAuth {
 		if err := conn.WriteJSON(pkg.AuthError{Type: pkg.TypeAuthError, Error: "invalid auth message"}); err != nil {
-			log.Printf("daemon ws: write auth error: %v", err)
+			slog.Warn("daemon ws: write auth error", "err", err)
 		}
 		return
 	}
@@ -38,7 +38,7 @@ func (s *Server) HandleDaemonWS(w http.ResponseWriter, r *http.Request) {
 	err = s.pool.QueryRow(r.Context(), `SELECT id::text FROM daemons WHERE token_hash = $1`, HashDaemonToken(auth.Token)).Scan(&daemonID)
 	if err != nil {
 		if err := conn.WriteJSON(pkg.AuthError{Type: pkg.TypeAuthError, Error: "invalid token"}); err != nil {
-			log.Printf("daemon ws: write auth error: %v", err)
+			slog.Warn("daemon ws: write auth error", "err", err)
 		}
 		return
 	}
@@ -46,7 +46,7 @@ func (s *Server) HandleDaemonWS(w http.ResponseWriter, r *http.Request) {
 	// requests may write to the conn concurrently, and this direct write would
 	// race them (gorilla/websocket allows only one writer).
 	if err := conn.WriteJSON(pkg.AuthOK{Type: pkg.TypeAuthOK, DaemonID: daemonID}); err != nil {
-		log.Printf("daemon ws: write auth ok: %v", err)
+		slog.Warn("daemon ws: write auth ok", "err", err)
 		return
 	}
 	ac := s.hub.Register(daemonID, conn)

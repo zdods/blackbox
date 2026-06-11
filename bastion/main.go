@@ -4,7 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
@@ -32,27 +32,30 @@ func main() {
 		fmt.Println("blackbox-bastion " + version.Version)
 		return
 	}
-	log.Printf("blackbox-bastion %s", version.Version)
 	cfg := LoadConfig()
+	setupLogger(cfg.LogFormat, cfg.LogLevel)
+	slog.Info("starting blackbox-bastion", "version", version.Version)
 	secret, warning, err := resolveJWTSecret(cfg.JWTSecret, cfg.DevMode)
 	if err != nil {
-		log.Fatalf("jwt secret: %v", err)
+		slog.Error("jwt secret", "err", err)
+		os.Exit(1)
 	}
 	if warning != "" {
-		log.Printf("warning: %s", warning)
+		slog.Warn(warning)
 	}
 	cfg.JWTSecret = secret
 	ctx := context.Background()
 	pool, err := OpenDB(ctx, cfg.DatabaseURL)
 	if err != nil {
-		log.Fatalf("database: %v", err)
+		slog.Error("database connect failed", "err", err)
+		os.Exit(1)
 	}
 	defer pool.Close()
-	log.Print("database connected")
+	slog.Info("database connected")
 	if err := RunMigrations(ctx, pool); err != nil {
-		log.Fatalf("migrations: %v", err)
+		slog.Error("migrations failed", "err", err)
+		os.Exit(1)
 	}
-	log.Print("migrations applied")
 	hub := NewHub()
 	totpCache := NewTotpSetupCache()
 	srv := &Server{
@@ -67,24 +70,25 @@ func main() {
 	go func() {
 		var err error
 		if cfg.TLSCertFile != "" && cfg.TLSKeyFile != "" {
-			log.Printf("server listening on %s (TLS)", cfg.ServerAddr)
+			slog.Info("server listening", "addr", cfg.ServerAddr, "tls", true)
 			err = httpServer.ListenAndServeTLS(cfg.TLSCertFile, cfg.TLSKeyFile)
 		} else {
-			log.Printf("server listening on %s", cfg.ServerAddr)
+			slog.Info("server listening", "addr", cfg.ServerAddr, "tls", false)
 			err = httpServer.ListenAndServe()
 		}
 		if err != nil && err != http.ErrServerClosed {
-			log.Fatalf("server: %v", err)
+			slog.Error("server failed", "err", err)
+			os.Exit(1)
 		}
 	}()
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
-	log.Print("shutdown signal received, stopping server")
+	slog.Info("shutdown signal received, stopping server")
 	if err := httpServer.Shutdown(context.Background()); err != nil {
-		log.Printf("shutdown: %v", err)
+		slog.Error("shutdown", "err", err)
 	} else {
-		log.Print("server stopped")
+		slog.Info("server stopped")
 	}
 }
 
@@ -116,7 +120,7 @@ func (s *Server) routes() http.Handler {
 	mux.HandleFunc("GET /ws/daemon", s.HandleDaemonWS)
 	// Static web app (SPA fallback to index.html); single pattern catches all GET requests not matched above
 	mux.Handle("GET /{path...}", staticHandler(s.cfg.StaticDir))
-	return corsThenMux(s.cfg, mux)
+	return withRequestID(accessLog(corsThenMux(s.cfg, mux)))
 }
 
 // Healthz reports liveness: 200 when the server is up and the DB responds.
