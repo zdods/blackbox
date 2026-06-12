@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Console favicon and home-screen icons: the [▪‿▪] face as an SVG
+  favicon with PNG fallbacks, apple-touch-icon, and a web manifest so
+  the console can be added to a phone home screen as a standalone app.
+
 ## [0.4.0] - 2026-06-11
 
 ### Changed
