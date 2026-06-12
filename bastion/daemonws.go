@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"time"
 
-	"blackbox/pkg"
+	"blackhaul/pkg"
 
 	"github.com/gorilla/websocket"
 )

@@ -4,15 +4,15 @@
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<meta name="theme-color" content="#0c0d0f" />
-		<title>blackbox — your own private "cloud", on your own machines</title>
+		<title>blackhaul — your own private "cloud", on your own machines</title>
 		<meta
 			name="description"
-			content="There is no cloud — only someone else's hard drive. blackbox turns the machines you already own into a private &quot;cloud&quot;: one secure console, files that never leave home."
+			content="There is no cloud — only someone else's hard drive. blackhaul turns the machines you already own into a private &quot;cloud&quot;: one secure console, files that never leave home."
 		/>
-		<meta property="og:title" content="blackbox [▪‿▪]" />
+		<meta property="og:title" content="blackhaul [▪‿▪]" />
 		<meta
 			property="og:description"
-			content="There is no cloud. Only someone else's hard drive. blackbox turns your own machines into a private &quot;cloud&quot;."
+			content="There is no cloud. Only someone else's hard drive. blackhaul turns your own machines into a private &quot;cloud&quot;."
 		/>
 		<style>
 			@font-face {
@@ -525,11 +525,11 @@
 		<div class="grid-bg" aria-hidden="true"></div>
 		<div class="wrap">
 			<nav>
-				<a class="brand" href="#"><span class="face">[▪‿▪]</span><span>blackbox</span></a>
+				<a class="brand" href="#"><span class="face">[▪‿▪]</span><span>blackhaul</span></a>
 				<div class="nav-links">
-					<a href="https://github.com/zdods/blackbox">github</a>
-					<a href="https://github.com/zdods/blackbox/releases/latest">releases</a>
-					<a href="https://github.com/zdods/blackbox/blob/main/SECURITY.md">security</a>
+					<a href="https://github.com/zdods/blackhaul">github</a>
+					<a href="https://github.com/zdods/blackhaul/releases/latest">releases</a>
+					<a href="https://github.com/zdods/blackhaul/blob/main/SECURITY.md">security</a>
 				</div>
 			</nav>
 
@@ -540,15 +540,15 @@
 					<span class="hero-line">Only someone else's hard&nbsp;drive.</span>
 				</h1>
 				<p class="tagline">
-					blackbox turns the computers you already own into a "cloud" that's actually yours —
+					blackhaul turns the computers you already own into a "cloud" that's actually yours —
 					browse, upload, and download from one secure dashboard, while your files never
 					leave home.
 				</p>
 				<div class="hero-cta">
-					<a class="btn btn-primary" href="https://github.com/zdods/blackbox#quick-start"
+					<a class="btn btn-primary" href="https://github.com/zdods/blackhaul#quick-start"
 						>Get started</a
 					>
-					<a class="btn btn-ghost" href="https://github.com/zdods/blackbox">View on GitHub</a>
+					<a class="btn btn-ghost" href="https://github.com/zdods/blackhaul">View on GitHub</a>
 				</div>
 			</header>
 
@@ -557,7 +557,7 @@
 				<div class="install-box">
 					<code
 						><span class="dim">$</span> curl -fsSL
-						https://raw.githubusercontent.com/zdods/blackbox/main/install.sh | sh</code
+						https://raw.githubusercontent.com/zdods/blackhaul/main/install.sh | sh</code
 					>
 					<button class="copy-btn" type="button" data-copy>copy</button>
 				</div>
@@ -575,7 +575,7 @@
 						<span class="ledger-index">01</span>
 						<h3><span class="row-face" aria-hidden="true">[▪‿▪]</span> Your files stay home</h3>
 						<p>
-							blackbox never copies your data to anyone else's hardware. The server in the middle
+							blackhaul never copies your data to anyone else's hardware. The server in the middle
 							just passes files through without keeping anything — your stuff lives on your
 							machines and nowhere else. No tracking, ever.
 						</p>
@@ -586,7 +586,7 @@
 							<span class="row-face" aria-hidden="true">[▪ω▪]</span> Works with what you own
 						</h3>
 						<p>
-							A laptop, an old desktop, a NAS, the server in your closet — blackbox runs a tiny
+							A laptop, an old desktop, a NAS, the server in your closet — blackhaul runs a tiny
 							helper program (the daemon) quietly in the background on Linux, macOS, and Windows.
 							One command installs it.
 						</p>
@@ -685,7 +685,7 @@
 					</li>
 					<li>
 						<span><strong>A real way to report problems.</strong> Found something? Tell us quietly
-							via <a href="https://github.com/zdods/blackbox/blob/main/SECURITY.md">SECURITY.md</a>
+							via <a href="https://github.com/zdods/blackhaul/blob/main/SECURITY.md">SECURITY.md</a>
 							and we'll fix it loudly.</span>
 					</li>
 				</ul>
@@ -769,7 +769,7 @@
 
 			document.querySelector('[data-copy]').addEventListener('click', async (e) => {
 				const cmd =
-					'curl -fsSL https://raw.githubusercontent.com/zdods/blackbox/main/install.sh | sh';
+					'curl -fsSL https://raw.githubusercontent.com/zdods/blackhaul/main/install.sh | sh';
 				try {
 					await navigator.clipboard.writeText(cmd);
 					e.target.textContent = 'copied';

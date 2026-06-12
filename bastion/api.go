@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"blackbox/pkg"
+	"blackhaul/pkg"
 
 	"github.com/google/uuid"
 )

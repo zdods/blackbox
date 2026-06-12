@@ -15,7 +15,7 @@ switch ($Target) {
         docker compose -f docker-compose.yml -f docker-compose.dev.yml build bastion
     }
     "build-daemon" {
-        go build -o blackbox-daemon.exe ./daemon
+        go build -o blackhaul-daemon.exe ./daemon
     }
     "up" {
         docker compose up

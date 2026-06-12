@@ -9,7 +9,7 @@ Releases are driven by semver git tags (`vX.Y.Z`). Pushing a tag triggers
 `.github/workflows/release.yml`, which:
 
 - builds and pushes the multi-arch bastion image to
-  `ghcr.io/<owner>/blackbox-bastion` with SBOM + provenance, and
+  `ghcr.io/<owner>/blackhaul-bastion` with SBOM + provenance, and
 - runs **GoReleaser** (`.goreleaser.yaml`): daemon binaries for
   linux/darwin/windows × amd64/arm64, archives + `checksums.txt` attached to
   a **GitHub Release it creates itself**, and a Homebrew cask pushed to
@@ -94,13 +94,13 @@ Then watch the workflow and verify **both** jobs' artifacts:
 gh run watch --exit-status $(gh run list --workflow=release.yml --limit 1 --json databaseId --jq '.[0].databaseId')
 
 # Image landed
-docker pull ghcr.io/<owner>/blackbox-bastion:X.Y.Z   # or inspect via gh api
+docker pull ghcr.io/<owner>/blackhaul-bastion:X.Y.Z   # or inspect via gh api
 
 # Release assets: 4 tar.gz + 2 zip + checksums.txt
 gh release view vX.Y.Z --json assets --jq '.assets[].name'
 
 # Cask updated (only if TAP_GITHUB_TOKEN is configured)
-gh api repos/<owner>/homebrew-tap/contents/Casks/blackbox-daemon.rb --jq '.size' 2>/dev/null
+gh api repos/<owner>/homebrew-tap/contents/Casks/blackhaul-daemon.rb --jq '.size' 2>/dev/null
 ```
 
 If the workflow fails, report the failure and do NOT delete/re-push the tag

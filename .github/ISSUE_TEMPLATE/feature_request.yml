@@ -6,7 +6,7 @@ body:
     id: problem
     attributes:
       label: What problem would this solve?
-      description: Describe the situation where blackbox currently falls short for you.
+      description: Describe the situation where blackhaul currently falls short for you.
     validations:
       required: true
   - type: textarea

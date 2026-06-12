@@ -13,7 +13,7 @@ daemon logs `websocket: bad handshake`, that is almost always the proxy.
 Once TLS terminates at the proxy, daemons must use a **`wss://`** URL:
 
 ```bash
-./blackbox-daemon --bastion-url=wss://blackbox.example.com/ws/daemon
+./blackhaul-daemon --bastion-url=wss://blackhaul.example.com/ws/daemon
 ```
 
 (`ws://` against an HTTP→HTTPS redirect fails — WebSocket dials do not follow
@@ -30,7 +30,7 @@ map $http_upgrade $connection_upgrade {
 
 server {
     listen 443 ssl;
-    server_name blackbox.example.com;
+    server_name blackhaul.example.com;
 
     # ssl_certificate     /path/fullchain.pem;
     # ssl_certificate_key /path/privkey.pem;
@@ -61,7 +61,7 @@ server {
 
 server {
     listen 80;
-    server_name blackbox.example.com;
+    server_name blackhaul.example.com;
     return 301 https://$host$request_uri;
 }
 ```
@@ -75,7 +75,7 @@ Caddy proxies WebSockets and provisions Let's Encrypt automatically — no
 special configuration:
 
 ```caddyfile
-blackbox.example.com {
+blackhaul.example.com {
     reverse_proxy 127.0.0.1:8080
 }
 ```
@@ -85,10 +85,10 @@ blackbox.example.com {
 ```yaml
 labels:
   - traefik.enable=true
-  - traefik.http.routers.blackbox.rule=Host(`blackbox.example.com`)
-  - traefik.http.routers.blackbox.entrypoints=websecure
-  - traefik.http.routers.blackbox.tls.certresolver=letsencrypt
-  - traefik.http.services.blackbox.loadbalancer.server.port=8080
+  - traefik.http.routers.blackhaul.rule=Host(`blackhaul.example.com`)
+  - traefik.http.routers.blackhaul.entrypoints=websecure
+  - traefik.http.routers.blackhaul.tls.certresolver=letsencrypt
+  - traefik.http.services.blackhaul.loadbalancer.server.port=8080
 ```
 
 Traefik forwards WebSocket upgrades by default.
@@ -108,12 +108,12 @@ network or give the bastion its own certificate (`TLS_CERT_FILE`/`TLS_KEY_FILE`)
 
 ```bash
 # Should answer 101 Switching Protocols (anything else is the proxy):
-curl -si https://blackbox.example.com/ws/daemon \
+curl -si https://blackhaul.example.com/ws/daemon \
   -H "Connection: Upgrade" -H "Upgrade: websocket" \
   -H "Sec-WebSocket-Version: 13" -H "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==" | head -1
 
 # Health endpoint through the proxy:
-curl -s https://blackbox.example.com/healthz
+curl -s https://blackhaul.example.com/healthz
 ```
 
 | Symptom (daemon log) | Cause |

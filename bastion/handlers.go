@@ -113,7 +113,7 @@ func (s *Server) RegisterTOTPSetup(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusForbidden, errMsgUnavailable)
 		return
 	}
-	setupID, secret, provisioningURI, err := GenerateTOTPSetup("blackbox", "user")
+	setupID, secret, provisioningURI, err := GenerateTOTPSetup("blackhaul", "user")
 	if err != nil {
 		writeJSONError(w, http.StatusInternalServerError, "internal error")
 		return

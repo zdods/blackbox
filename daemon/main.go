@@ -14,8 +14,8 @@ import (
 	"sync"
 	"time"
 
-	"blackbox/pkg"
-	"blackbox/pkg/version"
+	"blackhaul/pkg"
+	"blackhaul/pkg/version"
 
 	"github.com/gorilla/websocket"
 	"github.com/zalando/go-keyring"
@@ -28,22 +28,22 @@ var errAuthFailed = errors.New("auth failed")
 var errDialFailed = errors.New("dial failed")
 
 func main() {
-	bastionURL := flag.String("bastion-url", "", "blackbox-server WebSocket URL")
-	token := flag.String("token", "", "blackbox daemon token (from blackbox-console)")
+	bastionURL := flag.String("bastion-url", "", "blackhaul-server WebSocket URL")
+	token := flag.String("token", "", "blackhaul daemon token (from blackhaul-console)")
 	hostedPath := flag.String("hosted-path", "", "Root directory to expose (e.g. /path/to/dir or C:\\Users\\you\\files)")
-	configPath := flag.String("config", "", "Path to config file (default: ~/.blackbox-daemon)")
+	configPath := flag.String("config", "", "Path to config file (default: ~/.blackhaul-daemon)")
 	showVersion := flag.Bool("version", false, "Print version and exit")
 	flag.Parse()
 
 	if *showVersion {
-		fmt.Println("blackbox-daemon " + version.Version)
+		fmt.Println("blackhaul-daemon " + version.Version)
 		return
 	}
 
 	// Resolve config file path (expand ~ for both default and user-supplied paths)
 	cfgPath := *configPath
 	if cfgPath == "" {
-		cfgPath = "~/.blackbox-daemon"
+		cfgPath = "~/.blackhaul-daemon"
 	}
 	var err error
 	cfgPath, err = resolveDir(cfgPath)
@@ -64,9 +64,9 @@ func main() {
 	}
 
 	// Priority: flags > env vars > keyring > config file
-	url := firstNonEmpty(*bastionURL, os.Getenv("BLACKBOX_BASTION_URL"), cfgURL)
-	tok := firstNonEmpty(*token, os.Getenv("BLACKBOX_TOKEN"), keyringTok)
-	path := firstNonEmpty(*hostedPath, os.Getenv("BLACKBOX_HOSTED_PATH"), cfgHosted)
+	url := firstNonEmpty(*bastionURL, os.Getenv("BLACKHAUL_BASTION_URL"), cfgURL)
+	tok := firstNonEmpty(*token, os.Getenv("BLACKHAUL_TOKEN"), keyringTok)
+	path := firstNonEmpty(*hostedPath, os.Getenv("BLACKHAUL_HOSTED_PATH"), cfgHosted)
 
 	// Fall back to interactive setup if required values are still missing
 	fromSetup := false
@@ -113,7 +113,7 @@ func main() {
 		case errAuthFailed:
 			authFailures++
 			if authFailures >= 3 {
-				log.Fatalf("auth failed repeatedly; check your token in blackbox-console and restart the daemon")
+				log.Fatalf("auth failed repeatedly; check your token in blackhaul-console and restart the daemon")
 			}
 			log.Printf("auth failed (%d/3); reconnecting in %v...", authFailures, backoff)
 		case errDialFailed:
@@ -169,7 +169,7 @@ func firstNonEmpty(vals ...string) string {
 // runSetup prompts for host, directory, and token when not provided. Returns (url, token, hostedPath).
 func runSetup(url, token, hostedPath string) (string, string, string) {
 	fmt.Println()
-	fmt.Println("  [▪‿▪]  blackbox-daemon setup")
+	fmt.Println("  [▪‿▪]  blackhaul-daemon setup")
 	fmt.Println()
 	scan := bufio.NewScanner(os.Stdin)
 
@@ -261,7 +261,7 @@ var activeUploads = struct {
 	m map[string]*uploadState
 }{m: make(map[string]*uploadState)}
 
-const tmpDirPrefix = ".blackbox-tmp"
+const tmpDirPrefix = ".blackhaul-tmp"
 const uploadTimeout = 10 * time.Minute
 
 func init() {
@@ -435,7 +435,7 @@ func runDaemon(bastionURL, token, root string) error {
 		log.Printf("unexpected auth response: %s", authResp.Type)
 		return nil
 	}
-	log.Printf("blackbox daemon connected (id %s)", authResp.DaemonID)
+	log.Printf("blackhaul daemon connected (id %s)", authResp.DaemonID)
 	// Message loop
 	for {
 		_, data, err := conn.ReadMessage()

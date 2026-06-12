@@ -1,18 +1,18 @@
 #!/bin/sh
-# blackbox-daemon installer
+# blackhaul-daemon installer
 #
 # Usage:
-#   curl -fsSL https://raw.githubusercontent.com/zdods/blackbox/main/install.sh | sh
+#   curl -fsSL https://raw.githubusercontent.com/zdods/blackhaul/main/install.sh | sh
 #
 # Environment overrides:
-#   BLACKBOX_VERSION      release tag to install (default: latest, e.g. v0.1.0)
-#   BLACKBOX_INSTALL_DIR  install directory (default: /usr/local/bin)
+#   BLACKHAUL_VERSION      release tag to install (default: latest, e.g. v0.1.0)
+#   BLACKHAUL_INSTALL_DIR  install directory (default: /usr/local/bin)
 set -eu
 
-REPO="zdods/blackbox"
-BINARY="blackbox-daemon"
-INSTALL_DIR="${BLACKBOX_INSTALL_DIR:-/usr/local/bin}"
-VERSION="${BLACKBOX_VERSION:-latest}"
+REPO="zdods/blackhaul"
+BINARY="blackhaul-daemon"
+INSTALL_DIR="${BLACKHAUL_INSTALL_DIR:-/usr/local/bin}"
+VERSION="${BLACKHAUL_VERSION:-latest}"
 
 say() { printf '%s\n' "$*" >&2; }
 fail() { say "error: $*"; exit 1; }
@@ -41,7 +41,7 @@ esac
 if [ "$VERSION" = "latest" ]; then
   VERSION=$(curl -fsSL "https://api.github.com/repos/$REPO/releases/latest" |
     grep '"tag_name":' | head -1 | sed -E 's/.*"tag_name": *"([^"]+)".*/\1/')
-  [ -n "$VERSION" ] || fail "could not determine the latest release; pass BLACKBOX_VERSION=vX.Y.Z"
+  [ -n "$VERSION" ] || fail "could not determine the latest release; pass BLACKHAUL_VERSION=vX.Y.Z"
 fi
 VNUM=${VERSION#v} # archive names use the version without the leading v
 
@@ -87,12 +87,12 @@ say ""
 say "$("$INSTALL_DIR/$BINARY" --version) installed"
 say ""
 say "next steps:"
-say "  1. create a daemon token in the blackbox console"
+say "  1. create a daemon token in the blackhaul console"
 say "  2. run '$BINARY' for interactive setup (saves config + keyring token)"
 if [ "$OS" = linux ]; then
   say "  3. (optional) run it as a service — systemd unit with instructions:"
-  say "     https://github.com/$REPO/blob/main/packaging/systemd/blackbox-daemon.service"
+  say "     https://github.com/$REPO/blob/main/packaging/systemd/blackhaul-daemon.service"
 else
   say "  3. (optional) run it as a service — launchd agent with instructions:"
-  say "     https://github.com/$REPO/blob/main/packaging/launchd/io.github.blackbox.daemon.plist"
+  say "     https://github.com/$REPO/blob/main/packaging/launchd/io.github.blackhaul.daemon.plist"
 fi

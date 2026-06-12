@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"blackbox/pkg"
+	"blackhaul/pkg"
 )
 
 func TestHandleListDir(t *testing.T) {

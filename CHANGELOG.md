@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Project renamed: blackbox → blackhaul.** Everything user-facing follows:
+  the daemon binary is `blackhaul-daemon`, the server image is
+  `ghcr.io/zdods/blackhaul-bastion`, env vars are `BLACKHAUL_*`, the config
+  dir is `~/.blackhaul-daemon`, the OS keyring service, systemd/launchd
+  service names, the Homebrew cask, and the default Postgres database name
+  (`blackhaul`). Existing installs must migrate by hand (pre-1.0, no shim):
+  rename the config dir, re-enter the token, reinstall the service unit, and
+  `ALTER DATABASE blackbox RENAME TO blackhaul`. Old GitHub URLs redirect.
+
 ## [0.3.0] - 2026-06-11
 
 ### Added
@@ -118,9 +129,9 @@ console.
 - Compose binds Postgres to `127.0.0.1`; bastion container runs as
   non-root.
 
-[Unreleased]: https://github.com/zdods/blackbox/compare/v0.3.0...HEAD
-[0.3.0]: https://github.com/zdods/blackbox/compare/v0.2.0...v0.3.0
-[0.2.0]: https://github.com/zdods/blackbox/compare/v0.1.1...v0.2.0
-[0.1.1]: https://github.com/zdods/blackbox/compare/v0.1.0...v0.1.1
-[0.1.0]: https://github.com/zdods/blackbox/compare/v0.0.1...v0.1.0
-[0.0.1]: https://github.com/zdods/blackbox/releases/tag/v0.0.1
+[Unreleased]: https://github.com/zdods/blackhaul/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/zdods/blackhaul/compare/v0.2.0...v0.3.0
+[0.2.0]: https://github.com/zdods/blackhaul/compare/v0.1.1...v0.2.0
+[0.1.1]: https://github.com/zdods/blackhaul/compare/v0.1.0...v0.1.1
+[0.1.0]: https://github.com/zdods/blackhaul/compare/v0.0.1...v0.1.0
+[0.0.1]: https://github.com/zdods/blackhaul/releases/tag/v0.0.1

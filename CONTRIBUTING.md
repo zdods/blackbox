@@ -1,4 +1,4 @@
-# Contributing to blackbox
+# Contributing to blackhaul
 
 Thanks for your interest! Issues and pull requests are welcome.
 
@@ -13,13 +13,13 @@ make dev
 
 # Or run locally without Docker
 cd web && npm install && npm run build && cd ..
-export DATABASE_URL=postgres://postgres@localhost:5432/blackbox?sslmode=disable
+export DATABASE_URL=postgres://postgres@localhost:5432/blackhaul?sslmode=disable
 export STATIC_DIR=web/build
 go run ./bastion
 
 # Build and run the daemon
 make build-daemon
-./blackbox-daemon
+./blackhaul-daemon
 ```
 
 See the [README](README.md) for the full picture (daemon setup, TLS, service

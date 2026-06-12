@@ -1,4 +1,4 @@
-const TOKEN_KEY = 'blackbox_token';
+const TOKEN_KEY = 'blackhaul_token';
 
 export function getToken() {
 	if (typeof window === 'undefined') return null;

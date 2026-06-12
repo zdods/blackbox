@@ -2,7 +2,7 @@
 
 // Integration tests drive the real handler stack (routes + middleware +
 // Postgres + daemon WebSocket protocol) end to end. They need a Postgres
-// reachable via TEST_DATABASE_URL (default: local blackbox_test database,
+// reachable via TEST_DATABASE_URL (default: local blackhaul_test database,
 // created automatically if the server is up).
 //
 // Run: go test -tags=integration ./bastion/
@@ -24,7 +24,7 @@ import (
 	"testing"
 	"time"
 
-	"blackbox/pkg"
+	"blackhaul/pkg"
 
 	"github.com/gorilla/websocket"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -39,7 +39,7 @@ func testDBURL() string {
 	if u := os.Getenv("TEST_DATABASE_URL"); u != "" {
 		return u
 	}
-	return "postgres://postgres:postgres@localhost:5432/blackbox_test?sslmode=disable"
+	return "postgres://postgres:postgres@localhost:5432/blackhaul_test?sslmode=disable"
 }
 
 // openTestDB connects to the test database, creating it first when it does

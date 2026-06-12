@@ -53,7 +53,7 @@ func TestTotpSetupCacheExpiry(t *testing.T) {
 }
 
 func TestGenerateTOTPSetup(t *testing.T) {
-	setupID, secret, uri, err := GenerateTOTPSetup("blackbox", "user")
+	setupID, secret, uri, err := GenerateTOTPSetup("blackhaul", "user")
 	if err != nil {
 		t.Fatalf("GenerateTOTPSetup: %v", err)
 	}
@@ -69,8 +69,8 @@ func TestGenerateTOTPSetup(t *testing.T) {
 }
 
 func TestGenerateTOTPSetupUniqueness(t *testing.T) {
-	id1, s1, _, _ := GenerateTOTPSetup("blackbox", "user")
-	id2, s2, _, _ := GenerateTOTPSetup("blackbox", "user")
+	id1, s1, _, _ := GenerateTOTPSetup("blackhaul", "user")
+	id2, s2, _, _ := GenerateTOTPSetup("blackhaul", "user")
 	if id1 == id2 {
 		t.Error("setup IDs should be unique")
 	}

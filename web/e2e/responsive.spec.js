@@ -26,7 +26,7 @@ const ENTRIES = [
 // Mock the API and mark the client as logged in. Playwright gives the most
 // recently registered route precedence, so the catch-all goes first.
 async function loginAndMock(page) {
-	await page.addInitScript(() => localStorage.setItem('blackbox_token', 'e2e'));
+	await page.addInitScript(() => localStorage.setItem('blackhaul_token', 'e2e'));
 	await page.route('**/api/**', (route) => route.fulfill({ json: {} }));
 	await page.route('**/api/daemons', (route) => route.fulfill({ json: [DAEMON] }));
 	await page.route('**/api/daemons/d1/files**', (route) => route.fulfill({ json: ENTRIES }));

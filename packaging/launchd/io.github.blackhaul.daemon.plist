@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>io.github.blackhaul.daemon</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <!-- Update this path to match where you placed the blackhaul-daemon binary -->
+        <string>/usr/local/bin/blackhaul-daemon</string>
+    </array>
+
+    <!-- Start immediately when loaded and keep running -->
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+
+    <!-- Log stderr to ~/Library/Logs/blackhaul-daemon.log -->
+    <key>StandardErrorPath</key>
+    <string>/Users/yourusername/Library/Logs/blackhaul-daemon.log</string>
+    <key>StandardOutPath</key>
+    <string>/Users/yourusername/Library/Logs/blackhaul-daemon.log</string>
+</dict>
+</plist>
+
+<!--
+Install instructions:
+
+  1. Build the daemon:
+       go build -o blackhaul-daemon ./daemon
+
+  2. Copy the binary:
+       sudo cp blackhaul-daemon /usr/local/bin/blackhaul-daemon
+       sudo chmod +x /usr/local/bin/blackhaul-daemon
+
+  3. Run setup once to create ~/.blackhaul-daemon:
+       /usr/local/bin/blackhaul-daemon
+     Answer the prompts and save the config when asked.
+
+  4. Edit this file:
+     - Replace "yourusername" in StandardErrorPath and StandardOutPath
+       with the output of `whoami`
+     - Update ProgramArguments if you placed the binary elsewhere
+
+  5. Install and load the LaunchAgent:
+       cp io.github.blackhaul.daemon.plist ~/Library/LaunchAgents/
+       launchctl load ~/Library/LaunchAgents/io.github.blackhaul.daemon.plist
+
+  6. Check status:
+       launchctl list | grep blackhaul
+       tail -f ~/Library/Logs/blackhaul-daemon.log
+
+  To unload:
+       launchctl unload ~/Library/LaunchAgents/io.github.blackhaul.daemon.plist
+-->

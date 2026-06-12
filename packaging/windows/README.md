@@ -1,4 +1,4 @@
-# Running blackbox-daemon as a Windows service
+# Running blackhaul-daemon as a Windows service
 
 After completing the one-time setup (see below), the daemon can run as a Windows service that starts automatically on boot.
 
@@ -7,12 +7,12 @@ After completing the one-time setup (see below), the daemon can run as a Windows
 Build and run the daemon interactively first to create the config file:
 
 ```powershell
-go build -o blackbox-daemon.exe ./daemon
-.\blackbox-daemon.exe
+go build -o blackhaul-daemon.exe ./daemon
+.\blackhaul-daemon.exe
 ```
 
 Answer the prompts (bastion URL, directory, token) and choose **y** to save the config.
-The config is written to `%USERPROFILE%\.blackbox-daemon` (e.g. `C:\Users\You\.blackbox-daemon`) and is readable only by your user account.
+The config is written to `%USERPROFILE%\.blackhaul-daemon` (e.g. `C:\Users\You\.blackhaul-daemon`) and is readable only by your user account.
 
 ---
 
@@ -25,32 +25,32 @@ The config is written to `%USERPROFILE%\.blackbox-daemon` (e.g. `C:\Users\You\.b
 2. Open an **elevated** PowerShell (Run as Administrator):
 
 ```powershell
-$binary = "C:\path\to\blackbox-daemon.exe"   # update this path
+$binary = "C:\path\to\blackhaul-daemon.exe"   # update this path
 
-nssm install blackbox-daemon $binary
-nssm set blackbox-daemon AppStdout "$env:USERPROFILE\.blackbox-daemon.log"
-nssm set blackbox-daemon AppStderr "$env:USERPROFILE\.blackbox-daemon.log"
-nssm set blackbox-daemon Start SERVICE_AUTO_START
-nssm start blackbox-daemon
+nssm install blackhaul-daemon $binary
+nssm set blackhaul-daemon AppStdout "$env:USERPROFILE\.blackhaul-daemon.log"
+nssm set blackhaul-daemon AppStderr "$env:USERPROFILE\.blackhaul-daemon.log"
+nssm set blackhaul-daemon Start SERVICE_AUTO_START
+nssm start blackhaul-daemon
 ```
 
 3. Check status:
 
 ```powershell
-nssm status blackbox-daemon
+nssm status blackhaul-daemon
 ```
 
 To view logs:
 
 ```powershell
-Get-Content "$env:USERPROFILE\.blackbox-daemon.log" -Wait
+Get-Content "$env:USERPROFILE\.blackhaul-daemon.log" -Wait
 ```
 
 To remove:
 
 ```powershell
-nssm stop blackbox-daemon
-nssm remove blackbox-daemon confirm
+nssm stop blackhaul-daemon
+nssm remove blackhaul-daemon confirm
 ```
 
 ---
@@ -60,24 +60,24 @@ nssm remove blackbox-daemon confirm
 Windows' built-in service manager. No extra tools needed.
 
 ```powershell
-$binary = "C:\path\to\blackbox-daemon.exe"   # update this path
+$binary = "C:\path\to\blackhaul-daemon.exe"   # update this path
 
-sc.exe create blackbox-daemon binPath= $binary start= auto
-sc.exe description blackbox-daemon "Blackbox file daemon"
-sc.exe start blackbox-daemon
+sc.exe create blackhaul-daemon binPath= $binary start= auto
+sc.exe description blackhaul-daemon "Blackhaul file daemon"
+sc.exe start blackhaul-daemon
 ```
 
 Check status:
 
 ```powershell
-sc.exe query blackbox-daemon
+sc.exe query blackhaul-daemon
 ```
 
 To remove:
 
 ```powershell
-sc.exe stop blackbox-daemon
-sc.exe delete blackbox-daemon
+sc.exe stop blackhaul-daemon
+sc.exe delete blackhaul-daemon
 ```
 
 > **Note:** `sc.exe` does not capture stdout/stderr. Logs will not be written unless you add a log wrapper. NSSM is recommended for easier log access.
@@ -89,9 +89,9 @@ sc.exe delete blackbox-daemon
 The daemon reads its config from:
 
 ```
-%USERPROFILE%\.blackbox-daemon
+%USERPROFILE%\.blackhaul-daemon
 ```
 
-For example: `C:\Users\YourName\.blackbox-daemon`
+For example: `C:\Users\YourName\.blackhaul-daemon`
 
 The file contains `bastion_url`, `token`, and `hosted_path`. It is not stored in a system-wide location — if you run the service as a different user, run the interactive setup as that user first.

@@ -4,7 +4,7 @@ services:
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
-      POSTGRES_DB: ${POSTGRES_DB:-blackbox}
+      POSTGRES_DB: ${POSTGRES_DB:-blackhaul}
     ports:
       # Bound to localhost: Postgres is reachable from the host for dev tooling
       # but never exposed to the network.
@@ -13,18 +13,18 @@ services:
       - postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "PGPASSWORD=\"${POSTGRES_PASSWORD:-postgres}\" psql -U \"${POSTGRES_USER:-postgres}\" -d \"${POSTGRES_DB:-blackbox}\" -w -c 'SELECT 1' || exit 1"]
+      test: ["CMD-SHELL", "PGPASSWORD=\"${POSTGRES_PASSWORD:-postgres}\" psql -U \"${POSTGRES_USER:-postgres}\" -d \"${POSTGRES_DB:-blackhaul}\" -w -c 'SELECT 1' || exit 1"]
       interval: 2s
       timeout: 2s
       retries: 10
 
-  # blackbox-server (serves blackbox-console + daemon hub)
+  # blackhaul-server (serves blackhaul-console + daemon hub)
   # Default: published multi-arch image. To build from source with hot
   # reload, use the dev overlay (make dev / docker-compose.dev.yml).
   bastion:
-    image: ghcr.io/zdods/blackbox-bastion:${BASTION_IMAGE_TAG:-latest}
+    image: ghcr.io/zdods/blackhaul-bastion:${BASTION_IMAGE_TAG:-latest}
     environment:
-      DATABASE_URL: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-blackbox}?sslmode=disable
+      DATABASE_URL: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-blackhaul}?sslmode=disable
       SERVER_ADDR: :8080
       # Unset JWT_SECRET = random ephemeral secret (secure, but sessions reset
       # on restart). Set JWT_SECRET in .env for production, or DEV_MODE=1 for a

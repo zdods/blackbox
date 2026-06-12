@@ -82,17 +82,17 @@ make up           # or: docker compose up --build
 
 # Local dev (no Docker)
 cd web && npm install && npm run build && cd ..
-export DATABASE_URL=postgres://postgres@localhost:5432/blackbox?sslmode=disable
+export DATABASE_URL=postgres://postgres@localhost:5432/blackhaul?sslmode=disable
 export STATIC_DIR=web/build
 go run ./bastion
 
 # Build daemon
-go build -o blackbox-daemon ./daemon
+go build -o blackhaul-daemon ./daemon
 
-# Run daemon (interactive first-time setup; saves config to ~/.blackbox-daemon)
-./blackbox-daemon
+# Run daemon (interactive first-time setup; saves config to ~/.blackhaul-daemon)
+./blackhaul-daemon
 
 # Run daemon with explicit values (flags > env vars > config file > interactive)
-./blackbox-daemon --bastion-url=ws://localhost:8080/ws/daemon --token=TOKEN --hosted-path=~/files
-BLACKBOX_TOKEN=TOKEN BLACKBOX_HOSTED_PATH=~/files ./blackbox-daemon
+./blackhaul-daemon --bastion-url=ws://localhost:8080/ws/daemon --token=TOKEN --hosted-path=~/files
+BLACKHAUL_TOKEN=TOKEN BLACKHAUL_HOSTED_PATH=~/files ./blackhaul-daemon
 ```

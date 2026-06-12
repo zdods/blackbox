@@ -1,5 +1,5 @@
 <script>
-	// The blackbox face — brand mark doubling as a status indicator.
+	// The blackhaul face — brand mark doubling as a status indicator.
 	export let state = 'ok'; // 'ok' | 'loading' | 'error' | 'offline'
 
 	const FACES = {

@@ -1,6 +1,6 @@
 # site/
 
-Static landing page for blackbox (GTM front door). Self-contained — one
+Static landing page for blackhaul (GTM front door). Self-contained — one
 HTML file plus the self-hosted JetBrains Mono fonts (OFL licensed, copied
 from `web/static/fonts/`).
 

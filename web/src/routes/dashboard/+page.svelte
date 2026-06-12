@@ -152,7 +152,7 @@
 <header class="page-header">
 	<div>
 		<h1 class="page-title">hosts</h1>
-		<p class="page-sub">Machines running the blackbox daemon.</p>
+		<p class="page-sub">Machines running the blackhaul daemon.</p>
 	</div>
 </header>
 

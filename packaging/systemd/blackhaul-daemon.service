@@ -1,15 +1,15 @@
 [Unit]
-Description=Blackbox Daemon
+Description=Blackhaul Daemon
 After=network-online.target
 Wants=network-online.target
 
 [Service]
-# Run as your user so the daemon can read ~/.blackbox-daemon
+# Run as your user so the daemon can read ~/.blackhaul-daemon
 # Replace "yourusername" with the output of `whoami`
 User=yourusername
 Group=yourusername
 
-ExecStart=/usr/local/bin/blackbox-daemon
+ExecStart=/usr/local/bin/blackhaul-daemon
 Restart=on-failure
 RestartSec=5
 
@@ -23,23 +23,23 @@ WantedBy=multi-user.target
 # Install instructions:
 #
 #   1. Build the daemon:
-#        go build -o blackbox-daemon ./daemon
+#        go build -o blackhaul-daemon ./daemon
 #
 #   2. Copy the binary to a system path:
-#        sudo cp blackbox-daemon /usr/local/bin/blackbox-daemon
-#        sudo chmod +x /usr/local/bin/blackbox-daemon
+#        sudo cp blackhaul-daemon /usr/local/bin/blackhaul-daemon
+#        sudo chmod +x /usr/local/bin/blackhaul-daemon
 #
-#   3. Run setup once as your user (not root) to create ~/.blackbox-daemon:
-#        /usr/local/bin/blackbox-daemon
+#   3. Run setup once as your user (not root) to create ~/.blackhaul-daemon:
+#        /usr/local/bin/blackhaul-daemon
 #      Answer the prompts and save the config when asked.
 #
 #   4. Edit this file and replace "yourusername" with your actual username.
 #
 #   5. Install and enable the service:
-#        sudo cp blackbox-daemon.service /etc/systemd/system/
+#        sudo cp blackhaul-daemon.service /etc/systemd/system/
 #        sudo systemctl daemon-reload
-#        sudo systemctl enable --now blackbox-daemon
+#        sudo systemctl enable --now blackhaul-daemon
 #
 #   6. Check status:
-#        sudo systemctl status blackbox-daemon
-#        journalctl -u blackbox-daemon -f
+#        sudo systemctl status blackhaul-daemon
+#        journalctl -u blackhaul-daemon -f

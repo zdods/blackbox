@@ -3,7 +3,7 @@ import { writable } from 'svelte/store';
 // Theme choice persisted in localStorage; 'system' resolves to light/dark
 // via prefers-color-scheme. app.html applies the resolved theme before
 // first paint so there is no flash — this module takes over after hydration.
-const KEY = 'blackbox-theme';
+const KEY = 'blackhaul-theme';
 
 export const THEMES = [
 	{ value: 'system', label: 'system' },

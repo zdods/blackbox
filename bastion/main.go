@@ -11,7 +11,7 @@ import (
 	"syscall"
 	"time"
 
-	"blackbox/pkg/version"
+	"blackhaul/pkg/version"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -29,12 +29,12 @@ func main() {
 	showVersion := flag.Bool("version", false, "Print version and exit")
 	flag.Parse()
 	if *showVersion {
-		fmt.Println("blackbox-bastion " + version.Version)
+		fmt.Println("blackhaul-bastion " + version.Version)
 		return
 	}
 	cfg := LoadConfig()
 	setupLogger(cfg.LogFormat, cfg.LogLevel)
-	slog.Info("starting blackbox-bastion", "version", version.Version)
+	slog.Info("starting blackhaul-bastion", "version", version.Version)
 	secret, warning, err := resolveJWTSecret(cfg.JWTSecret, cfg.DevMode)
 	if err != nil {
 		slog.Error("jwt secret", "err", err)

@@ -13,7 +13,7 @@ func TestLoadConfigDefaults(t *testing.T) {
 
 	cfg := LoadConfig()
 
-	if cfg.DatabaseURL != "postgres://postgres:postgres@localhost:5432/blackbox?sslmode=disable" {
+	if cfg.DatabaseURL != "postgres://postgres:postgres@localhost:5432/blackhaul?sslmode=disable" {
 		t.Errorf("DatabaseURL = %q", cfg.DatabaseURL)
 	}
 	if cfg.ServerAddr != ":8080" {
@@ -46,7 +46,7 @@ func TestLoadConfigFromEnv(t *testing.T) {
 	t.Setenv("CORS_ORIGIN", "https://myapp.com")
 
 	// Clear any other env vars that could interfere
-	for _, key := range []string{"BLACKBOX_BASTION_URL", "BLACKBOX_TOKEN", "BLACKBOX_HOSTED_PATH"} {
+	for _, key := range []string{"BLACKHAUL_BASTION_URL", "BLACKHAUL_TOKEN", "BLACKHAUL_HOSTED_PATH"} {
 		os.Unsetenv(key)
 	}
 

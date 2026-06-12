@@ -3,12 +3,12 @@
 # only the daemon needs prebuilt binaries, since it runs on end-user machines.
 version: 2
 
-project_name: blackbox
+project_name: blackhaul
 
 builds:
-  - id: blackbox-daemon
+  - id: blackhaul-daemon
     main: ./daemon
-    binary: blackbox-daemon
+    binary: blackhaul-daemon
     env:
       - CGO_ENABLED=0
     goos:
@@ -19,13 +19,13 @@ builds:
       - amd64
       - arm64
     ldflags:
-      - -s -w -X blackbox/pkg/version.Version=v{{ .Version }}
+      - -s -w -X blackhaul/pkg/version.Version=v{{ .Version }}
     mod_timestamp: "{{ .CommitTimestamp }}"
 
 archives:
   - ids:
-      - blackbox-daemon
-    name_template: "blackbox-daemon_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+      - blackhaul-daemon
+    name_template: "blackhaul-daemon_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     formats:
       - tar.gz
     format_overrides:
@@ -34,8 +34,8 @@ archives:
           - zip
     files:
       - LICENSE
-      - packaging/systemd/blackbox-daemon.service
-      - packaging/launchd/io.github.blackbox.daemon.plist
+      - packaging/systemd/blackhaul-daemon.service
+      - packaging/launchd/io.github.blackhaul.daemon.plist
       - packaging/windows/README.md
 
 checksum:
@@ -60,14 +60,14 @@ changelog:
 release:
   footer: |
     ---
-    **Server image:** `docker pull ghcr.io/zdods/blackbox-bastion:{{ .Version }}`
-    **Daemon install:** `curl -fsSL https://raw.githubusercontent.com/zdods/blackbox/main/install.sh | sh`
+    **Server image:** `docker pull ghcr.io/zdods/blackhaul-bastion:{{ .Version }}`
+    **Daemon install:** `curl -fsSL https://raw.githubusercontent.com/zdods/blackhaul/main/install.sh | sh`
 
 # Homebrew tap (macOS). Skipped automatically until the tap repo + token
 # exist: set the TAP_GITHUB_TOKEN secret (a fine-grained PAT with contents
 # write on zdods/homebrew-tap) in this repo's Actions secrets.
 homebrew_casks:
-  - name: blackbox-daemon
+  - name: blackhaul-daemon
     # NOTE: token is evaluated in env-only template mode — plain {{ .Env.X }}
     # only, no template functions (envOrDefault broke the v0.1.0 release).
     skip_upload: "{{ if .Env.TAP_GITHUB_TOKEN }}false{{ else }}true{{ end }}"
@@ -76,14 +76,14 @@ homebrew_casks:
       name: homebrew-tap
       branch: main
       token: "{{ .Env.TAP_GITHUB_TOKEN }}"
-    homepage: https://github.com/zdods/blackbox
-    description: Outbound-only file daemon for blackbox — browse your machines from a hosted console with zero network config
-    commit_msg_template: "blackbox-daemon {{ .Tag }}"
+    homepage: https://github.com/zdods/blackhaul
+    description: Outbound-only file daemon for blackhaul — browse your machines from a hosted console with zero network config
+    commit_msg_template: "blackhaul-daemon {{ .Tag }}"
     # The binaries are not signed/notarized; strip the quarantine flag so
     # Gatekeeper does not block them (recommended by GoReleaser docs).
     hooks:
       post:
         install: |
           if system_command("/usr/bin/xattr", args: ["-h"]).exit_status == 0
-            system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/blackbox-daemon"]
+            system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/blackhaul-daemon"]
           end

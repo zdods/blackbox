@@ -1,9 +1,9 @@
 # Binaries (built artifacts — do not commit runnable binaries)
-/blackbox-daemon
+/blackhaul-daemon
 /bastion
 !/bastion/
 !/bastion/**
-daemon/blackbox-daemon
+daemon/blackhaul-daemon
 bastion/bastion
 web/bastion
 *.exe

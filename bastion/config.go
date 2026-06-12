@@ -34,7 +34,7 @@ type Config struct {
 func LoadConfig() Config {
 	dbURL := os.Getenv("DATABASE_URL")
 	if dbURL == "" {
-		dbURL = "postgres://postgres:postgres@localhost:5432/blackbox?sslmode=disable"
+		dbURL = "postgres://postgres:postgres@localhost:5432/blackhaul?sslmode=disable"
 	}
 	addr := os.Getenv("SERVER_ADDR")
 	if addr == "" {

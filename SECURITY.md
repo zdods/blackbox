@@ -1,15 +1,15 @@
 # Security Policy
 
-Blackbox brokers access to files on your machines, so security reports take
+Blackhaul brokers access to files on your machines, so security reports take
 priority over all other work.
 
 ## Reporting a vulnerability
 
 **Please do not open a public issue for security problems.**
 
-- **Preferred:** [GitHub private vulnerability reporting](https://github.com/zdods/blackbox/security/advisories/new)
+- **Preferred:** [GitHub private vulnerability reporting](https://github.com/zdods/blackhaul/security/advisories/new)
   (Security → Report a vulnerability).
-- **Email:** zach@zdods.com with the subject `blackbox security`.
+- **Email:** zach@zdods.com with the subject `blackhaul security`.
 
 Include what you can of: affected component (bastion / daemon / web console),
 version (`--version` or image tag), deployment method (Docker image, compose,
@@ -23,9 +23,9 @@ and changelog if you want it.
 
 ## Supported versions
 
-Blackbox is pre-1.0: **only the latest release** receives security fixes.
+Blackhaul is pre-1.0: **only the latest release** receives security fixes.
 If you can, confirm the issue reproduces on the
-[latest release](https://github.com/zdods/blackbox/releases/latest) before
+[latest release](https://github.com/zdods/blackhaul/releases/latest) before
 reporting — but when in doubt, report anyway.
 
 ## Scope
@@ -45,7 +45,7 @@ Out of scope:
 - Resource exhaustion from large transfers on an instance you operate
   (the bastion proxies all bytes by design)
 - Vulnerabilities in third-party dependencies with no demonstrated impact
-  on blackbox — report upstream, but feel free to tell us too so we can
+  on blackhaul — report upstream, but feel free to tell us too so we can
   bump the dependency
 
 ## Hardening your deployment

@@ -5,7 +5,7 @@
 services:
   bastion:
     # Local tag so the source build never shadows the published GHCR image
-    image: blackbox-bastion:dev
+    image: blackhaul-bastion:dev
     build:
       context: .
       dockerfile: bastion/Dockerfile

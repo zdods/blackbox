@@ -7,7 +7,7 @@ build-bastion:
 	$(COMPOSE_DEV) build bastion
 
 build-daemon:
-	go build -ldflags "-X blackbox/pkg/version.Version=$(VERSION)" -o blackbox-daemon ./daemon
+	go build -ldflags "-X blackhaul/pkg/version.Version=$(VERSION)" -o blackhaul-daemon ./daemon
 
 up:
 	docker compose up
@@ -19,7 +19,7 @@ test:
 	go test ./bastion/ ./daemon/ ./pkg/...
 
 clean:
-	rm -f blackbox-daemon
+	rm -f blackhaul-daemon
 	docker compose down -v --remove-orphans
 
 logs:

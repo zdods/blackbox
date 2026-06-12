@@ -1,5 +1,5 @@
 {
-	"name": "blackbox-console",
+	"name": "blackhaul-console",
 	"version": "0.0.1",
 	"private": true,
 	"type": "module",

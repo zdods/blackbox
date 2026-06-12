@@ -23,7 +23,7 @@
 	<header class="app-header">
 		<a class="app-header__brand" href={authed ? '/dashboard' : '/'}>
 			<Face state="ok" />
-			<span>blackbox</span>
+			<span>blackhaul</span>
 		</a>
 		<div class="app-header__actions">
 			<ThemeSelect />

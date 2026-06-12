@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	keyringService = "blackbox-daemon"
+	keyringService = "blackhaul-daemon"
 	keyringAccount = "token"
 )
 
