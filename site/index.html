@@ -480,6 +480,57 @@
 				margin-top: 0.2rem;
 			}
 
+			/* ---- Hosted waitlist ---- */
+			.waitlist-form {
+				display: flex;
+				gap: 1rem;
+				max-width: 34rem;
+			}
+			.waitlist-input {
+				flex: 1;
+				min-width: 0;
+				height: 2.75rem;
+				padding: 0 1rem;
+				background: var(--inset);
+				border: 1px solid var(--border);
+				border-radius: 8px;
+				font-family: var(--font-mono);
+				font-size: 0.9rem;
+				color: var(--text);
+				transition: border-color 0.15s;
+			}
+			.waitlist-input::placeholder {
+				color: var(--text-faint);
+			}
+			.waitlist-input:focus {
+				outline: none;
+				border-color: var(--accent);
+			}
+			.waitlist-form .btn {
+				border: 0;
+				cursor: pointer;
+				font-family: var(--font-mono);
+				flex-shrink: 0;
+			}
+			.waitlist-hint {
+				margin: 0.75rem 0 0;
+				max-width: 34rem;
+				font-size: 0.8rem;
+				color: var(--text-faint);
+			}
+			.waitlist-done {
+				display: flex;
+				align-items: center;
+				gap: 0.85rem;
+				max-width: 34rem;
+				margin: 0;
+				background: var(--accent-soft);
+				border: 1px solid var(--accent);
+				border-radius: 8px;
+				padding: 0.85rem 1.25rem;
+				font-size: 0.9rem;
+			}
+
 			/* ---- Footer ---- */
 			footer {
 				border-top: 1px solid var(--border);
@@ -535,6 +586,12 @@
 				.crew {
 					grid-template-columns: repeat(2, 1fr);
 				}
+				.waitlist-form {
+					flex-direction: column;
+				}
+				.waitlist-form .btn {
+					justify-content: center;
+				}
 				.wiring-panel {
 					padding: 1.5rem 1rem;
 				}
@@ -554,6 +611,7 @@
 			<nav>
 				<a class="brand" href="#"><span class="face">[▪‿▪]</span><span>blackhaul</span></a>
 				<div class="nav-links">
+					<a href="#waitlist">waitlist</a>
 					<a href="https://github.com/zdods/blackhaul">github</a>
 					<a href="https://github.com/zdods/blackhaul/releases/latest">releases</a>
 					<a href="https://github.com/zdods/blackhaul/blob/main/SECURITY.md">security</a>
@@ -767,6 +825,35 @@
 				</div>
 			</section>
 
+			<section id="waitlist">
+				<h2 class="section-label">Hosted waitlist</h2>
+				<p class="section-lede">
+					Don't want to host the server yourself? A fully managed version is on the roadmap.
+					Leave your email and you'll hear the moment the beta opens — that's the only thing
+					we'll ever send you.
+				</p>
+				<form
+					class="waitlist-form"
+					action="https://app.kit.com/forms/9557680/subscriptions"
+					method="post"
+				>
+					<input
+						class="waitlist-input"
+						type="email"
+						name="email_address"
+						required
+						placeholder="you@example.com"
+						aria-label="Email address"
+						autocomplete="email"
+					/>
+					<button class="btn btn-primary" type="submit">join the waitlist</button>
+				</form>
+				<p class="waitlist-hint">
+					You'll get one confirmation email to prove it's really you — unconfirmed addresses are
+					dropped, so the list stays clean.
+				</p>
+			</section>
+
 			<footer>
 				<span>MIT licensed · made for people who own their hardware</span>
 				<span class="footer-face" aria-hidden="true">[▪‿▪]</span>
@@ -811,6 +898,38 @@
 			face.addEventListener('mouseleave', () => {
 				mood = 'idle';
 				show('idle');
+			});
+
+			// Waitlist form: submit to Kit inline; on any failure fall back to a
+			// native POST so the signup still lands on Kit's hosted page.
+			const waitlistForm = document.querySelector('.waitlist-form');
+			waitlistForm.addEventListener('submit', async (e) => {
+				e.preventDefault();
+				const btn = waitlistForm.querySelector('button');
+				btn.disabled = true;
+				btn.textContent = 'joining…';
+				try {
+					const res = await fetch(waitlistForm.action, {
+						method: 'POST',
+						body: new FormData(waitlistForm),
+						headers: { accept: 'application/json' },
+					});
+					if (!res.ok) throw new Error(res.status);
+					const done = document.createElement('p');
+					done.className = 'waitlist-done';
+					done.innerHTML =
+						'<span class="face" aria-hidden="true">[^‿^]</span>' +
+						'<span>almost in — check your inbox and click the confirmation link.</span>';
+					waitlistForm.replaceWith(done);
+					mood = 'happy';
+					show('happy');
+					setTimeout(() => {
+						mood = 'idle';
+						show('idle');
+					}, 1600);
+				} catch (_) {
+					waitlistForm.submit();
+				}
 			});
 
 			document.querySelector('[data-copy]').addEventListener('click', async (e) => {
