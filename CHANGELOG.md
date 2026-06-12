@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Compose project name pinned to `blackhaul`, so containers and the data
+  volume are named `blackhaul-*` regardless of the checkout directory.
+  Existing compose deployments get a fresh volume on next `up` — to keep
+  data, either set `COMPOSE_PROJECT_NAME` to your old project name or copy
+  the old volume's contents before removing it.
+
 ## [0.4.1] - 2026-06-11
 
 ### Added
