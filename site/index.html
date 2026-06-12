@@ -277,10 +277,11 @@
 				border: 1px solid var(--border);
 				border-radius: 10px;
 				padding: 1rem 1.25rem;
-				overflow-x: auto;
 			}
 			.install-box code {
 				flex: 1;
+				min-width: 0;
+				overflow-x: auto;
 				font-family: var(--font-mono);
 				font-size: 0.85rem;
 				color: var(--text);
@@ -481,10 +482,16 @@
 			}
 
 			/* ---- Hosted waitlist ---- */
+			#waitlist {
+				max-width: 44rem;
+				margin: 0 auto;
+			}
+			#waitlist .section-lede {
+				max-width: none;
+			}
 			.waitlist-form {
 				display: flex;
 				gap: 1rem;
-				max-width: 34rem;
 			}
 			.waitlist-input {
 				flex: 1;
@@ -514,7 +521,6 @@
 			}
 			.waitlist-hint {
 				margin: 0.75rem 0 0;
-				max-width: 34rem;
 				font-size: 0.8rem;
 				color: var(--text-faint);
 			}
@@ -522,7 +528,6 @@
 				display: flex;
 				align-items: center;
 				gap: 0.85rem;
-				max-width: 34rem;
 				margin: 0;
 				background: var(--accent-soft);
 				border: 1px solid var(--accent);
