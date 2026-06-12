@@ -396,6 +396,9 @@
 				color: var(--text-faint);
 				text-align: center;
 			}
+			.wiring-mobile {
+				display: none;
+			}
 
 			/* ---- Security posture ---- */
 			.posture {
@@ -490,11 +493,26 @@
 			}
 
 			@media (max-width: 720px) {
+				nav {
+					flex-wrap: wrap;
+					row-gap: 0.25rem;
+				}
+				.nav-links {
+					width: 100%;
+					justify-content: flex-start;
+					gap: 1.5rem;
+				}
+				.nav-links a {
+					padding: 0.4rem 0;
+				}
 				.hero {
-					padding: 4rem 0 3.5rem;
+					padding: 3.5rem 0;
 				}
 				.install {
 					margin-bottom: 4.5rem;
+				}
+				.install-box code {
+					font-size: 0.8rem;
 				}
 				section {
 					padding-bottom: 4.5rem;
@@ -513,10 +531,14 @@
 					grid-template-columns: repeat(2, 1fr);
 				}
 				.wiring-panel {
-					padding: 1.25rem 1rem;
+					padding: 1.5rem 1rem;
 				}
-				.wiring-panel pre {
-					font-size: 0.65rem;
+				.wiring-desktop {
+					display: none;
+				}
+				.wiring-mobile {
+					display: block;
+					font-size: 0.75rem;
 				}
 			}
 		</style>
@@ -636,7 +658,7 @@
 					bastion) passes your files through and keeps none of them.
 				</p>
 				<div class="wiring-panel" role="img" aria-label="Architecture diagram: your machines (laptop, NAS, PC) make outbound TLS connections to the bastion relay. Your browser connects to the bastion over HTTPS. The bastion stores nothing and relays everything. Offline machines simply show as offline.">
-					<pre aria-hidden="true">
+					<pre class="wiring-desktop" aria-hidden="true">
  <span class="wl">YOUR MACHINES</span>                         <span class="wl">ANYWHERE</span>
 
 ┌──────────────┐
@@ -652,6 +674,25 @@
                                        │  you    <span class="wf">[▪‿▪]</span> │
                                        │  any browser  │
                                        └───────────────┘</pre>
+				<pre class="wiring-mobile" aria-hidden="true">
+ <span class="wl">YOUR MACHINES</span>
+
+┌──────────────┐  ┌──────────────┐
+│ laptop <span class="wf">[▪‿▪]</span> │  │ nas    <span class="wf">[▪‿▪]</span> │
+└───────┬──────┘  └──────┬───────┘
+        └────────┬───────┘ 
+                 │  outbound only
+                 │  encrypted
+                 ▼
+           ┌───────────┐
+           │  bastion  │
+           │   relay   │
+           └─────▲─────┘
+                 │  https
+         ┌───────┴───────┐
+         │  you    <span class="wf">[▪‿▪]</span> │
+         │  any browser  │
+         └───────────────┘</pre>
 				</div>
 				<p class="wiring-caption">keeps nothing · passes everything through · no doors left open</p>
 			</section>
