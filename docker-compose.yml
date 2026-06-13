@@ -16,6 +16,11 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
+    # Defense-in-depth: forbid privilege escalation and cap memory. (Postgres
+    # keeps its default capabilities — it needs them to initialize the data dir.)
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 512m
     healthcheck:
       test: ["CMD-SHELL", "PGPASSWORD=\"${POSTGRES_PASSWORD:-postgres}\" psql -U \"${POSTGRES_USER:-postgres}\" -d \"${POSTGRES_DB:-blackhaul}\" -w -c 'SELECT 1' || exit 1"]
       interval: 2s
@@ -38,6 +43,16 @@ services:
     ports:
       - "${BASTION_PORT:-8080}:8080"
     restart: unless-stopped
+    # The bastion is a static binary that needs no Linux capabilities and binds
+    # a high port, so drop everything and forbid privilege escalation; cap
+    # memory and PIDs to bound a runaway/DoS. (read_only rootfs is a further
+    # step but isn't enabled here so the image stays drop-in.)
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    mem_limit: 512m
+    pids_limit: 200
     depends_on:
       postgres:
         condition: service_healthy

@@ -1,7 +1,7 @@
 <script>
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { getToken } from '$lib/auth.js';
+	import { isLoggedIn } from '$lib/auth.js';
 	import { getRegisterCredentials, clearRegisterCredentials } from '$lib/register-state.js';
 	import Face from '$lib/Face.svelte';
 	import QRCode from 'qrcode';
@@ -16,7 +16,7 @@
 	let secret = '';
 	let qrDataUrl = '';
 
-	$: if (typeof window !== 'undefined' && getToken()) {
+	$: if (typeof window !== 'undefined' && isLoggedIn()) {
 		goto('/dashboard');
 	}
 

@@ -1,8 +1,8 @@
 <script>
-	import { onMount } from 'svelte';
+	import { onMount, onDestroy } from 'svelte';
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
-	import { getToken, clearToken, apiFetch } from '$lib/auth.js';
+	import { isLoggedIn, clearLoggedIn, apiFetch } from '$lib/auth.js';
 	import Face from '$lib/Face.svelte';
 
 	const daemonId = $page.params.id;
@@ -111,7 +111,7 @@
 	})();
 
 	onMount(() => {
-		if (!getToken()) {
+		if (!isLoggedIn()) {
 			goto('/login');
 			return;
 		}
@@ -133,7 +133,7 @@
 			const q = path ? `?path=${encodeURIComponent(path)}` : '';
 			const res = await apiFetch(`/api/daemons/${daemonId}/files${q}`);
 			if (res.status === 401) {
-				clearToken();
+				clearLoggedIn();
 				goto('/login');
 				return;
 			}
@@ -300,10 +300,18 @@
 		await uploadFiles(files);
 	}
 
+	// Revoke any open image preview object URL when leaving the page, so a blob
+	// isn't leaked for the tab's lifetime on client navigation.
+	onDestroy(() => {
+		if (previewType === 'image' && previewContent) URL.revokeObjectURL(previewContent);
+	});
+
 	// Preview modal
 	async function openPreview(entry) {
 		const fullPath = path ? `${path}/${entry.name}` : entry.name;
 		const ext = getExt(entry.name);
+		// Revoke the previous image URL before replacing it.
+		if (previewType === 'image' && previewContent) URL.revokeObjectURL(previewContent);
 		previewEntry = entry;
 		previewContent = null;
 		previewType = null;

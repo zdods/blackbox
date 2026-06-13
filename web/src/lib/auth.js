@@ -1,24 +1,27 @@
-const TOKEN_KEY = 'blackhaul_token';
+// The real session credential is an httpOnly cookie set by the server and never
+// readable by JS. This flag is only a client-side "probably logged in" hint used
+// to decide whether to render the app or redirect to /login — it holds no secret.
+const AUTH_FLAG_KEY = 'blackhaul_authed';
 
-export function getToken() {
-	if (typeof window === 'undefined') return null;
-	return localStorage.getItem(TOKEN_KEY);
+export function isLoggedIn() {
+	if (typeof window === 'undefined') return false;
+	return localStorage.getItem(AUTH_FLAG_KEY) === 'true';
 }
 
-export function setToken(token) {
+export function setLoggedIn() {
 	if (typeof window === 'undefined') return;
-	localStorage.setItem(TOKEN_KEY, token);
+	localStorage.setItem(AUTH_FLAG_KEY, 'true');
 }
 
-export function clearToken() {
+export function clearLoggedIn() {
 	if (typeof window === 'undefined') return;
-	localStorage.removeItem(TOKEN_KEY);
+	localStorage.removeItem(AUTH_FLAG_KEY);
 }
 
 export function apiFetch(path, options = {}) {
 	const headers = { ...options.headers };
-	// Rely on httpOnly session cookie set by the server.
-	// Send credentials so the browser includes the cookie.
+	// The httpOnly session cookie authenticates the request; send credentials so
+	// the browser includes it.
 	const fetchOptions = { ...options, headers, cache: 'no-store', credentials: 'same-origin' };
 	return fetch(path, fetchOptions);
 }

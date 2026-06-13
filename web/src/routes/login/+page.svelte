@@ -1,7 +1,7 @@
 <script>
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { setToken, getToken } from '$lib/auth.js';
+	import { isLoggedIn, setLoggedIn } from '$lib/auth.js';
 	import Face from '$lib/Face.svelte';
 
 	let username = '';
@@ -14,7 +14,7 @@
 	let loginToken = '';
 	let step = 'password'; // 'password' | 'totp'
 
-	$: if (typeof window !== 'undefined' && getToken()) {
+	$: if (typeof window !== 'undefined' && isLoggedIn()) {
 		goto('/dashboard');
 	}
 
@@ -57,7 +57,7 @@
 				return;
 			}
 			// Server sets httpOnly session cookie; store a flag for client-side auth checks.
-			setToken('session');
+			setLoggedIn();
 			goto('/dashboard');
 		} finally {
 			loading = false;
@@ -83,7 +83,7 @@
 				return;
 			}
 			// Server sets httpOnly session cookie; store a flag for client-side auth checks.
-			setToken('session');
+			setLoggedIn();
 			goto('/dashboard');
 		} finally {
 			loading = false;
