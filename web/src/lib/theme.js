@@ -52,8 +52,17 @@ function apply(choice) {
 	document.documentElement.style.colorScheme = resolved === 'light' ? 'light' : 'dark';
 	const meta = document.querySelector('meta[name="theme-color"]');
 	if (meta) meta.setAttribute('content', THEME_COLORS[resolved]);
+	// Replace the node rather than mutate href — browsers reliably re-render
+	// the tab icon on node replacement but may ignore an href mutation.
 	const favicon = document.getElementById('favicon');
-	if (favicon) favicon.setAttribute('href', faviconDataUri(resolved));
+	if (favicon) {
+		const link = document.createElement('link');
+		link.id = 'favicon';
+		link.rel = 'icon';
+		link.type = 'image/svg+xml';
+		link.href = faviconDataUri(resolved);
+		favicon.replaceWith(link);
+	}
 }
 
 export const theme = writable(storedChoice());

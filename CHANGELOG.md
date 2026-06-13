@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- The console favicon now matches the remembered theme on initial page load
+  instead of flashing the dark default. The browser's preload scanner committed
+  the static icon before the theme script ran; the favicon `<link>` node is now
+  replaced rather than mutated, which forces the tab icon to re-render.
+
 ## [0.6.1] - 2026-06-13
 
 ### Changed
