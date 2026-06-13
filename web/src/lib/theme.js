@@ -13,6 +13,25 @@ export const THEMES = [
 ];
 
 const THEME_COLORS = { light: '#f7f7f5', dark: '#0c0d0f', nord: '#2e3440' };
+const THEME_ACCENTS = { light: '#0c8c5e', dark: '#3fd68c', nord: '#a3be8c' };
+
+// Build the [▪‿▪] favicon recolored for the resolved theme. The background rect
+// uses --bg and the face uses --accent, mirroring web/static/icons/icon.svg.
+function faviconDataUri(resolved) {
+	const bg = THEME_COLORS[resolved];
+	const fg = THEME_ACCENTS[resolved];
+	const svg =
+		`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">` +
+		`<rect width="100" height="100" rx="20" fill="${bg}"/>` +
+		`<g stroke="${fg}" stroke-width="6" fill="none">` +
+		`<path d="M 24 28 H 16 V 72 H 24" stroke-linecap="square"/>` +
+		`<path d="M 76 28 H 84 V 72 H 76" stroke-linecap="square"/>` +
+		`<path d="M 44 58 Q 50 66 56 58" stroke-linecap="round"/></g>` +
+		`<g fill="${fg}">` +
+		`<rect x="28" y="40" width="12" height="12"/>` +
+		`<rect x="60" y="40" width="12" height="12"/></g></svg>`;
+	return 'data:image/svg+xml,' + encodeURIComponent(svg);
+}
 
 function storedChoice() {
 	if (typeof window === 'undefined') return 'system';
@@ -33,6 +52,8 @@ function apply(choice) {
 	document.documentElement.style.colorScheme = resolved === 'light' ? 'light' : 'dark';
 	const meta = document.querySelector('meta[name="theme-color"]');
 	if (meta) meta.setAttribute('content', THEME_COLORS[resolved]);
+	const favicon = document.getElementById('favicon');
+	if (favicon) favicon.setAttribute('href', faviconDataUri(resolved));
 }
 
 export const theme = writable(storedChoice());
