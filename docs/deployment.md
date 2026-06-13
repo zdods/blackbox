@@ -97,8 +97,10 @@ Traefik forwards WebSocket upgrades by default.
 
 | Env var | Why |
 |---|---|
-| `TRUST_PROXY=1` | Rate limiting keys on the client IP. Behind a proxy every request comes from the proxy's IP — this trusts `X-Forwarded-For` instead. Set it **only** when the proxy overwrites that header (the configs above do). |
-| `JWT_SECRET` | Set a stable secret (`openssl rand -base64 32`) or sessions reset on every restart. |
+| `TRUST_PROXY=1` | Rate limiting keys on the client IP. Behind a proxy every request comes from the proxy's IP — this trusts the right-most `X-Forwarded-For` hop instead. Set it **only** when the proxy appends/overwrites that header (the configs above do). |
+| `JWT_SECRET` | Set a stable secret (`openssl rand -base64 32`, **≥32 bytes** or the server won't start) or sessions reset on every restart. |
+| `COOKIE_SECURE=1` | Sets the `Secure` flag on the session cookie. Needed when TLS terminates at the proxy and the bastion speaks plain HTTP. |
+| `TOTP_ENC_KEY` | Encrypts 2FA secrets at rest with a dedicated key (base64 of 32 bytes); otherwise derived from `JWT_SECRET`. |
 
 TLS between the proxy and the bastion on the same host is unnecessary; if
 the proxy is on a different machine, either run the link over a private
