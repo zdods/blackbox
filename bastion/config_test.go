@@ -76,21 +76,31 @@ func TestLoadConfigFromEnv(t *testing.T) {
 }
 
 func TestResolveJWTSecretExplicit(t *testing.T) {
-	secret, warning, err := resolveJWTSecret("real-production-secret", false)
+	const explicit = "a-real-production-secret-at-least-32-bytes-long"
+	secret, stable, warning, err := resolveJWTSecret(explicit, false)
 	if err != nil {
 		t.Fatalf("resolveJWTSecret: %v", err)
 	}
-	if secret != "real-production-secret" {
+	if secret != explicit {
 		t.Errorf("secret = %q, want explicit secret unchanged", secret)
+	}
+	if !stable {
+		t.Error("explicit secret should be reported stable")
 	}
 	if warning != "" {
 		t.Errorf("warning = %q, want empty", warning)
 	}
 }
 
+func TestResolveJWTSecretRejectsShort(t *testing.T) {
+	if _, _, _, err := resolveJWTSecret("too-short", false); err == nil {
+		t.Error("expected error for a sub-32-byte JWT secret")
+	}
+}
+
 func TestResolveJWTSecretDevMode(t *testing.T) {
 	for _, in := range []string{"", devJWTSecret} {
-		secret, warning, err := resolveJWTSecret(in, true)
+		secret, _, warning, err := resolveJWTSecret(in, true)
 		if err != nil {
 			t.Fatalf("resolveJWTSecret(%q): %v", in, err)
 		}
@@ -106,7 +116,7 @@ func TestResolveJWTSecretDevMode(t *testing.T) {
 func TestResolveJWTSecretEphemeral(t *testing.T) {
 	// Unset or default secret outside DEV_MODE must never be used as-is.
 	for _, in := range []string{"", devJWTSecret} {
-		secret, warning, err := resolveJWTSecret(in, false)
+		secret, _, warning, err := resolveJWTSecret(in, false)
 		if err != nil {
 			t.Fatalf("resolveJWTSecret(%q): %v", in, err)
 		}
@@ -117,8 +127,8 @@ func TestResolveJWTSecretEphemeral(t *testing.T) {
 			t.Error("ephemeral secret should produce a warning")
 		}
 	}
-	a, _, _ := resolveJWTSecret("", false)
-	b, _, _ := resolveJWTSecret("", false)
+	a, _, _, _ := resolveJWTSecret("", false)
+	b, _, _, _ := resolveJWTSecret("", false)
 	if a == b {
 		t.Error("ephemeral secrets should be random, got identical values")
 	}

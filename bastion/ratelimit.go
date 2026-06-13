@@ -94,13 +94,16 @@ func (rl *RateLimiter) sweep(now time.Time) {
 }
 
 // clientIP extracts the caller's IP for rate-limit keying. With trustProxy set
-// (deployments behind a reverse proxy), the first X-Forwarded-For hop is used;
-// otherwise the connection's remote address is authoritative.
+// (deployments behind a reverse proxy), the *right-most* X-Forwarded-For hop is
+// used — the address the trusted proxy observed and appended. The left-most
+// entries are client-supplied and spoofable, so using them would let an
+// attacker rotate the header to dodge the limiter. Otherwise the connection's
+// remote address is authoritative.
 func clientIP(r *http.Request, trustProxy bool) string {
 	if trustProxy {
 		if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
-			first, _, _ := strings.Cut(xff, ",")
-			if ip := strings.TrimSpace(first); ip != "" {
+			parts := strings.Split(xff, ",")
+			if ip := strings.TrimSpace(parts[len(parts)-1]); ip != "" {
 				return ip
 			}
 		}

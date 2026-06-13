@@ -11,6 +11,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
+- TOTP (2FA) secrets are now encrypted at rest with AES-256-GCM, using
+  `TOTP_ENC_KEY` or a key derived from a stable `JWT_SECRET` (existing plaintext
+  secrets are migrated on startup). An operator-supplied `JWT_SECRET` must be at
+  least 32 bytes. Login adds a per-account attempt limiter and equalizes timing
+  so a username can't be enumerated, the rate limiter reads the correct
+  (right-most) `X-Forwarded-For` hop behind a proxy, state-changing requests get
+  a same-origin (CSRF) check, and `COOKIE_SECURE=1` forces a Secure session
+  cookie when TLS terminates at a proxy.
 - Hardened the server's HTTP and WebSocket surface: every response now sends
   `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, and
   `Referrer-Policy: no-referrer` (plus HSTS under TLS); file downloads are

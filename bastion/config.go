@@ -3,6 +3,7 @@ package main
 import (
 	"crypto/rand"
 	"encoding/base64"
+	"errors"
 	"os"
 )
 
@@ -29,6 +30,12 @@ type Config struct {
 	LogFormat string
 	// LogLevel: "debug" to include static-asset access logs.
 	LogLevel string
+	// TOTPEncKey: base64 of 32 bytes used to encrypt TOTP secrets at rest
+	// (TOTP_ENC_KEY). When empty, a key is derived from a stable JWT secret.
+	TOTPEncKey string
+	// CookieSecure: force the Secure flag on the session cookie (COOKIE_SECURE=1),
+	// for deployments that terminate TLS at a reverse proxy.
+	CookieSecure bool
 }
 
 func LoadConfig() Config {
@@ -41,17 +48,19 @@ func LoadConfig() Config {
 		addr = ":8080"
 	}
 	return Config{
-		DatabaseURL: dbURL,
-		ServerAddr:  addr,
-		JWTSecret:   os.Getenv("JWT_SECRET"),
-		StaticDir:   os.Getenv("STATIC_DIR"),
-		TLSCertFile: os.Getenv("TLS_CERT_FILE"),
-		TLSKeyFile:  os.Getenv("TLS_KEY_FILE"),
-		CORSOrigin:  os.Getenv("CORS_ORIGIN"),
-		DevMode:     boolEnv("DEV_MODE"),
-		TrustProxy:  boolEnv("TRUST_PROXY"),
-		LogFormat:   os.Getenv("LOG_FORMAT"),
-		LogLevel:    os.Getenv("LOG_LEVEL"),
+		DatabaseURL:  dbURL,
+		ServerAddr:   addr,
+		JWTSecret:    os.Getenv("JWT_SECRET"),
+		StaticDir:    os.Getenv("STATIC_DIR"),
+		TLSCertFile:  os.Getenv("TLS_CERT_FILE"),
+		TLSKeyFile:   os.Getenv("TLS_KEY_FILE"),
+		CORSOrigin:   os.Getenv("CORS_ORIGIN"),
+		DevMode:      boolEnv("DEV_MODE"),
+		TrustProxy:   boolEnv("TRUST_PROXY"),
+		LogFormat:    os.Getenv("LOG_FORMAT"),
+		LogLevel:     os.Getenv("LOG_LEVEL"),
+		TOTPEncKey:   os.Getenv("TOTP_ENC_KEY"),
+		CookieSecure: boolEnv("COOKIE_SECURE"),
 	}
 }
 
@@ -60,23 +69,27 @@ func boolEnv(key string) bool {
 	return v == "1" || v == "true"
 }
 
-// resolveJWTSecret picks the signing secret. An explicit non-default secret is
-// used as-is. Otherwise: DEV_MODE keeps the stable dev secret (so dev sessions
-// survive rebuilds), and production falls back to a random ephemeral secret —
-// secure by default, but sessions reset on restart. Returns the secret and a
-// warning to log (empty when an explicit secret was provided).
-func resolveJWTSecret(secret string, devMode bool) (string, string, error) {
+// resolveJWTSecret picks the signing secret and reports whether it is stable
+// (survives restarts). An explicit secret must be at least 32 bytes — a short
+// HS256 key is brute-forceable offline from one captured token, after which an
+// attacker can mint sessions. Otherwise: DEV_MODE keeps the stable dev secret,
+// and production falls back to a random ephemeral secret (secure by default,
+// but sessions reset on restart). Returns (secret, stable, warning, err).
+func resolveJWTSecret(secret string, devMode bool) (string, bool, string, error) {
 	if secret != "" && secret != devJWTSecret {
-		return secret, "", nil
+		if len(secret) < 32 {
+			return "", false, "", errors.New("JWT_SECRET must be at least 32 bytes (generate one with: openssl rand -base64 32)")
+		}
+		return secret, true, "", nil
 	}
 	if devMode {
-		return devJWTSecret, "DEV_MODE enabled; using the insecure development JWT secret", nil
+		return devJWTSecret, true, "DEV_MODE enabled; using the insecure development JWT secret", nil
 	}
 	b := make([]byte, 32)
 	if _, err := rand.Read(b); err != nil {
-		return "", "", err
+		return "", false, "", err
 	}
-	return base64.RawURLEncoding.EncodeToString(b),
+	return base64.RawURLEncoding.EncodeToString(b), false,
 		"JWT_SECRET not set; generated an ephemeral secret — sessions will not survive a restart. Set JWT_SECRET in production.",
 		nil
 }

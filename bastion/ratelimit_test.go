@@ -92,10 +92,24 @@ func TestClientIPIgnoresForwardedForByDefault(t *testing.T) {
 
 func TestClientIPTrustProxy(t *testing.T) {
 	r := httptest.NewRequest("POST", "/api/login", nil)
+	r.RemoteAddr = "10.0.0.2:51234" // the reverse proxy's connection
+	// The trusted proxy appends the real client IP as the right-most hop.
+	r.Header.Set("X-Forwarded-For", "198.51.100.1, 203.0.113.9")
+	if ip := clientIP(r, true); ip != "203.0.113.9" {
+		t.Errorf("clientIP = %q, want right-most hop 203.0.113.9", ip)
+	}
+}
+
+func TestClientIPTrustProxyIgnoresSpoofedLeftEntries(t *testing.T) {
+	r := httptest.NewRequest("POST", "/api/login", nil)
 	r.RemoteAddr = "10.0.0.2:51234"
-	r.Header.Set("X-Forwarded-For", "198.51.100.1, 10.0.0.2")
-	if ip := clientIP(r, true); ip != "198.51.100.1" {
-		t.Errorf("clientIP = %q, want first X-Forwarded-For hop", ip)
+	// An attacker rotating the left-most (client-supplied) value must not get a
+	// fresh rate-limit bucket; the right-most hop added by the proxy is stable.
+	for _, spoof := range []string{"1.1.1.1", "2.2.2.2"} {
+		r.Header.Set("X-Forwarded-For", spoof+", 203.0.113.9")
+		if ip := clientIP(r, true); ip != "203.0.113.9" {
+			t.Errorf("clientIP = %q, want 203.0.113.9 regardless of spoofed left entry", ip)
+		}
 	}
 }
 
