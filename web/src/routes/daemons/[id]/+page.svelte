@@ -167,15 +167,23 @@
 
 	async function download(entry) {
 		const fullPath = path ? `${path}/${entry.name}` : entry.name;
+		// Preflight with the metadata endpoint so we silently no-op on error
+		// (file gone, daemon offline) instead of navigating to a junk response —
+		// preserves the prior behavior without buffering the file to check it.
+		const meta = await apiFetch(`/api/daemons/${daemonId}/meta?path=${encodeURIComponent(fullPath)}`);
+		if (!meta.ok) return;
+		// Navigate to the download URL via a download anchor so the browser
+		// streams the response straight to disk. The same-origin httpOnly session
+		// cookie rides along; the server's Content-Disposition supplies the
+		// filename. Avoids buffering the whole file in a Blob in tab memory.
 		const url = `/api/daemons/${daemonId}/files?path=${encodeURIComponent(fullPath)}&download=1`;
-		const res = await apiFetch(url);
-		if (!res.ok) return;
-		const blob = await res.blob();
 		const a = document.createElement('a');
-		a.href = URL.createObjectURL(blob);
+		a.href = url;
 		a.download = entry.name;
+		a.rel = 'noopener';
+		document.body.appendChild(a);
 		a.click();
-		URL.revokeObjectURL(a.href);
+		a.remove();
 	}
 
 	const CHUNK_SIZE = 5 * 1024 * 1024;

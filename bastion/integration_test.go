@@ -92,6 +92,7 @@ func newTestServer(t *testing.T) (*Server, *httptest.Server) {
 		totpCache:       NewTotpSetupCache(),
 		authLimiter:     NewRateLimiter(10, time.Minute),
 		totpFailLimiter: NewRateLimiter(5, 15*time.Minute),
+		transferSem:     make(chan struct{}, maxConcurrentTransfers),
 	}
 	ts := httptest.NewServer(srv.routes())
 	t.Cleanup(func() {

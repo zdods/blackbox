@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- File transfers now use bounded memory end to end. Downloads stream straight
+  to disk in the browser (large files no longer buffer in a tab-memory Blob),
+  and the server saves them under the file's real name via a
+  `Content-Disposition` header. Uploads larger than 6 MB must use the chunked
+  protocol (the console already does this automatically); the single-request
+  upload path is capped so the server can never buffer a large file in RAM.
+  Concurrent transfers per server are capped to bound worst-case memory.
 - Compose project name pinned to `blackhaul`, so containers and the data
   volume are named `blackhaul-*` regardless of the checkout directory.
   Existing compose deployments get a fresh volume on next `up` — to keep
