@@ -86,13 +86,14 @@ func newTestServer(t *testing.T) (*Server, *httptest.Server) {
 		t.Fatalf("truncate: %v", err)
 	}
 	srv := &Server{
-		pool:            pool,
-		cfg:             Config{JWTSecret: testJWTSecret},
-		hub:             NewHub(),
-		totpCache:       NewTotpSetupCache(),
-		authLimiter:     NewRateLimiter(10, time.Minute),
-		totpFailLimiter: NewRateLimiter(5, 15*time.Minute),
-		transferSem:     make(chan struct{}, maxConcurrentTransfers),
+		pool:             pool,
+		cfg:              Config{JWTSecret: testJWTSecret},
+		hub:              NewHub(),
+		totpCache:        NewTotpSetupCache(),
+		authLimiter:      NewRateLimiter(10, time.Minute),
+		loginFailLimiter: NewRateLimiter(5, 15*time.Minute),
+		totpFailLimiter:  NewRateLimiter(5, 15*time.Minute),
+		transferSem:      make(chan struct{}, maxConcurrentTransfers),
 	}
 	ts := httptest.NewServer(srv.routes())
 	t.Cleanup(func() {
@@ -502,7 +503,9 @@ func TestIntegrationLogoutRevokesAllSessions(t *testing.T) {
 func TestIntegrationAuthRateLimit(t *testing.T) {
 	_, ts := newTestServer(t)
 	c := client(t)
-	for i := 0; i < 10; i++ {
+	// The per-account limiter locks a username after 5 failed password attempts
+	// (stricter than, and independent of, the per-IP limiter).
+	for i := 0; i < 5; i++ {
 		resp := postJSON(t, c, ts.URL+"/api/login", map[string]string{"username": "ghost", "password": "nope"})
 		wantStatus(t, resp, http.StatusUnauthorized)
 		resp.Body.Close()

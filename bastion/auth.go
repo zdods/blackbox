@@ -37,6 +37,11 @@ func CheckPassword(hash, password string) bool {
 	return bcrypt.CompareHashAndPassword([]byte(hash), []byte(password)) == nil
 }
 
+// dummyPasswordHash is compared against when the username is unknown, so the
+// login path spends the same bcrypt time whether or not the user exists (no
+// timing-based user enumeration). Computed once at startup.
+var dummyPasswordHash, _ = bcrypt.GenerateFromPassword([]byte("blackhaul-no-such-user"), bcrypt.DefaultCost)
+
 func CreateUser(ctx context.Context, pool *pgxpool.Pool, username, password string) (*User, error) {
 	hash, err := HashPassword(password)
 	if err != nil {

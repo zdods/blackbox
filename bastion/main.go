@@ -17,13 +17,15 @@ import (
 )
 
 type Server struct {
-	pool            *pgxpool.Pool
-	cfg             Config
-	hub             *Hub
-	totpCache       *TotpSetupCache
-	authLimiter     *RateLimiter  // per-IP gate on auth endpoints
-	totpFailLimiter *RateLimiter  // per-user lockout on failed TOTP codes
-	transferSem     chan struct{} // bounds concurrent file uploads/downloads
+	pool             *pgxpool.Pool
+	cfg              Config
+	hub              *Hub
+	totpCache        *TotpSetupCache
+	authLimiter      *RateLimiter  // per-IP gate on auth endpoints
+	loginFailLimiter *RateLimiter  // per-account gate on failed passwords
+	totpFailLimiter  *RateLimiter  // per-user lockout on failed TOTP codes
+	totpKey          []byte        // TOTP-secret encryption key (nil = disabled)
+	transferSem      chan struct{} // bounds concurrent file uploads/downloads
 }
 
 func main() {
@@ -36,7 +38,7 @@ func main() {
 	cfg := LoadConfig()
 	setupLogger(cfg.LogFormat, cfg.LogLevel)
 	slog.Info("starting blackhaul-bastion", "version", version.Version)
-	secret, warning, err := resolveJWTSecret(cfg.JWTSecret, cfg.DevMode)
+	secret, jwtStable, warning, err := resolveJWTSecret(cfg.JWTSecret, cfg.DevMode)
 	if err != nil {
 		slog.Error("jwt secret", "err", err)
 		os.Exit(1)
@@ -45,6 +47,14 @@ func main() {
 		slog.Warn(warning)
 	}
 	cfg.JWTSecret = secret
+	totpKey, err := resolveTOTPKey(cfg.TOTPEncKey, secret, jwtStable)
+	if err != nil {
+		slog.Error("totp encryption key", "err", err)
+		os.Exit(1)
+	}
+	if totpKey == nil {
+		slog.Warn("TOTP secrets stored in plaintext — set JWT_SECRET (or TOTP_ENC_KEY) to encrypt them at rest")
+	}
 	ctx := context.Background()
 	pool, err := OpenDB(ctx, cfg.DatabaseURL)
 	if err != nil {
@@ -57,16 +67,22 @@ func main() {
 		slog.Error("migrations failed", "err", err)
 		os.Exit(1)
 	}
+	if err := backfillTOTPEncryption(ctx, pool, totpKey); err != nil {
+		slog.Error("totp backfill failed", "err", err)
+		os.Exit(1)
+	}
 	hub := NewHub()
 	totpCache := NewTotpSetupCache()
 	srv := &Server{
-		pool:            pool,
-		cfg:             cfg,
-		hub:             hub,
-		totpCache:       totpCache,
-		authLimiter:     NewRateLimiter(10, time.Minute),
-		totpFailLimiter: NewRateLimiter(5, 15*time.Minute),
-		transferSem:     make(chan struct{}, maxConcurrentTransfers),
+		pool:             pool,
+		cfg:              cfg,
+		hub:              hub,
+		totpCache:        totpCache,
+		authLimiter:      NewRateLimiter(10, time.Minute),
+		loginFailLimiter: NewRateLimiter(5, 15*time.Minute),
+		totpFailLimiter:  NewRateLimiter(5, 15*time.Minute),
+		totpKey:          totpKey,
+		transferSem:      make(chan struct{}, maxConcurrentTransfers),
 	}
 	httpServer := &http.Server{Addr: cfg.ServerAddr, Handler: srv.routes()}
 	go func() {

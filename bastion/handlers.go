@@ -5,11 +5,31 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgconn"
 )
+
+// isSafeMethod reports whether the HTTP method is non-state-changing.
+func isSafeMethod(m string) bool {
+	return m == http.MethodGet || m == http.MethodHead || m == http.MethodOptions
+}
+
+// sameOrigin reports whether the request's Origin matches its Host. A missing
+// Origin is allowed (non-browser clients omit it; SameSite=Lax covers browsers).
+func sameOrigin(r *http.Request) bool {
+	origin := r.Header.Get("Origin")
+	if origin == "" {
+		return true
+	}
+	u, err := url.Parse(origin)
+	if err != nil || u.Host == "" {
+		return false
+	}
+	return strings.EqualFold(u.Host, r.Host)
+}
 
 const sessionExpiry = 24 * time.Hour
 
@@ -86,7 +106,12 @@ func (s *Server) Register(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, errMsgBadRequest)
 		return
 	}
-	_, err = CreateUserWithTOTP(ctx, s.pool, req.Username, req.Password, secret)
+	encSecret, err := encryptTOTPSecret(s.totpKey, secret)
+	if err != nil {
+		writeJSONError(w, http.StatusInternalServerError, "internal error")
+		return
+	}
+	_, err = CreateUserWithTOTP(ctx, s.pool, req.Username, req.Password, encSecret)
 	if err != nil {
 		if isDuplicate(err) {
 			writeJSONError(w, http.StatusBadRequest, errMsgBadRequest)
@@ -149,15 +174,27 @@ func (s *Server) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	ctx := r.Context()
+	// Per-account throttle on password attempts (the per-IP limiter alone is
+	// bypassable with many source IPs / spoofed XFF).
+	if s.loginFailLimiter.Blocked(req.Username) {
+		writeJSONError(w, http.StatusTooManyRequests, errMsgRateLimited)
+		return
+	}
 	user, err := GetUserByUsername(ctx, s.pool, req.Username)
 	if err != nil {
+		// Spend comparable bcrypt time on a missing user so existence can't be
+		// inferred from response timing.
+		CheckPassword(string(dummyPasswordHash), req.Password)
+		s.loginFailLimiter.Record(req.Username)
 		writeJSONError(w, http.StatusUnauthorized, errMsgAuthFailed)
 		return
 	}
 	if !CheckPassword(user.PasswordHash, req.Password) {
+		s.loginFailLimiter.Record(req.Username)
 		writeJSONError(w, http.StatusUnauthorized, errMsgAuthFailed)
 		return
 	}
+	s.loginFailLimiter.Reset(req.Username)
 	if user.TotpSecret != "" {
 		loginToken, err := IssueLoginToken(user.ID, user.Username, s.cfg.JWTSecret)
 		if err != nil {
@@ -221,7 +258,12 @@ func (s *Server) LoginTOTP(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusTooManyRequests, errMsgRateLimited)
 		return
 	}
-	if user.TotpSecret == "" || !ValidateTOTP(req.Code, user.TotpSecret) {
+	secret, err := decryptTOTPSecret(s.totpKey, user.TotpSecret)
+	if err != nil {
+		writeJSONError(w, http.StatusInternalServerError, "internal error")
+		return
+	}
+	if secret == "" || !ValidateTOTP(req.Code, secret) {
 		s.totpFailLimiter.Record(user.ID)
 		writeJSONError(w, http.StatusUnauthorized, errMsgAuthFailed)
 		return
@@ -241,6 +283,12 @@ func (s *Server) LoginTOTP(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// cookieSecure reports whether the session cookie should carry the Secure flag:
+// either TLS terminates in-process, or COOKIE_SECURE is set (TLS at a proxy).
+func (s *Server) cookieSecure() bool {
+	return s.cfg.CookieSecure || (s.cfg.TLSCertFile != "" && s.cfg.TLSKeyFile != "")
+}
+
 // setSessionCookie attaches the session JWT as an httpOnly cookie.
 func (s *Server) setSessionCookie(w http.ResponseWriter, token string) {
 	http.SetCookie(w, &http.Cookie{
@@ -250,7 +298,7 @@ func (s *Server) setSessionCookie(w http.ResponseWriter, token string) {
 		MaxAge:   int(sessionExpiry.Seconds()),
 		HttpOnly: true,
 		SameSite: http.SameSiteLaxMode,
-		Secure:   s.cfg.TLSCertFile != "" && s.cfg.TLSKeyFile != "",
+		Secure:   s.cookieSecure(),
 	})
 }
 
@@ -270,7 +318,7 @@ func (s *Server) Logout(w http.ResponseWriter, r *http.Request) {
 		MaxAge:   -1,
 		HttpOnly: true,
 		SameSite: http.SameSiteLaxMode,
-		Secure:   s.cfg.TLSCertFile != "" && s.cfg.TLSKeyFile != "",
+		Secure:   s.cookieSecure(),
 	})
 	w.WriteHeader(http.StatusNoContent)
 }
@@ -278,16 +326,27 @@ func (s *Server) Logout(w http.ResponseWriter, r *http.Request) {
 func (s *Server) AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		token := ""
+		fromCookie := false
 		if c, _ := r.Cookie("session"); c != nil {
 			token = c.Value
+			fromCookie = true
 		}
 		if token == "" {
+			fromCookie = false
 			if prefix, suffix, ok := strings.Cut(r.Header.Get("Authorization"), " "); ok && strings.EqualFold(prefix, "Bearer") {
 				token = strings.TrimSpace(suffix)
 			}
 		}
 		if token == "" {
 			writeJSONError(w, http.StatusUnauthorized, "unauthorized")
+			return
+		}
+		// CSRF defense-in-depth: a cookie-authenticated state-changing request
+		// must come from the same origin. (SameSite=Lax is the primary defense;
+		// this blocks the residual cross-site cases. Bearer-token API clients are
+		// not cookie-bound and so are exempt.)
+		if fromCookie && !isSafeMethod(r.Method) && !sameOrigin(r) {
+			writeJSONError(w, http.StatusForbidden, "cross-origin request blocked")
 			return
 		}
 		claims, err := ValidateToken(token, s.cfg.JWTSecret)
