@@ -293,7 +293,7 @@ func init() {
 				if time.Since(u.lastActive) > uploadTimeout || time.Since(u.createdAt) > 2*uploadTimeout {
 					os.RemoveAll(u.tmpDir)
 					delete(activeUploads.m, id)
-					log.Printf("cleaned up stale upload %s", id)
+					log.Printf("cleaned up stale upload %s", logSafe(id))
 				}
 				u.mu.Unlock()
 			}
@@ -412,7 +412,7 @@ func handleWriteChunk(root string, req *pkg.WriteChunkRequest, chunkData []byte)
 		activeUploads.Lock()
 		delete(activeUploads.m, req.UploadID)
 		activeUploads.Unlock()
-		log.Printf("assembled chunked upload: %s (%d chunks)", u.destPath, u.totalChunks)
+		log.Printf("assembled chunked upload: %s (%d chunks)", logSafe(u.destPath), u.totalChunks)
 	}
 
 	return pkg.WriteChunkResponse{
@@ -483,14 +483,14 @@ func runDaemon(bastionURL, token, root string) error {
 		return nil
 	}
 	if authResp.Type == pkg.TypeAuthError {
-		log.Printf("auth failed: %s", authResp.Error)
+		log.Printf("auth failed: %s", logSafe(authResp.Error))
 		return errAuthFailed
 	}
 	if authResp.Type != pkg.TypeAuthOK {
-		log.Printf("unexpected auth response: %s", authResp.Type)
+		log.Printf("unexpected auth response: %s", logSafe(authResp.Type))
 		return nil
 	}
-	log.Printf("blackhaul daemon connected (id %s)", authResp.DaemonID)
+	log.Printf("blackhaul daemon connected (id %s)", logSafe(authResp.DaemonID))
 	// Message loop
 	for {
 		_, data, err := conn.ReadMessage()
@@ -624,7 +624,10 @@ func runDaemon(bastionURL, token, root string) error {
 // non-existent components cannot be symlinks.
 func safePath(root, rel string) string {
 	rel = filepath.Clean(rel)
-	if rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+	// filepath.IsLocal rejects absolute paths, "..", and (on Windows) reserved
+	// names lexically — a stronger, standard guard than a manual ".." check, and
+	// one static analysis recognizes as a path-traversal sanitizer.
+	if !filepath.IsLocal(rel) {
 		return ""
 	}
 	rootClean := filepath.Clean(root)
@@ -640,6 +643,18 @@ func safePath(root, rel string) string {
 		}
 	}
 	return abs
+}
+
+// logSafe strips control characters (notably CR/LF) from an attacker-influenced
+// value before it is logged, so a crafted path, filename, or remote message
+// cannot forge or inject log lines.
+func logSafe(s string) string {
+	return strings.Map(func(r rune) rune {
+		if r < 0x20 || r == 0x7f {
+			return ' '
+		}
+		return r
+	}, s)
 }
 
 // resolveExisting resolves the deepest existing ancestor of p with EvalSymlinks
@@ -683,7 +698,7 @@ func handleListDir(root string, req *pkg.ListDirRequest) pkg.ListDirResponse {
 		var size int64
 		var mtime string
 		if err != nil {
-			log.Printf("list dir entry %s: %v", e.Name(), err)
+			log.Printf("list dir entry %s: %v", logSafe(e.Name()), err)
 		} else if info != nil {
 			size = info.Size()
 			mtime = info.ModTime().Format("2006-01-02T15:04:05Z07:00")
