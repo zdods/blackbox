@@ -155,13 +155,22 @@ func (s *Server) Healthz(w http.ResponseWriter, r *http.Request) {
 }
 
 func corsThenMux(cfg Config, mux http.Handler) http.Handler {
-	origin := cfg.CORSOrigin
+	allowed := cfg.CORSOrigin
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if origin != "" {
-			w.Header().Set("Access-Control-Allow-Origin", origin)
+		// Only advertise CORS when an origin is configured and the request's
+		// Origin matches it. With no CORS_ORIGIN the API is same-origin only;
+		// emitting a permissive method/header set unconditionally is misleading.
+		origin := r.Header.Get("Origin")
+		if allowed != "" && origin != "" && (allowed == "*" || origin == allowed) {
+			if allowed == "*" {
+				w.Header().Set("Access-Control-Allow-Origin", "*")
+			} else {
+				w.Header().Set("Access-Control-Allow-Origin", allowed)
+				w.Header().Set("Vary", "Origin")
+			}
+			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
+			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
 		}
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
 		if r.Method == "OPTIONS" {
 			w.WriteHeader(http.StatusNoContent)
 			return

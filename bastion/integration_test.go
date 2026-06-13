@@ -665,6 +665,46 @@ func TestIntegrationFileProxyDaemonOffline(t *testing.T) {
 	resp.Body.Close()
 }
 
+func TestIntegrationFileProxyRejectsUnownedDaemon(t *testing.T) {
+	srv, ts := newTestServer(t)
+	c := client(t)
+	secret := registerUser(t, c, ts.URL, "zach", "pw12345678")
+	login(t, c, ts.URL, "zach", "pw12345678", secret)
+
+	// A daemon owned by a *different* user must be invisible (404, not 503),
+	// even though it exists in the table — the ownership gate, not connectivity.
+	var otherUser string
+	if err := srv.pool.QueryRow(context.Background(),
+		`INSERT INTO users (username, password_hash) VALUES ('intruder', 'x') RETURNING id::text`).Scan(&otherUser); err != nil {
+		t.Fatal(err)
+	}
+	var otherDaemon string
+	if err := srv.pool.QueryRow(context.Background(),
+		`INSERT INTO daemons (label, token_hash, hosted_path, owner_id) VALUES ('theirs', 'h', '.', $1) RETURNING id::text`,
+		otherUser).Scan(&otherDaemon); err != nil {
+		t.Fatal(err)
+	}
+	for _, path := range []string{"/files?path=.", "/meta?path=."} {
+		resp, err := c.Get(ts.URL + "/api/daemons/" + otherDaemon + path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		wantStatus(t, resp, http.StatusNotFound)
+		resp.Body.Close()
+	}
+	// The owner's own list must not include the other user's daemon.
+	resp, err := c.Get(ts.URL + "/api/daemons")
+	if err != nil {
+		t.Fatal(err)
+	}
+	list := decodeJSON[[]map[string]any](t, resp)
+	for _, d := range list {
+		if d["id"] == otherDaemon {
+			t.Fatal("ListDaemons leaked another user's daemon")
+		}
+	}
+}
+
 func TestIntegrationChunkedUpload(t *testing.T) {
 	_, ts := newTestServer(t)
 	c := client(t)

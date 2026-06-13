@@ -29,8 +29,13 @@ func (s *Server) Me(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) ListDaemons(w http.ResponseWriter, r *http.Request) {
+	claims := ClaimsFromContext(r.Context())
+	if claims == nil {
+		writeJSONError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
 	rows, err := s.pool.Query(r.Context(),
-		`SELECT id::text, label, hosted_path, created_at FROM daemons ORDER BY label`)
+		`SELECT id::text, label, hosted_path, created_at FROM daemons WHERE owner_id = $1 ORDER BY label`, claims.UserID)
 	if err != nil {
 		writeJSONError(w, http.StatusInternalServerError, "internal error")
 		return
@@ -107,6 +112,11 @@ func (s *Server) getDaemonDisk(ctx context.Context, daemonID string) (free, tota
 
 // CreateDaemon creates a new daemon; returns daemon id and token (show token only on create).
 func (s *Server) CreateDaemon(w http.ResponseWriter, r *http.Request) {
+	claims := ClaimsFromContext(r.Context())
+	if claims == nil {
+		writeJSONError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
 	var req struct {
 		Label      string `json:"label"`
 		HostedPath string `json:"hosted_path"`
@@ -130,8 +140,8 @@ func (s *Server) CreateDaemon(w http.ResponseWriter, r *http.Request) {
 	}
 	var id string
 	err = s.pool.QueryRow(r.Context(),
-		`INSERT INTO daemons (label, token_hash, hosted_path) VALUES ($1, $2, $3) RETURNING id::text`,
-		req.Label, HashDaemonToken(token), hostedPath,
+		`INSERT INTO daemons (label, token_hash, hosted_path, owner_id) VALUES ($1, $2, $3, $4) RETURNING id::text`,
+		req.Label, HashDaemonToken(token), hostedPath, claims.UserID,
 	).Scan(&id)
 	if err != nil {
 		writeJSONError(w, http.StatusInternalServerError, "internal error")
@@ -149,6 +159,11 @@ func (s *Server) CreateDaemon(w http.ResponseWriter, r *http.Request) {
 
 // UpdateDaemon updates a daemon (e.g. label). PATCH /api/daemons/:id
 func (s *Server) UpdateDaemon(w http.ResponseWriter, r *http.Request) {
+	claims := ClaimsFromContext(r.Context())
+	if claims == nil {
+		writeJSONError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
 	daemonID := r.PathValue("id")
 	if daemonID == "" {
 		writeJSONError(w, http.StatusBadRequest, "daemon id required")
@@ -165,7 +180,7 @@ func (s *Server) UpdateDaemon(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, "label required")
 		return
 	}
-	result, err := s.pool.Exec(r.Context(), `UPDATE daemons SET label = $1 WHERE id::text = $2`, *req.Label, daemonID)
+	result, err := s.pool.Exec(r.Context(), `UPDATE daemons SET label = $1 WHERE id::text = $2 AND owner_id = $3`, *req.Label, daemonID, claims.UserID)
 	if err != nil {
 		writeJSONError(w, http.StatusInternalServerError, "internal error")
 		return
@@ -179,13 +194,17 @@ func (s *Server) UpdateDaemon(w http.ResponseWriter, r *http.Request) {
 
 // DeleteDaemon removes a daemon. DELETE /api/daemons/:id
 func (s *Server) DeleteDaemon(w http.ResponseWriter, r *http.Request) {
+	claims := ClaimsFromContext(r.Context())
+	if claims == nil {
+		writeJSONError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
 	daemonID := r.PathValue("id")
 	if daemonID == "" {
 		writeJSONError(w, http.StatusBadRequest, "daemon id required")
 		return
 	}
-	s.hub.Unregister(daemonID)
-	result, err := s.pool.Exec(r.Context(), `DELETE FROM daemons WHERE id::text = $1`, daemonID)
+	result, err := s.pool.Exec(r.Context(), `DELETE FROM daemons WHERE id::text = $1 AND owner_id = $2`, daemonID, claims.UserID)
 	if err != nil {
 		writeJSONError(w, http.StatusInternalServerError, "internal error")
 		return
@@ -194,7 +213,16 @@ func (s *Server) DeleteDaemon(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusNotFound, "not found")
 		return
 	}
+	s.hub.Unregister(daemonID)
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// daemonOwnedBy reports whether the daemon belongs to the given user. Used to
+// scope file/meta proxying to the caller's own daemons.
+func (s *Server) daemonOwnedBy(ctx context.Context, daemonID, userID string) bool {
+	var one int
+	err := s.pool.QueryRow(ctx, `SELECT 1 FROM daemons WHERE id::text = $1 AND owner_id = $2`, daemonID, userID).Scan(&one)
+	return err == nil
 }
 
 // generateDaemonToken returns a cryptographically secure token (32 bytes entropy, base64url).
