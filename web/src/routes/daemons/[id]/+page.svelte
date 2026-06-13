@@ -722,6 +722,7 @@
 	.col-size {
 		width: 7rem;
 		color: var(--text-muted);
+		white-space: nowrap;
 	}
 	.file-list th.col-size,
 	.file-list td.col-size {
@@ -946,13 +947,20 @@
 		.file-list td {
 			padding: var(--space-sm);
 		}
-		/* Wrap long names, but never mid-word on the action buttons */
+		/* Wrap long names at natural break points (hyphens, dots) and only
+		   split mid-token when a single run is still too wide for the column. */
 		.file-list td.col-name .link {
-			word-break: break-all;
+			overflow-wrap: anywhere;
 		}
 		.file-list .dl-btn,
 		.file-list .delete-btn {
 			white-space: nowrap;
+		}
+		/* Comfortable touch targets for the per-row actions. */
+		.file-list .dl-btn,
+		.file-list .delete-btn,
+		.file-list td.col-name .link {
+			min-height: 2.25rem;
 		}
 		.upload-row {
 			flex-wrap: wrap;
@@ -970,6 +978,13 @@
 		.preview-modal {
 			width: 100%;
 			max-height: 92vh;
+		}
+		/* Reclaim header width so short filenames don't needlessly truncate. */
+		.preview-header {
+			padding: var(--space-md);
+		}
+		.preview-actions button {
+			padding: 0 var(--space-sm);
 		}
 	}
 </style>
