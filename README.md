@@ -9,7 +9,7 @@
 
 Self-hosted, single-user cloud storage. Run a server, log in with username/password, and run daemons on your machines to expose directories. Browse, upload, and download from one place.
 
-**Requirements:** Go 1.22+, Node 20+ (for building blackhaul-console), Docker (optional), Postgres. The daemon can be built for Linux, macOS, and Windows.
+**Requirements:** Go 1.25+, Node 22+ (for building blackhaul-console), Docker (optional), Postgres. The daemon can be built for Linux, macOS, and Windows.
 
 **Disclaimer:** Provided as-is, no warranty. Not recommended for high-security deployments; use at your own risk.
 
@@ -192,7 +192,6 @@ Then use **https://** for the console and **wss://** for daemons, e.g. `--bastio
 ## Roadmap
 
 - [ ] **Share links** — time-limited public download links, proxied through the bastion
-- [ ] Mobile-friendly console
 - [ ] Folder upload (entire directory trees)
 - [ ] Rename/move files and directories; create directories
 - [ ] Batch operations (multi-select delete, download, move)

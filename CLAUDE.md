@@ -11,7 +11,7 @@ Self-hosted, single-user cloud storage. Monorepo with Go backend, SvelteKit fron
 
 ## Tech stack
 
-- **Go 1.22+** with stdlib only (`net/http`, `ServeMux`) — no external web frameworks
+- **Go 1.25+** (`go.mod`) with stdlib only (`net/http`, `ServeMux`) — no external web frameworks
 - **SvelteKit 5** with `adapter-static` (static site generation)
 - **PostgreSQL** for persistence
 - **WebSockets** (`gorilla/websocket`) for daemon ↔ server communication
