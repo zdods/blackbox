@@ -35,6 +35,14 @@ CI runs the Go tests and builds the web app on every PR. Changes to
 security-relevant code (auth, sessions, path handling, rate limiting) should
 come with tests.
 
+For a full end-to-end check against a real running stack (bastion + Postgres +
+a real daemon, exercising every feature by hand), run the smoke test — handy
+before cutting a release:
+
+```bash
+bash .claude/skills/smoke-test/smoke-test.sh   # ends with "N passed, 0 failed"
+```
+
 ## Commit messages
 
 Conventional Commits: `<type>(<scope>): <short description>`
