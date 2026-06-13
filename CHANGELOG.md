@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
+- Deployment hardening: the Compose bastion drops all Linux capabilities,
+  forbids privilege escalation, and caps memory/PIDs; Postgres forbids privilege
+  escalation and caps memory. The daemon installer matches the release checksum
+  by exact filename and compares it explicitly (closing an empty-input bypass),
+  and `.env.example` flags the default Postgres password. The build context
+  (`.dockerignore`) no longer includes repo metadata or local secrets.
 - Daemon and file endpoints are now scoped to the authenticated user (each
   daemon carries an `owner_id`), so a request can only reach daemons the caller
   registered — single-user today, but it forecloses a cross-tenant access bug if

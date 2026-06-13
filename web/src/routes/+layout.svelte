@@ -1,20 +1,21 @@
 <script>
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
-	import { getToken, clearToken, apiFetch } from '$lib/auth.js';
+	import { isLoggedIn, clearLoggedIn, apiFetch } from '$lib/auth.js';
 	import Face from '$lib/Face.svelte';
 	import ThemeSelect from '$lib/ThemeSelect.svelte';
 	import '../app.css';
 
 	$: centered = $page.url.pathname === '/login' || $page.url.pathname.startsWith('/register');
-	// Re-check auth on every navigation (token lives in localStorage).
-	$: authed = $page.url && typeof window !== 'undefined' && !!getToken();
+	// Re-check auth on every navigation (login flag in localStorage; the
+	// real session is an httpOnly cookie).
+	$: authed = $page.url && typeof window !== 'undefined' && !!isLoggedIn();
 
 	async function logout() {
 		try {
 			await apiFetch('/api/logout', { method: 'POST' });
 		} catch (_) {}
-		clearToken();
+		clearLoggedIn();
 		goto('/login');
 	}
 </script>

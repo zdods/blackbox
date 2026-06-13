@@ -68,8 +68,13 @@ else
 fi
 (
   cd "$TMP"
-  grep " $ARCHIVE\$" checksums.txt | $SHA_TOOL -c - >/dev/null 2>&1 ||
-    fail "checksum verification failed for $ARCHIVE"
+  # Match the exact filename and compare hashes directly. (Piping a grep into
+  # `sha256sum -c` can silently pass on empty input on some platforms, so the
+  # expected hash is asserted non-empty and compared explicitly.)
+  expected=$(awk -v f="$ARCHIVE" '$2 == f {print $1}' checksums.txt)
+  [ -n "$expected" ] || fail "no checksum listed for $ARCHIVE"
+  actual=$($SHA_TOOL "$ARCHIVE" | awk '{print $1}')
+  [ "$expected" = "$actual" ] || fail "checksum verification failed for $ARCHIVE"
 )
 say "checksum verified"
 

@@ -1,1 +1,13 @@
-web/node_modules
+# Keep the build context lean and free of local secrets and repo metadata, so
+# nothing sensitive rides along even if a COPY is broadened later.
+.git
+.env
+.env.*
+*.env
+**/node_modules
+docs
+site
+assets
+*.md
+.github
+.claude

@@ -1,7 +1,7 @@
 <script>
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { getToken } from '$lib/auth.js';
+	import { isLoggedIn } from '$lib/auth.js';
 	import { setRegisterCredentials, clearRegisterCredentials } from '$lib/register-state.js';
 	import Face from '$lib/Face.svelte';
 
@@ -12,7 +12,7 @@
 	let setupLoading = true;
 	let registrationOpen = false;
 
-	$: if (typeof window !== 'undefined' && getToken()) {
+	$: if (typeof window !== 'undefined' && isLoggedIn()) {
 		goto('/dashboard');
 	}
 

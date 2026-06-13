@@ -1,7 +1,7 @@
 <script>
 	import { onMount, onDestroy } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { getToken, clearToken, apiFetch } from '$lib/auth.js';
+	import { isLoggedIn, clearLoggedIn, apiFetch } from '$lib/auth.js';
 	import Face from '$lib/Face.svelte';
 
 	const POLL_INTERVAL_MS = 8000; // refreshes daemon list and disk space
@@ -19,7 +19,7 @@
 	let pollInterval = null;
 
 	onMount(() => {
-		if (!getToken()) {
+		if (!isLoggedIn()) {
 			goto('/login');
 			return;
 		}
@@ -47,7 +47,7 @@
 		try {
 			const res = await apiFetch('/api/daemons');
 			if (res.status === 401) {
-				clearToken();
+				clearLoggedIn();
 				goto('/login');
 				return;
 			}
@@ -61,7 +61,7 @@
 	}
 
 	async function loadQuiet() {
-		if (!getToken()) return;
+		if (!isLoggedIn()) return;
 		try {
 			const res = await apiFetch('/api/daemons');
 			if (res.status === 401) return;

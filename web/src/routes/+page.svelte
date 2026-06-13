@@ -1,11 +1,11 @@
 <script>
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { getToken } from '$lib/auth.js';
+	import { isLoggedIn } from '$lib/auth.js';
 	import Face from '$lib/Face.svelte';
 
 	onMount(async () => {
-		if (getToken()) {
+		if (isLoggedIn()) {
 			goto('/dashboard');
 			return;
 		}
