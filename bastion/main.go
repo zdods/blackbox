@@ -21,8 +21,9 @@ type Server struct {
 	cfg             Config
 	hub             *Hub
 	totpCache       *TotpSetupCache
-	authLimiter     *RateLimiter // per-IP gate on auth endpoints
-	totpFailLimiter *RateLimiter // per-user lockout on failed TOTP codes
+	authLimiter     *RateLimiter  // per-IP gate on auth endpoints
+	totpFailLimiter *RateLimiter  // per-user lockout on failed TOTP codes
+	transferSem     chan struct{} // bounds concurrent file uploads/downloads
 }
 
 func main() {
@@ -65,6 +66,7 @@ func main() {
 		totpCache:       totpCache,
 		authLimiter:     NewRateLimiter(10, time.Minute),
 		totpFailLimiter: NewRateLimiter(5, 15*time.Minute),
+		transferSem:     make(chan struct{}, maxConcurrentTransfers),
 	}
 	httpServer := &http.Server{Addr: cfg.ServerAddr, Handler: srv.routes()}
 	go func() {

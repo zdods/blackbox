@@ -14,6 +14,11 @@
 			property="og:description"
 			content="There is no cloud. Only someone else's hard drive. blackhaul turns your own machines into a private &quot;cloud&quot;."
 		/>
+		<link rel="icon" type="image/svg+xml" href="icons/icon.svg" />
+		<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png" />
+		<link rel="icon" type="image/png" sizes="16x16" href="icons/favicon-16.png" />
+		<link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+		<link rel="manifest" href="site.webmanifest" />
 		<style>
 			@font-face {
 				font-family: 'JetBrains Mono';
@@ -272,10 +277,11 @@
 				border: 1px solid var(--border);
 				border-radius: 10px;
 				padding: 1rem 1.25rem;
-				overflow-x: auto;
 			}
 			.install-box code {
 				flex: 1;
+				min-width: 0;
+				overflow-x: auto;
 				font-family: var(--font-mono);
 				font-size: 0.85rem;
 				color: var(--text);
@@ -396,6 +402,9 @@
 				color: var(--text-faint);
 				text-align: center;
 			}
+			.wiring-mobile {
+				display: none;
+			}
 
 			/* ---- Security posture ---- */
 			.posture {
@@ -472,6 +481,61 @@
 				margin-top: 0.2rem;
 			}
 
+			/* ---- Hosted waitlist ---- */
+			#waitlist {
+				max-width: 44rem;
+				margin: 0 auto;
+			}
+			#waitlist .section-lede {
+				max-width: none;
+			}
+			.waitlist-form {
+				display: flex;
+				gap: 1rem;
+			}
+			.waitlist-input {
+				flex: 1;
+				min-width: 0;
+				height: 2.75rem;
+				padding: 0 1rem;
+				background: var(--inset);
+				border: 1px solid var(--border);
+				border-radius: 8px;
+				font-family: var(--font-mono);
+				font-size: 0.9rem;
+				color: var(--text);
+				transition: border-color 0.15s;
+			}
+			.waitlist-input::placeholder {
+				color: var(--text-faint);
+			}
+			.waitlist-input:focus {
+				outline: none;
+				border-color: var(--accent);
+			}
+			.waitlist-form .btn {
+				border: 0;
+				cursor: pointer;
+				font-family: var(--font-mono);
+				flex-shrink: 0;
+			}
+			.waitlist-hint {
+				margin: 0.75rem 0 0;
+				font-size: 0.8rem;
+				color: var(--text-faint);
+			}
+			.waitlist-done {
+				display: flex;
+				align-items: center;
+				gap: 0.85rem;
+				margin: 0;
+				background: var(--accent-soft);
+				border: 1px solid var(--accent);
+				border-radius: 8px;
+				padding: 0.85rem 1.25rem;
+				font-size: 0.9rem;
+			}
+
 			/* ---- Footer ---- */
 			footer {
 				border-top: 1px solid var(--border);
@@ -490,11 +554,26 @@
 			}
 
 			@media (max-width: 720px) {
+				nav {
+					flex-wrap: wrap;
+					row-gap: 0.25rem;
+				}
+				.nav-links {
+					width: 100%;
+					justify-content: flex-start;
+					gap: 1.5rem;
+				}
+				.nav-links a {
+					padding: 0.4rem 0;
+				}
 				.hero {
-					padding: 4rem 0 3.5rem;
+					padding: 3.5rem 0;
 				}
 				.install {
 					margin-bottom: 4.5rem;
+				}
+				.install-box code {
+					font-size: 0.8rem;
 				}
 				section {
 					padding-bottom: 4.5rem;
@@ -512,11 +591,21 @@
 				.crew {
 					grid-template-columns: repeat(2, 1fr);
 				}
-				.wiring-panel {
-					padding: 1.25rem 1rem;
+				.waitlist-form {
+					flex-direction: column;
 				}
-				.wiring-panel pre {
-					font-size: 0.65rem;
+				.waitlist-form .btn {
+					justify-content: center;
+				}
+				.wiring-panel {
+					padding: 1.5rem 1rem;
+				}
+				.wiring-desktop {
+					display: none;
+				}
+				.wiring-mobile {
+					display: block;
+					font-size: 0.75rem;
 				}
 			}
 		</style>
@@ -527,6 +616,7 @@
 			<nav>
 				<a class="brand" href="#"><span class="face">[▪‿▪]</span><span>blackhaul</span></a>
 				<div class="nav-links">
+					<a href="#waitlist">waitlist</a>
 					<a href="https://github.com/zdods/blackhaul">github</a>
 					<a href="https://github.com/zdods/blackhaul/releases/latest">releases</a>
 					<a href="https://github.com/zdods/blackhaul/blob/main/SECURITY.md">security</a>
@@ -567,6 +657,35 @@
 				</p>
 			</div>
 
+			<section id="waitlist">
+				<h2 class="section-label">Hosted waitlist</h2>
+				<p class="section-lede">
+					Rather not deal with servers at all? A fully managed version is on the roadmap —
+					same privacy, zero setup.
+					Leave your email and you'll hear the moment the beta opens — that's the only thing
+					we'll ever send you.
+				</p>
+				<form
+					class="waitlist-form"
+					action="https://app.kit.com/forms/9557680/subscriptions"
+					method="post"
+				>
+					<input
+						class="waitlist-input"
+						type="email"
+						name="email_address"
+						required
+						placeholder="you@example.com"
+						aria-label="Email address"
+						autocomplete="email"
+					/>
+					<button class="btn btn-primary" type="submit">join the waitlist</button>
+				</form>
+				<p class="waitlist-hint">
+					One quick confirmation email, then silence until the beta opens.
+				</p>
+			</section>
+
 			<section>
 				<h2 class="section-label">What you get</h2>
 				<p class="section-lede">Line by line. No asterisks.</p>
@@ -575,8 +694,8 @@
 						<span class="ledger-index">01</span>
 						<h3><span class="row-face" aria-hidden="true">[▪‿▪]</span> Your files stay home</h3>
 						<p>
-							blackhaul never copies your data to anyone else's hardware. The server in the middle
-							just passes files through without keeping anything — your stuff lives on your
+							blackhaul never copies your data to anyone else's hardware. Files pass straight
+							through on their way to you, and nothing is kept along the way — your stuff lives on your
 							machines and nowhere else. No tracking, ever.
 						</p>
 					</div>
@@ -587,7 +706,7 @@
 						</h3>
 						<p>
 							A laptop, an old desktop, a NAS, the server in your closet — blackhaul runs a tiny
-							helper program (the daemon) quietly in the background on Linux, macOS, and Windows.
+							helper that sits quietly in the background on Linux, macOS, and Windows.
 							One command installs it.
 						</p>
 					</div>
@@ -605,7 +724,7 @@
 						<span class="ledger-index">04</span>
 						<h3><span class="row-face" aria-hidden="true">[–‿–]</span> No network gymnastics</h3>
 						<p>
-							Your machines call out to the server — nothing on the internet can call in. No
+							Your machines call out — nothing on the internet can call in. No
 							router settings, no VPN, no port forwarding, no asking your ISP for anything. If
 							it can browse the web, it can join.
 						</p>
@@ -632,11 +751,12 @@
 			<section>
 				<h2 class="section-label">How it works</h2>
 				<p class="section-lede">
-					Your machines call out; nothing calls in. The server in the middle (we call it the
-					bastion) passes your files through and keeps none of them.
+					Your machines call out; nothing calls in. In the middle sits the bastion — a relay
+					whose only job is to hand files between your machines and your browser, keeping
+					none of them.
 				</p>
-				<div class="wiring-panel" role="img" aria-label="Architecture diagram: your machines (laptop, NAS, PC) make outbound TLS connections to the bastion relay. Your browser connects to the bastion over HTTPS. The bastion stores nothing and relays everything. Offline machines simply show as offline.">
-					<pre aria-hidden="true">
+				<div class="wiring-panel" role="img" aria-label="Architecture diagram: your machines (laptop, NAS, PC) make outbound, encrypted connections to the bastion relay. Your browser connects to the bastion over HTTPS. The bastion stores nothing and relays everything. Offline machines simply show as offline.">
+					<pre class="wiring-desktop" aria-hidden="true">
  <span class="wl">YOUR MACHINES</span>                         <span class="wl">ANYWHERE</span>
 
 ┌──────────────┐
@@ -652,6 +772,25 @@
                                        │  you    <span class="wf">[▪‿▪]</span> │
                                        │  any browser  │
                                        └───────────────┘</pre>
+				<pre class="wiring-mobile" aria-hidden="true">
+ <span class="wl">YOUR MACHINES</span>
+
+┌──────────────┐  ┌──────────────┐
+│ laptop <span class="wf">[▪‿▪]</span> │  │ nas    <span class="wf">[▪‿▪]</span> │
+└───────┬──────┘  └──────┬───────┘
+        └────────┬───────┘ 
+                 │  outbound only
+                 │  encrypted
+                 ▼
+           ┌───────────┐
+           │  bastion  │
+           │   relay   │
+           └─────▲─────┘
+                 │  https
+         ┌───────┴───────┐
+         │  you    <span class="wf">[▪‿▪]</span> │
+         │  any browser  │
+         └───────────────┘</pre>
 				</div>
 				<p class="wiring-caption">keeps nothing · passes everything through · no doors left open</p>
 			</section>
@@ -672,8 +811,8 @@
 							there's no door on them for the internet to knock on.</span>
 					</li>
 					<li>
-						<span><strong>Encrypted the whole way.</strong> Browser to server, server to your
-							machines — the same encryption your bank uses (TLS), end to end.</span>
+						<span><strong>Encrypted the whole way.</strong> From your browser to your machines, every
+							step of the journey is wrapped in the same encryption your bank uses (TLS).</span>
 					</li>
 					<li>
 						<span><strong>Careful with your keys.</strong> One click logs you out everywhere, and
@@ -694,8 +833,8 @@
 			<section>
 				<h2 class="section-label">Meet the faces</h2>
 				<p class="section-lede">
-					The console speaks kaomoji. Four moods, no mystery meat — you always know how your
-					fleet is feeling.
+					The console speaks kaomoji. Four moods, zero guesswork — one glance tells you how
+					your fleet is feeling.
 				</p>
 				<div class="crew">
 					<div class="crew-member">
@@ -765,6 +904,38 @@
 			face.addEventListener('mouseleave', () => {
 				mood = 'idle';
 				show('idle');
+			});
+
+			// Waitlist form: submit to Kit inline; on any failure fall back to a
+			// native POST so the signup still lands on Kit's hosted page.
+			const waitlistForm = document.querySelector('.waitlist-form');
+			waitlistForm.addEventListener('submit', async (e) => {
+				e.preventDefault();
+				const btn = waitlistForm.querySelector('button');
+				btn.disabled = true;
+				btn.textContent = 'joining…';
+				try {
+					const res = await fetch(waitlistForm.action, {
+						method: 'POST',
+						body: new FormData(waitlistForm),
+						headers: { accept: 'application/json' },
+					});
+					if (!res.ok) throw new Error(res.status);
+					const done = document.createElement('p');
+					done.className = 'waitlist-done';
+					done.innerHTML =
+						'<span class="face" aria-hidden="true">[^‿^]</span>' +
+						'<span>almost in — check your inbox and click the confirmation link.</span>';
+					waitlistForm.replaceWith(done);
+					mood = 'happy';
+					show('happy');
+					setTimeout(() => {
+						mood = 'idle';
+						show('idle');
+					}, 1600);
+				} catch (_) {
+					waitlistForm.submit();
+				}
 			});
 
 			document.querySelector('[data-copy]').addEventListener('click', async (e) => {

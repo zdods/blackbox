@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-06-13
+
+### Changed
+
+- File transfers now use bounded memory end to end. Downloads stream straight
+  to disk in the browser (large files no longer buffer in a tab-memory Blob),
+  and the server saves them under the file's real name via a
+  `Content-Disposition` header. Uploads larger than 6 MB must use the chunked
+  protocol (the console already does this automatically); the single-request
+  upload path is capped so the server can never buffer a large file in RAM.
+  Concurrent transfers per server are capped to bound worst-case memory.
+- Compose project name pinned to `blackhaul`, so containers and the data
+  volume are named `blackhaul-*` regardless of the checkout directory.
+  Existing compose deployments get a fresh volume on next `up` — to keep
+  data, either set `COMPOSE_PROJECT_NAME` to your old project name or copy
+  the old volume's contents before removing it.
+
+## [0.4.1] - 2026-06-11
+
+### Added
+
+- Console favicon and home-screen icons: the [▪‿▪] face as an SVG
+  favicon with PNG fallbacks, apple-touch-icon, and a web manifest so
+  the console can be added to a phone home screen as a standalone app.
+
+## [0.4.0] - 2026-06-11
+
 ### Changed
 
 - **Project renamed: blackbox → blackhaul.** Everything user-facing follows:
@@ -129,7 +156,10 @@ console.
 - Compose binds Postgres to `127.0.0.1`; bastion container runs as
   non-root.
 
-[Unreleased]: https://github.com/zdods/blackhaul/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/zdods/blackhaul/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/zdods/blackhaul/compare/v0.4.1...v0.5.0
+[0.4.1]: https://github.com/zdods/blackhaul/compare/v0.4.0...v0.4.1
+[0.4.0]: https://github.com/zdods/blackhaul/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/zdods/blackhaul/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/zdods/blackhaul/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/zdods/blackhaul/compare/v0.1.0...v0.1.1

@@ -1,3 +1,7 @@
+# Pin the compose project name so containers, volumes, and dev-built images
+# are named blackhaul-* regardless of the checkout directory's name.
+name: blackhaul
+
 services:
   postgres:
     image: postgres:16-alpine
