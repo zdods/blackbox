@@ -50,6 +50,7 @@ docker-compose.override.yml
 # dev
 PLAN.md
 GTM.md
+SECURITY-REVIEW.md
 
 # Playwright
 web/test-results/
