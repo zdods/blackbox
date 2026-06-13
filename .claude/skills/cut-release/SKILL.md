@@ -110,10 +110,17 @@ until the user decides; a moved tag breaks anyone who already fetched it.
 
 GoReleaser **creates the GitHub Release itself** with commit-grouped notes
 and a footer (image pull + installer one-liner) — do **not** `gh release
-create`. Offer to polish the generated notes instead, e.g. prepend the
-curated changelog section from step 4:
+create`. **Always** replace the auto-generated notes with the curated
+changelog — don't just offer; this is the standing default.
+
+Build the notes from the `[X.Y.Z]` section you rolled in step 4:
+
+1. Lead with the curated, grouped prose (Security / Fixed / Changed / Added)
+   — drop the raw commit-hash list.
+2. Add a `**Full changelog:** …/compare/vPREV...vX.Y.Z` link.
+3. Keep GoReleaser's footer (image pull + installer one-liner).
 
 ```bash
-gh release view vX.Y.Z --json body --jq .body   # inspect
-gh release edit vX.Y.Z --notes "<improved notes>"
+gh release view vX.Y.Z --json body --jq .body   # inspect the footer to keep
+gh release edit vX.Y.Z --notes-file <curated-notes.md>
 ```
