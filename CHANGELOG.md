@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-06-13
+
 ### Security
 
 - Deployment hardening: the Compose bastion drops all Linux capabilities,
@@ -22,8 +24,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   origin instead of unconditionally.
 - TOTP (2FA) secrets are now encrypted at rest with AES-256-GCM, using
   `TOTP_ENC_KEY` or a key derived from a stable `JWT_SECRET` (existing plaintext
-  secrets are migrated on startup). An operator-supplied `JWT_SECRET` must be at
-  least 32 bytes. Login adds a per-account attempt limiter and equalizes timing
+  secrets are migrated on startup). **Breaking:** an operator-supplied
+  `JWT_SECRET` must now be at least 32 bytes — a shorter one is brute-forceable
+  from a captured token, so the server refuses to start. (Note: when the TOTP key
+  is derived from `JWT_SECRET`, rotating that secret later makes stored 2FA
+  secrets undecryptable; set a dedicated `TOTP_ENC_KEY` to decouple them.) Login
+  adds a per-account attempt limiter and equalizes timing
   so a username can't be enumerated, the rate limiter reads the correct
   (right-most) `X-Forwarded-For` hop behind a proxy, state-changing requests get
   a same-origin (CSRF) check, and `COOKIE_SECURE=1` forces a Secure session
@@ -205,7 +211,8 @@ console.
 - Compose binds Postgres to `127.0.0.1`; bastion container runs as
   non-root.
 
-[Unreleased]: https://github.com/zdods/blackhaul/compare/v0.5.1...HEAD
+[Unreleased]: https://github.com/zdods/blackhaul/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/zdods/blackhaul/compare/v0.5.1...v0.6.0
 [0.5.1]: https://github.com/zdods/blackhaul/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/zdods/blackhaul/compare/v0.4.1...v0.5.0
 [0.4.1]: https://github.com/zdods/blackhaul/compare/v0.4.0...v0.4.1
