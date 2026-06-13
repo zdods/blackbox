@@ -439,6 +439,11 @@ a.btn:focus-visible {
 @media (max-width: 640px) {
 	.app-header {
 		padding: 0 var(--space-md);
+		gap: var(--space-sm);
+	}
+
+	.app-header__actions {
+		gap: var(--space-sm);
 	}
 
 	.app-main {

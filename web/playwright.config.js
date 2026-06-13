@@ -16,10 +16,24 @@ export default defineConfig({
 			use: { browserName: 'chromium', viewport: { width: 1280, height: 800 } }
 		},
 		{
+			name: 'tablet',
+			use: { browserName: 'chromium', viewport: { width: 768, height: 1024 }, hasTouch: true }
+		},
+		{
 			name: 'mobile',
 			use: {
 				browserName: 'chromium',
 				viewport: { width: 375, height: 667 },
+				deviceScaleFactor: 2,
+				isMobile: true,
+				hasTouch: true
+			}
+		},
+		{
+			name: 'mobile-small',
+			use: {
+				browserName: 'chromium',
+				viewport: { width: 320, height: 568 },
 				deviceScaleFactor: 2,
 				isMobile: true,
 				hasTouch: true

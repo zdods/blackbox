@@ -358,6 +358,12 @@
 		.host-card__actions {
 			width: 100%;
 			justify-content: flex-end;
+			gap: var(--space-sm);
+		}
+		/* Comfortable touch targets for the host actions on mobile. */
+		.host-card__actions .quiet {
+			min-height: 2.25rem;
+			padding: var(--space-sm) var(--space-sm);
 		}
 		.add-host-row {
 			flex-direction: column;

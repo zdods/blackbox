@@ -23,6 +23,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   field (upload id, chunk index/count, read size and offset), caps concurrent
   uploads, assembles chunked uploads atomically, and writes files `0600`.
 
+### Fixed
+
+- Mobile responsiveness across the console. The header no longer wraps the
+  "log out" button onto two lines on narrow phones (≤320px); long filenames in
+  the file browser now break at hyphens instead of mid-word; file sizes stay on
+  one line; and the file preview modal stops truncating short filenames on
+  small screens. Per-row and host-card actions also get larger touch targets on
+  mobile. Layout is verified at 320/375/768/1280px via the responsive e2e suite.
+
 ## [0.5.0] - 2026-06-13
 
 ### Changed

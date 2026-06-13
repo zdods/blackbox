@@ -42,5 +42,14 @@
 		height: 2rem;
 		padding: 0 var(--space-md);
 		font-size: 0.8rem;
+		white-space: nowrap;
+	}
+
+	/* Tighten the header on small screens so the brand, theme picker and
+	   logout button share a single row without the button text wrapping. */
+	@media (max-width: 640px) {
+		.logout-btn {
+			padding: 0 var(--space-sm);
+		}
 	}
 </style>
