@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.1] - 2026-06-13
+
 ### Changed
 
 - The console favicon now recolors to match the selected theme (light, dark,
@@ -223,7 +225,8 @@ console.
 - Compose binds Postgres to `127.0.0.1`; bastion container runs as
   non-root.
 
-[Unreleased]: https://github.com/zdods/blackhaul/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/zdods/blackhaul/compare/v0.6.1...HEAD
+[0.6.1]: https://github.com/zdods/blackhaul/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/zdods/blackhaul/compare/v0.5.1...v0.6.0
 [0.5.1]: https://github.com/zdods/blackhaul/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/zdods/blackhaul/compare/v0.4.1...v0.5.0
