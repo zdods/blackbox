@@ -66,9 +66,14 @@ func contentDisposition(p string) string {
 }
 
 func (s *Server) DaemonFiles(w http.ResponseWriter, r *http.Request) {
+	claims := ClaimsFromContext(r.Context())
 	daemonID := r.PathValue("id")
 	if daemonID == "" {
 		writeJSONError(w, http.StatusBadRequest, "daemon id required")
+		return
+	}
+	if claims == nil || !s.daemonOwnedBy(r.Context(), daemonID, claims.UserID) {
+		writeJSONError(w, http.StatusNotFound, "not found")
 		return
 	}
 	path := r.URL.Query().Get("path")
@@ -117,9 +122,14 @@ func (s *Server) DaemonFiles(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) DaemonMeta(w http.ResponseWriter, r *http.Request) {
+	claims := ClaimsFromContext(r.Context())
 	daemonID := r.PathValue("id")
 	if daemonID == "" {
 		writeJSONError(w, http.StatusBadRequest, "daemon id required")
+		return
+	}
+	if claims == nil || !s.daemonOwnedBy(r.Context(), daemonID, claims.UserID) {
+		writeJSONError(w, http.StatusNotFound, "not found")
 		return
 	}
 	path := r.URL.Query().Get("path")

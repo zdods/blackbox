@@ -7,10 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.5.1] - 2026-06-13
-
 ### Security
 
+- Daemon and file endpoints are now scoped to the authenticated user (each
+  daemon carries an `owner_id`), so a request can only reach daemons the caller
+  registered — single-user today, but it forecloses a cross-tenant access bug if
+  multi-user is ever added. CORS headers are sent only for a configured, matching
+  origin instead of unconditionally.
 - TOTP (2FA) secrets are now encrypted at rest with AES-256-GCM, using
   `TOTP_ENC_KEY` or a key derived from a stable `JWT_SECRET` (existing plaintext
   secrets are migrated on startup). An operator-supplied `JWT_SECRET` must be at
@@ -19,6 +22,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (right-most) `X-Forwarded-For` hop behind a proxy, state-changing requests get
   a same-origin (CSRF) check, and `COOKIE_SECURE=1` forces a Secure session
   cookie when TLS terminates at a proxy.
+
+## [0.5.1] - 2026-06-13
+
+### Security
+
 - Hardened the server's HTTP and WebSocket surface: every response now sends
   `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, and
   `Referrer-Policy: no-referrer` (plus HSTS under TLS); file downloads are
