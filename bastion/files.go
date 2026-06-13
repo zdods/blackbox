@@ -216,6 +216,8 @@ func (s *Server) proxyReadFile(ctx context.Context, w http.ResponseWriter, ac *D
 	}
 
 	// Large files: stream via read_chunk with binary frames
+	w.Header().Set("Content-Type", "application/octet-stream")
+	w.Header().Set("X-Content-Type-Options", "nosniff")
 	w.Header().Set("Content-Disposition", contentDisposition(path))
 	w.Header().Set("Content-Length", strconv.FormatInt(meta.Size, 10))
 	flusher, _ := w.(http.Flusher)
@@ -245,6 +247,14 @@ func (s *Server) proxyReadFile(ctx context.Context, w http.ResponseWriter, ac *D
 			if resp.Error != "" {
 				reqLog(ctx).Warn("daemon read-chunk error", "daemon_err", resp.Error)
 			}
+			return
+		}
+		// Don't trust the daemon to honor the requested size: a chunk larger
+		// than asked, or an empty chunk while bytes remain, would overrun the
+		// declared Content-Length or spin forever. Bail rather than emit a body
+		// that doesn't match the announced length.
+		if len(chunkData) == 0 || len(chunkData) > chunkSize {
+			reqLog(ctx).Warn("daemon read-chunk size mismatch", "got", len(chunkData), "want", chunkSize)
 			return
 		}
 		if _, err := w.Write(chunkData); err != nil {
@@ -281,6 +291,8 @@ func (s *Server) proxyReadFileSmall(ctx context.Context, w http.ResponseWriter, 
 		writeJSONError(w, http.StatusBadGateway, "invalid data")
 		return
 	}
+	w.Header().Set("Content-Type", "application/octet-stream")
+	w.Header().Set("X-Content-Type-Options", "nosniff")
 	w.Header().Set("Content-Disposition", contentDisposition(path))
 	_, _ = w.Write(data) // client disconnect mid-download is not actionable
 }

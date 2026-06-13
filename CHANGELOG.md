@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
+- Hardened the server's HTTP and WebSocket surface: every response now sends
+  `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, and
+  `Referrer-Policy: no-referrer` (plus HSTS under TLS); file downloads are
+  served as `application/octet-stream` so a stored HTML/SVG file can't be
+  sniffed and rendered in-origin; the console ships a Content-Security-Policy.
+  Inbound daemon WebSocket frames are size-capped (no OOM from an oversized
+  frame), a missing binary follow-up frame can no longer stall the connection,
+  and streaming downloads validate each chunk against the requested size.
 - Daemon now contains symlink escapes: a symlink inside a hosted directory that
   points outside it can no longer be used to read, write, or delete files beyond
   the hosted root. The daemon also validates and bounds every server-supplied

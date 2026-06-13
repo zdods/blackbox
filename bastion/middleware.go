@@ -32,6 +32,26 @@ func setupLogger(format, level string) {
 	slog.SetDefault(slog.New(h))
 }
 
+// securityHeaders sets defensive response headers on every response. The
+// document Content-Security-Policy is delivered by the SPA build (SvelteKit
+// kit.csp, as a meta tag); these headers cover everything else — including
+// downloads of untrusted file content, where nosniff stops the browser from
+// MIME-sniffing a stored HTML/SVG file and rendering it in-origin.
+func securityHeaders(tlsEnabled bool) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			h := w.Header()
+			h.Set("X-Content-Type-Options", "nosniff")
+			h.Set("X-Frame-Options", "DENY")
+			h.Set("Referrer-Policy", "no-referrer")
+			if tlsEnabled {
+				h.Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+			}
+			next.ServeHTTP(w, r)
+		})
+	}
+}
+
 type ctxKeyRequestID struct{}
 
 // withRequestID tags every request with a unique ID, exposed in the
