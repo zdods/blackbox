@@ -18,6 +18,10 @@ func (s *Server) HandleDaemonWS(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer conn.Close()
+	// Bound per-frame memory: a daemon (compromised, or a future hosted-relay
+	// peer) must not be able to OOM the server with an oversized frame. Caps the
+	// largest list/read response well above the 5 MB download-chunk size.
+	conn.SetReadLimit(maxDaemonFrameBytes)
 	// Limit time for first message (auth) to avoid hanging connections.
 	if err := conn.SetReadDeadline(time.Now().Add(10 * time.Second)); err != nil {
 		return

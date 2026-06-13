@@ -7,9 +7,20 @@ import (
 	"net/http"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/gorilla/websocket"
 )
+
+// maxDaemonFrameBytes caps a single inbound WebSocket frame from a daemon, so a
+// malicious/compromised daemon can't OOM the bastion. Well above the 5 MB
+// download-chunk size, with headroom for large directory listings.
+const maxDaemonFrameBytes = 32 << 20
+
+// binaryFrameTimeout bounds how long readLoop waits for the binary frame that
+// must follow a control frame, so a daemon that promises one and never sends it
+// can't stall dispatch for every other in-flight request on that connection.
+const binaryFrameTimeout = 60 * time.Second
 
 // wsCheckOrigin returns true if the request origin is allowed. allowed is from config (CORSOrigin); "" or "*" allows all.
 func wsCheckOrigin(allowed string) func(*http.Request) bool {
@@ -284,8 +295,11 @@ func (ac *DaemonConn) readLoop(hub *Hub) {
 				default:
 				}
 			} else {
-				// Read the binary data frame
+				// Read the binary data frame, bounding the wait so a missing
+				// follow-up can't block the whole read loop indefinitely.
+				_ = ac.conn.SetReadDeadline(time.Now().Add(binaryFrameTimeout))
 				_, binData, err := ac.conn.ReadMessage()
+				_ = ac.conn.SetReadDeadline(time.Time{})
 				if err != nil {
 					return
 				}

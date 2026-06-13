@@ -122,7 +122,8 @@ func (s *Server) routes() http.Handler {
 	mux.HandleFunc("GET /ws/daemon", s.HandleDaemonWS)
 	// Static web app (SPA fallback to index.html); single pattern catches all GET requests not matched above
 	mux.Handle("GET /{path...}", staticHandler(s.cfg.StaticDir))
-	return withRequestID(accessLog(corsThenMux(s.cfg, mux)))
+	tlsEnabled := s.cfg.TLSCertFile != "" && s.cfg.TLSKeyFile != ""
+	return withRequestID(accessLog(securityHeaders(tlsEnabled)(corsThenMux(s.cfg, mux))))
 }
 
 // Healthz reports liveness: 200 when the server is up and the DB responds.
