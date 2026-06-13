@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -247,10 +248,11 @@ func resolveDir(path string) (string, error) {
 
 // uploadState tracks an in-progress chunked upload.
 type uploadState struct {
-	path        string
+	destPath    string // resolved once at creation; later chunks can't change it
 	totalChunks int
 	received    map[int]bool
 	tmpDir      string
+	createdAt   time.Time
 	lastActive  time.Time
 	mu          sync.Mutex
 }
@@ -264,6 +266,20 @@ var activeUploads = struct {
 const tmpDirPrefix = ".blackhaul-tmp"
 const uploadTimeout = 10 * time.Minute
 
+// Resource bounds. Every path/size/count below is supplied by the bastion and
+// must be treated as untrusted, so each is capped to keep a malicious or
+// compromised bastion from escaping the hosted root or exhausting the host.
+const (
+	maxReadBytes     = 8 << 20   // 8 MB cap on read_chunk / read_file responses
+	maxChunkBytes    = 8 << 20   // 8 MB cap on an accepted upload chunk
+	maxTotalChunks   = 1_000_000 // bounds the assembly loop and state map
+	maxActiveUploads = 128       // concurrent chunked uploads
+)
+
+// uploadIDRe constrains upload_id to a safe charset before it is ever used in a
+// filesystem path (it names a temp directory under the hosted root).
+var uploadIDRe = regexp.MustCompile(`^[A-Za-z0-9_-]{1,64}$`)
+
 func init() {
 	// Background goroutine to clean up stale uploads
 	go func() {
@@ -272,10 +288,12 @@ func init() {
 			activeUploads.Lock()
 			for id, u := range activeUploads.m {
 				u.mu.Lock()
-				if time.Since(u.lastActive) > uploadTimeout {
+				// Idle timeout, plus an absolute age cap so an attacker can't
+				// keep an upload alive indefinitely by dribbling chunks.
+				if time.Since(u.lastActive) > uploadTimeout || time.Since(u.createdAt) > 2*uploadTimeout {
 					os.RemoveAll(u.tmpDir)
 					delete(activeUploads.m, id)
-					log.Printf("cleaned up stale upload %s", id)
+					log.Printf("cleaned up stale upload %s", logSafe(id))
 				}
 				u.mu.Unlock()
 			}
@@ -295,26 +313,47 @@ func handleWriteChunk(root string, req *pkg.WriteChunkRequest, chunkData []byte)
 		}
 	}
 
+	// Validate every bastion-supplied field before it touches the filesystem.
+	if !uploadIDRe.MatchString(req.UploadID) {
+		return errResp("invalid upload id")
+	}
+	if req.TotalChunks <= 0 || req.TotalChunks > maxTotalChunks {
+		return errResp("invalid total chunks")
+	}
+	if req.ChunkIndex < 0 || req.ChunkIndex >= req.TotalChunks {
+		return errResp("invalid chunk index")
+	}
+	if len(chunkData) > maxChunkBytes {
+		return errResp("chunk too large")
+	}
+
 	destPath := safePath(root, req.Path)
 	if destPath == "" {
 		return errResp("invalid path")
 	}
 
-	// Get or create upload state
+	// Get or create upload state. destPath/totalChunks are bound once at
+	// creation; later chunks reusing this upload_id cannot retarget the write.
 	activeUploads.Lock()
 	u, exists := activeUploads.m[req.UploadID]
 	if !exists {
+		if len(activeUploads.m) >= maxActiveUploads {
+			activeUploads.Unlock()
+			return errResp("too many active uploads")
+		}
 		tmpDir := filepath.Join(root, tmpDirPrefix, req.UploadID)
-		if err := os.MkdirAll(tmpDir, 0755); err != nil {
+		if err := os.MkdirAll(tmpDir, 0700); err != nil {
 			activeUploads.Unlock()
 			return errResp("failed to create temp dir")
 		}
+		now := time.Now()
 		u = &uploadState{
-			path:        req.Path,
+			destPath:    destPath,
 			totalChunks: req.TotalChunks,
 			received:    make(map[int]bool),
 			tmpDir:      tmpDir,
-			lastActive:  time.Now(),
+			createdAt:   now,
+			lastActive:  now,
 		}
 		activeUploads.m[req.UploadID] = u
 	}
@@ -322,23 +361,28 @@ func handleWriteChunk(root string, req *pkg.WriteChunkRequest, chunkData []byte)
 
 	u.mu.Lock()
 	defer u.mu.Unlock()
+	if req.ChunkIndex >= u.totalChunks {
+		return errResp("invalid chunk index")
+	}
 	u.lastActive = time.Now()
 
 	// Write chunk to temp file
 	chunkFile := filepath.Join(u.tmpDir, fmt.Sprintf("chunk_%d", req.ChunkIndex))
-	if err := os.WriteFile(chunkFile, chunkData, 0644); err != nil {
+	if err := os.WriteFile(chunkFile, chunkData, 0600); err != nil {
 		return errResp("failed to write chunk")
 	}
 	u.received[req.ChunkIndex] = true
 
-	// If all chunks received, assemble the file
+	// If all chunks received, assemble into a temp file and atomically rename
+	// onto destPath, so a failed/partial upload never truncates an existing file.
 	if len(u.received) == u.totalChunks {
-		if dir := filepath.Dir(destPath); dir != destPath {
-			if err := os.MkdirAll(dir, 0755); err != nil {
+		if dir := filepath.Dir(u.destPath); dir != u.destPath {
+			if err := os.MkdirAll(dir, 0700); err != nil {
 				return errResp("failed to create directory")
 			}
 		}
-		outFile, err := os.Create(destPath)
+		assembled := filepath.Join(u.tmpDir, "assembled")
+		outFile, err := os.OpenFile(assembled, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0600)
 		if err != nil {
 			return errResp("failed to create output file")
 		}
@@ -347,23 +391,28 @@ func handleWriteChunk(root string, req *pkg.WriteChunkRequest, chunkData []byte)
 			data, err := os.ReadFile(cf)
 			if err != nil {
 				outFile.Close()
-				os.Remove(destPath)
 				return errResp("missing chunk during assembly")
 			}
 			if _, err := outFile.Write(data); err != nil {
 				outFile.Close()
-				os.Remove(destPath)
 				return errResp("failed to write assembled file")
 			}
 		}
+		if err := outFile.Sync(); err != nil {
+			outFile.Close()
+			return errResp("failed to flush assembled file")
+		}
 		outFile.Close()
+		if err := os.Rename(assembled, u.destPath); err != nil {
+			return errResp("failed to finalize upload")
+		}
 
 		// Clean up temp dir and upload state
 		os.RemoveAll(u.tmpDir)
 		activeUploads.Lock()
 		delete(activeUploads.m, req.UploadID)
 		activeUploads.Unlock()
-		log.Printf("assembled chunked upload: %s (%d chunks)", req.Path, u.totalChunks)
+		log.Printf("assembled chunked upload: %s (%d chunks)", logSafe(u.destPath), u.totalChunks)
 	}
 
 	return pkg.WriteChunkResponse{
@@ -378,6 +427,12 @@ func handleReadChunk(root string, req *pkg.ReadChunkRequest) (*pkg.ReadChunkResp
 	path := safePath(root, req.Path)
 	if path == "" {
 		return &pkg.ReadChunkResponse{Type: pkg.TypeReadChunk, RequestID: req.RequestID, Error: "invalid path"}, nil
+	}
+	if req.Size <= 0 || req.Size > maxReadBytes {
+		return &pkg.ReadChunkResponse{Type: pkg.TypeReadChunk, RequestID: req.RequestID, Error: "invalid chunk size"}, nil
+	}
+	if req.Offset < 0 {
+		return &pkg.ReadChunkResponse{Type: pkg.TypeReadChunk, RequestID: req.RequestID, Error: "invalid offset"}, nil
 	}
 	f, err := os.Open(path)
 	if err != nil {
@@ -428,14 +483,14 @@ func runDaemon(bastionURL, token, root string) error {
 		return nil
 	}
 	if authResp.Type == pkg.TypeAuthError {
-		log.Printf("auth failed: %s", authResp.Error)
+		log.Printf("auth failed: %s", logSafe(authResp.Error))
 		return errAuthFailed
 	}
 	if authResp.Type != pkg.TypeAuthOK {
-		log.Printf("unexpected auth response: %s", authResp.Type)
+		log.Printf("unexpected auth response: %s", logSafe(authResp.Type))
 		return nil
 	}
-	log.Printf("blackhaul daemon connected (id %s)", authResp.DaemonID)
+	log.Printf("blackhaul daemon connected (id %s)", logSafe(authResp.DaemonID))
 	// Message loop
 	for {
 		_, data, err := conn.ReadMessage()
@@ -559,18 +614,70 @@ func runDaemon(bastionURL, token, root string) error {
 	}
 }
 
-// safePath returns absolute path under root, or empty string if escape.
+// safePath returns an absolute path under root, or "" if the request escapes
+// the hosted root. It applies a lexical check (clean + reject "..") and then,
+// when the path exists on disk, a symlink check: the deepest existing ancestor
+// is resolved with EvalSymlinks and re-verified to be contained, so a symlink
+// inside the root that points outside it cannot be used to read/write/delete
+// beyond the hosted directory. The symlink check is skipped only when nothing
+// on the path exists yet (a fresh write target, or a synthetic test root) —
+// non-existent components cannot be symlinks.
 func safePath(root, rel string) string {
 	rel = filepath.Clean(rel)
-	if rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+	// filepath.IsLocal rejects absolute paths, "..", and (on Windows) reserved
+	// names lexically — a stronger, standard guard than a manual ".." check, and
+	// one static analysis recognizes as a path-traversal sanitizer.
+	if !filepath.IsLocal(rel) {
 		return ""
 	}
-	abs := filepath.Join(root, rel)
-	abs = filepath.Clean(abs)
-	if !strings.HasPrefix(abs, filepath.Clean(root)+string(filepath.Separator)) && abs != filepath.Clean(root) {
+	rootClean := filepath.Clean(root)
+	abs := filepath.Clean(filepath.Join(rootClean, rel))
+	if abs != rootClean && !strings.HasPrefix(abs, rootClean+string(filepath.Separator)) {
 		return ""
+	}
+	if resolvedRoot, err := filepath.EvalSymlinks(rootClean); err == nil {
+		if real := resolveExisting(abs); real != "" {
+			if real != resolvedRoot && !strings.HasPrefix(real, resolvedRoot+string(filepath.Separator)) {
+				return ""
+			}
+		}
 	}
 	return abs
+}
+
+// logSafe strips control characters (notably CR/LF) from an attacker-influenced
+// value before it is logged, so a crafted path, filename, or remote message
+// cannot forge or inject log lines.
+func logSafe(s string) string {
+	return strings.Map(func(r rune) rune {
+		if r < 0x20 || r == 0x7f {
+			return ' '
+		}
+		return r
+	}, s)
+}
+
+// resolveExisting resolves the deepest existing ancestor of p with EvalSymlinks
+// (following any symlinks) and re-appends the non-existent tail components. It
+// returns "" if no ancestor up to the filesystem root resolves. The re-appended
+// tail components don't exist yet, so they cannot themselves be symlinks.
+func resolveExisting(p string) string {
+	cur := p
+	var tail []string
+	for {
+		if resolved, err := filepath.EvalSymlinks(cur); err == nil {
+			for i := len(tail) - 1; i >= 0; i-- {
+				resolved = filepath.Join(resolved, tail[i])
+			}
+			return resolved
+		}
+		parent := filepath.Dir(cur)
+		if parent == cur {
+			return ""
+		}
+		tail = append(tail, filepath.Base(cur))
+		cur = parent
+	}
 }
 
 func handleListDir(root string, req *pkg.ListDirRequest) pkg.ListDirResponse {
@@ -591,7 +698,7 @@ func handleListDir(root string, req *pkg.ListDirRequest) pkg.ListDirResponse {
 		var size int64
 		var mtime string
 		if err != nil {
-			log.Printf("list dir entry %s: %v", e.Name(), err)
+			log.Printf("list dir entry %s: %v", logSafe(e.Name()), err)
 		} else if info != nil {
 			size = info.Size()
 			mtime = info.ModTime().Format("2006-01-02T15:04:05Z07:00")
@@ -605,6 +712,11 @@ func handleReadFile(root string, req *pkg.ReadFileRequest) pkg.ReadFileResponse 
 	path := safePath(root, req.Path)
 	if path == "" {
 		return pkg.ReadFileResponse{Type: pkg.TypeReadFile, RequestID: req.RequestID, Error: "invalid path"}
+	}
+	// Bound memory: this single-shot path is for small files only; large files
+	// must use read_chunk. Reject oversized files instead of reading them whole.
+	if info, err := os.Stat(path); err == nil && info.Size() > maxReadBytes {
+		return pkg.ReadFileResponse{Type: pkg.TypeReadFile, RequestID: req.RequestID, Error: "file too large; use chunked read"}
 	}
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -641,11 +753,11 @@ func handleWriteFile(root string, req *pkg.WriteFileRequest) pkg.WriteFileRespon
 		return pkg.WriteFileResponse{Type: pkg.TypeWriteFile, RequestID: req.RequestID, Error: err.Error()}
 	}
 	if dir := filepath.Dir(path); dir != path {
-		if err := os.MkdirAll(dir, 0755); err != nil {
+		if err := os.MkdirAll(dir, 0700); err != nil {
 			return pkg.WriteFileResponse{Type: pkg.TypeWriteFile, RequestID: req.RequestID, Error: err.Error()}
 		}
 	}
-	if err := os.WriteFile(path, data, 0644); err != nil {
+	if err := os.WriteFile(path, data, 0600); err != nil {
 		return pkg.WriteFileResponse{Type: pkg.TypeWriteFile, RequestID: req.RequestID, Error: err.Error()}
 	}
 	return pkg.WriteFileResponse{Type: pkg.TypeWriteFile, RequestID: req.RequestID}

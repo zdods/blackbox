@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+
+- Daemon now contains symlink escapes: a symlink inside a hosted directory that
+  points outside it can no longer be used to read, write, or delete files beyond
+  the hosted root. The daemon also validates and bounds every server-supplied
+  field (upload id, chunk index/count, read size and offset), caps concurrent
+  uploads, assembles chunked uploads atomically, and writes files `0600`.
+
 ## [0.5.0] - 2026-06-13
 
 ### Changed
