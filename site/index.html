@@ -496,7 +496,10 @@
 			.waitlist-input {
 				flex: 1;
 				min-width: 0;
-				height: 3.25rem;
+				/* min-height (not height): flex-basis:0% from `flex:1` overrides a
+				   plain height when the form stacks to a column on mobile,
+				   collapsing the field. A min-height survives that. */
+				min-height: 3.25rem;
 				padding: 0 1.25rem;
 				background: var(--inset);
 				border: 1px solid var(--border);
@@ -512,9 +515,10 @@
 			.waitlist-input:focus {
 				outline: none;
 				border-color: var(--accent);
+				box-shadow: 0 0 0 3px var(--accent-soft);
 			}
 			.waitlist-form .btn {
-				height: 3.25rem;
+				min-height: 3.25rem;
 				border: 0;
 				border-radius: 10px;
 				cursor: pointer;

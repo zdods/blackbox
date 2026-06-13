@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- The console favicon now recolors to match the selected theme (light, dark,
+  nord, or system), so the browser tab's `[▪‿▪]` icon stays in sync with the UI.
+
+### Fixed
+
+- Landing page: the hosted-waitlist email field no longer collapses to a thin
+  sliver on mobile. When the form stacked to a single column, `flex: 1` overrode
+  the field's height; it now uses `min-height` so the input keeps full height,
+  and gains the same accent focus ring as the console inputs.
+
 ## [0.6.0] - 2026-06-13
 
 ### Security
