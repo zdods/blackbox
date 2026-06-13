@@ -14,13 +14,16 @@ daemons — no files, no directory listings.
 
 What protects access:
 
-- One account, **bcrypt** password, **mandatory TOTP (2FA)**.
+- One account, **bcrypt** password, **mandatory TOTP (2FA)**. The 2FA secret is
+  **encrypted at rest** (set `TOTP_ENC_KEY`, or it's derived from a stable
+  `JWT_SECRET`).
 - Sessions are signed JWTs in **httpOnly cookies** (not readable by JS, never in
   localStorage); logging out **revokes all sessions** at once.
 - Daemon tokens are stored **hashed** (SHA-256); the plaintext exists only in
-  the daemon's `0600` config file on the host.
+  the daemon's `0600` config file on the host. Each daemon is scoped to its
+  owning user.
 - Each daemon is scoped to **one directory** (its hosted path) and rejects path
-  traversal outside it.
+  traversal outside it — including via symlinks that point out of the root.
 
 ### Does the server see my file contents?
 
@@ -109,11 +112,16 @@ file API returns `503` until the daemon reconnects.
 ### I'm logged out after every server restart
 
 `JWT_SECRET` isn't set, so the bastion generates a new **ephemeral** key each
-start and old sessions stop validating. Set a stable secret in production:
+start and old sessions stop validating. Set a stable secret in production (it
+must be **at least 32 bytes**, or the bastion refuses to start):
 
 ```bash
 JWT_SECRET=$(openssl rand -base64 32)
 ```
+
+If you derive the TOTP encryption key from `JWT_SECRET` (i.e. no `TOTP_ENC_KEY`),
+**don't rotate `JWT_SECRET` after enrolling 2FA** — the stored TOTP secret would
+become undecryptable. Set a dedicated `TOTP_ENC_KEY` to rotate them independently.
 
 ### Locked out of login / 2FA
 

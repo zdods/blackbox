@@ -171,11 +171,13 @@ The bastion is configured entirely via environment variables (see
 |-----|---------|
 | `DATABASE_URL` | Postgres connection string |
 | `SERVER_ADDR` | listen address (default `:8080`) |
-| `JWT_SECRET` | session signing key; if unset, an **ephemeral** random key is generated (secure, but sessions reset on restart) |
+| `JWT_SECRET` | session signing key; if unset, an **ephemeral** random key is generated (secure, but sessions reset on restart). An explicit value must be **≥32 bytes** |
+| `TOTP_ENC_KEY` | base64 of 32 bytes used to encrypt TOTP secrets at rest; if unset, a key is derived from a stable `JWT_SECRET` |
 | `STATIC_DIR` | directory to serve the console from |
 | `TLS_CERT_FILE` / `TLS_KEY_FILE` | terminate TLS in-process instead of at a proxy |
-| `CORS_ORIGIN` | `Access-Control-Allow-Origin` (default `*`) |
-| `TRUST_PROXY` | trust `X-Forwarded-For` for client IPs (set only behind a proxy) |
+| `COOKIE_SECURE` | force the `Secure` flag on the session cookie (TLS at a proxy) |
+| `CORS_ORIGIN` | allowed cross-origin; headers are emitted only for a matching `Origin` |
+| `TRUST_PROXY` | trust the right-most `X-Forwarded-For` hop for client IPs (set only behind a proxy) |
 | `DEV_MODE` | use the well-known dev JWT secret (local only) |
 | `LOG_FORMAT` / `LOG_LEVEL` | `json` logs; `debug` includes static-asset access logs |
 
@@ -185,9 +187,13 @@ The bastion is configured entirely via environment variables (see
 - **No file content at rest on the server** — the bastion proxies bytes; it
   never writes them to disk or the database.
 - **Single user, mandatory 2FA, httpOnly-cookie sessions, revocable in bulk.**
+  TOTP secrets are encrypted at rest; sessions get a same-origin (CSRF) check.
 - **Daemon tokens hashed at rest;** plaintext lives only in the host's `0600`
   config.
-- **Path traversal enforced at the daemon**, scoped to one hosted directory.
+- **Symlink-safe path containment at the daemon**, scoped to one hosted
+  directory; daemons are scoped to their owning user.
+- **Defensive HTTP**: nosniff / `X-Frame-Options` / CSP, `octet-stream`
+  downloads, and size-capped daemon WebSocket frames.
 
 For the threat model and reporting process, see [SECURITY.md](../SECURITY.md)
 and [security-notes.md](security-notes.md).

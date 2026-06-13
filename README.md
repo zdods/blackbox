@@ -47,7 +47,7 @@ Or use the Makefile / PowerShell script from the repo root:
 - Register once at http://localhost:8080/register  
 - Log in, add a host (label); the daemon token is copied to your clipboard automatically.
 
-For production, set `JWT_SECRET` (e.g. in `.env`; generate one with `openssl rand -base64 32`). If unset, the server generates a random ephemeral secret at startup — secure by default, but all sessions reset on restart. Ports, Postgres credentials, and other options can be overridden via environment variables; see [.env.example](.env.example).
+For production, set `JWT_SECRET` (e.g. in `.env`; generate one with `openssl rand -base64 32`, **at least 32 bytes** or the server refuses to start). If unset, the server generates a random ephemeral secret at startup — secure by default, but all sessions reset on restart. Set `TOTP_ENC_KEY` to encrypt 2FA secrets at rest with a dedicated key, and `COOKIE_SECURE=1` when TLS terminates at a reverse proxy. Ports, Postgres credentials, and other options can be overridden via environment variables; see [.env.example](.env.example).
 
 ### 2. Run blackhaul-daemon (on each host)
 
