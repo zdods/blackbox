@@ -4,9 +4,13 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strconv"
+	"strings"
 	"time"
 
 	"blackhaul/pkg"
@@ -15,7 +19,51 @@ import (
 )
 
 const proxyTimeout = 30 * time.Second
-const maxUploadSize = 512 << 20 // 512 MB
+
+// Upload memory bounds. Large files MUST use the chunked protocol; the
+// single-shot PUT is only for small files. Both caps sit just above the
+// client's 5 MB chunk size so the bastion never buffers a large body in RAM
+// for a single request — bounded per-request memory is what makes uploads
+// "stream" through this WebSocket proxy.
+const (
+	maxSingleShotUpload    = 6 << 20 // single, non-chunked PUT
+	maxChunkUpload         = 6 << 20 // one chunk of a chunked PUT
+	maxConcurrentTransfers = 16      // simultaneous uploads/downloads proxied
+)
+
+// acquireTransfer bounds how many uploads/downloads proxy through the bastion
+// at once, capping worst-case memory under concurrent load. It blocks until a
+// slot frees or the request context is cancelled; returns false on the latter.
+func (s *Server) acquireTransfer(ctx context.Context) bool {
+	select {
+	case s.transferSem <- struct{}{}:
+		return true
+	case <-ctx.Done():
+		return false
+	}
+}
+
+func (s *Server) releaseTransfer() { <-s.transferSem }
+
+// contentDisposition builds an RFC 6266 attachment header so a direct-navigation
+// download saves under the file's real name. It emits both a sanitized ASCII
+// filename and a UTF-8 filename* for non-ASCII names.
+func contentDisposition(p string) string {
+	name := p
+	if i := strings.LastIndexByte(p, '/'); i >= 0 {
+		name = p[i+1:]
+	}
+	if name == "" {
+		name = "download"
+	}
+	ascii := strings.Map(func(r rune) rune {
+		if r < 0x20 || r == 0x7f || r == '"' || r == '\\' || r > 0x7e {
+			return '_'
+		}
+		return r
+	}, name)
+	return fmt.Sprintf("attachment; filename=%q; filename*=UTF-8''%s", ascii, url.PathEscape(name))
+}
 
 func (s *Server) DaemonFiles(w http.ResponseWriter, r *http.Request) {
 	daemonID := r.PathValue("id")
@@ -35,6 +83,11 @@ func (s *Server) DaemonFiles(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), proxyTimeout)
 	defer cancel()
 	if r.Method == http.MethodGet && r.URL.Query().Get("download") == "1" {
+		if !s.acquireTransfer(ctx) {
+			writeJSONError(w, http.StatusServiceUnavailable, "server busy; try again")
+			return
+		}
+		defer s.releaseTransfer()
 		s.proxyReadFile(ctx, w, ac, path)
 		return
 	}
@@ -43,6 +96,11 @@ func (s *Server) DaemonFiles(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if r.Method == http.MethodPut {
+		if !s.acquireTransfer(ctx) {
+			writeJSONError(w, http.StatusServiceUnavailable, "server busy; try again")
+			return
+		}
+		defer s.releaseTransfer()
 		// Chunked upload if upload_id, chunk_index, total_chunks are present
 		if r.URL.Query().Get("upload_id") != "" {
 			s.proxyWriteChunk(ctx, w, r, ac, path)
@@ -158,7 +216,7 @@ func (s *Server) proxyReadFile(ctx context.Context, w http.ResponseWriter, ac *D
 	}
 
 	// Large files: stream via read_chunk with binary frames
-	w.Header().Set("Content-Disposition", "attachment")
+	w.Header().Set("Content-Disposition", contentDisposition(path))
 	w.Header().Set("Content-Length", strconv.FormatInt(meta.Size, 10))
 	flusher, _ := w.(http.Flusher)
 	var offset int64
@@ -223,14 +281,19 @@ func (s *Server) proxyReadFileSmall(ctx context.Context, w http.ResponseWriter, 
 		writeJSONError(w, http.StatusBadGateway, "invalid data")
 		return
 	}
-	w.Header().Set("Content-Disposition", "attachment")
+	w.Header().Set("Content-Disposition", contentDisposition(path))
 	_, _ = w.Write(data) // client disconnect mid-download is not actionable
 }
 
 func (s *Server) proxyWriteFile(ctx context.Context, w http.ResponseWriter, r *http.Request, ac *DaemonConn, path string) {
-	r.Body = http.MaxBytesReader(w, r.Body, maxUploadSize)
+	r.Body = http.MaxBytesReader(w, r.Body, maxSingleShotUpload)
 	data, err := io.ReadAll(r.Body)
 	if err != nil {
+		var tooLarge *http.MaxBytesError
+		if errors.As(err, &tooLarge) {
+			writeJSONError(w, http.StatusRequestEntityTooLarge, "file too large for a single request; use chunked upload")
+			return
+		}
 		writeJSONError(w, http.StatusBadRequest, "failed to read body")
 		return
 	}
@@ -272,9 +335,14 @@ func (s *Server) proxyWriteChunk(ctx context.Context, w http.ResponseWriter, r *
 		return
 	}
 
-	r.Body = http.MaxBytesReader(w, r.Body, maxUploadSize)
+	r.Body = http.MaxBytesReader(w, r.Body, maxChunkUpload)
 	chunkData, err := io.ReadAll(r.Body)
 	if err != nil {
+		var tooLarge *http.MaxBytesError
+		if errors.As(err, &tooLarge) {
+			writeJSONError(w, http.StatusRequestEntityTooLarge, "chunk too large")
+			return
+		}
 		writeJSONError(w, http.StatusBadRequest, "failed to read chunk body")
 		return
 	}
