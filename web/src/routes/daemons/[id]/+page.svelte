@@ -170,7 +170,9 @@
 		// Preflight with the metadata endpoint so we silently no-op on error
 		// (file gone, daemon offline) instead of navigating to a junk response —
 		// preserves the prior behavior without buffering the file to check it.
-		const meta = await apiFetch(`/api/daemons/${daemonId}/meta?path=${encodeURIComponent(fullPath)}`);
+		const meta = await apiFetch(
+			`/api/daemons/${daemonId}/meta?path=${encodeURIComponent(fullPath)}`
+		);
 		if (!meta.ok) return;
 		// Navigate to the download URL via a download anchor so the browser
 		// streams the response straight to disk. The same-origin httpOnly session
