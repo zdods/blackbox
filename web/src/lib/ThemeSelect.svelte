@@ -60,5 +60,9 @@
 		.theme-select__label {
 			display: none;
 		}
+		/* Trim the picker so the brand wordmark keeps its room on small phones. */
+		select {
+			padding: 0.25rem 1.2rem 0.25rem 0.5rem;
+		}
 	}
 </style>

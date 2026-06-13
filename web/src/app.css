@@ -149,6 +149,9 @@ body {
 	color: var(--text);
 	text-decoration: none;
 	letter-spacing: 0.01em;
+	/* Safety valve: the brand may shrink so the header can never overflow the
+	   viewport, even before the web font swaps in (wider fallback metrics). */
+	min-width: 0;
 }
 
 .app-header__brand:hover {
@@ -156,10 +159,23 @@ body {
 	color: var(--text);
 }
 
+/* The wordmark truncates rather than forcing horizontal scroll; the face
+   (flex-shrink: 0 below) always stays visible. */
+.app-header__brand span {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.app-header__brand .face {
+	flex-shrink: 0;
+}
+
 .app-header__actions {
 	display: flex;
 	align-items: center;
 	gap: var(--space-md);
+	flex-shrink: 0;
 }
 
 .app-main {
