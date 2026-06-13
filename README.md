@@ -175,6 +175,13 @@ Then use **https://** for the console and **wss://** for daemons, e.g. `--bastio
 
 **Connection overhead:** TLS adds one handshake before data flows. Typically that's **1–2 extra round-trips** on the first connection (~10–50 ms on a good link); resumed sessions often need only **1 extra RTT**. CPU cost is small (modern CPUs do TLS in milliseconds). For long-lived daemon connections the overhead is negligible.
 
+## Documentation
+
+- [Architecture](docs/architecture.md) — components, the daemon↔bastion protocol, data model, and security boundaries
+- [FAQ & troubleshooting](docs/faq.md) — "is my data safe?", connection problems, common errors
+- [Deploying behind a reverse proxy (TLS)](docs/deployment.md) — nginx / Caddy / Traefik WebSocket config
+- [Security policy](SECURITY.md) — reporting vulnerabilities; [internal security notes](docs/security-notes.md)
+
 ## Layout
 
 - `pkg/` – shared message types (daemon ↔ server)
