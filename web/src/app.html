@@ -29,7 +29,11 @@
 					var accents = { light: '#0c8c5e', dark: '#3fd68c', nord: '#a3be8c' };
 					var meta = document.querySelector('meta[name="theme-color"]');
 					if (meta) meta.setAttribute('content', colors[resolved]);
-					// Recolor the [▪‿▪] favicon to match the resolved theme.
+					// Recolor the [▪‿▪] favicon to match the resolved theme. The
+					// preload scanner fetches the link's default href before this
+					// script runs, so mutating href is ignored on first paint —
+					// replace the node instead to force a re-render (kept in sync
+					// by $lib/theme.js, which does the same).
 					var favicon = document.getElementById('favicon');
 					if (favicon) {
 						var bg = colors[resolved];
@@ -50,7 +54,12 @@
 							'">' +
 							'<rect x="28" y="40" width="12" height="12"/>' +
 							'<rect x="60" y="40" width="12" height="12"/></g></svg>';
-						favicon.setAttribute('href', 'data:image/svg+xml,' + encodeURIComponent(svg));
+						var link = document.createElement('link');
+						link.id = 'favicon';
+						link.rel = 'icon';
+						link.type = 'image/svg+xml';
+						link.href = 'data:image/svg+xml,' + encodeURIComponent(svg);
+						favicon.parentNode.replaceChild(link, favicon);
 					}
 				} catch (e) {
 					document.documentElement.setAttribute('data-theme', 'dark');
