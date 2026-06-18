@@ -65,3 +65,17 @@ func loadToken() (string, error) {
 func saveToken(token string) error {
 	return keyring.Set(keyringService, keyringAccount, token)
 }
+
+// deleteToken removes the daemon token from the OS keyring. It is idempotent:
+// a missing entry is not an error. Returns whether a token was actually
+// removed, so callers can report "removed" vs "nothing was stored".
+func deleteToken() (removed bool, err error) {
+	err = keyring.Delete(keyringService, keyringAccount)
+	if err == keyring.ErrNotFound {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return true, nil
+}

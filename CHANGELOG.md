@@ -18,6 +18,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   menu on touch), **file-type icons**, and a **list/grid view toggle**.
 - Loading **skeletons** and clearer empty/offline states across the dashboard and
   file browser.
+- The daemon can now clean up its own stored credentials so they're never
+  orphaned. `blackhaul-daemon --logout` removes the token from the OS keyring;
+  `blackhaul-daemon --reset` removes the token **and** the config file. Both are
+  idempotent and report exactly what they removed. When the server rejects a
+  token repeatedly (e.g. the host was deleted in the console), the daemon now
+  points you at `--logout` to clear the now-defunct token.
+- `install.sh --uninstall` does a full clean removal: stops and removes the
+  launchd/systemd service if present, clears the stored token + config, and
+  removes the binary.
 
 ### Changed
 
