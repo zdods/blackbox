@@ -65,4 +65,12 @@
 			padding: 0.25rem 1.2rem 0.25rem 0.5rem;
 		}
 	}
+
+	/* Coarse-pointer / mobile: give the picker a ≥44px hit target without
+	   widening its visual footprint, so it meets the new touch minimum. */
+	@media (pointer: coarse) {
+		.theme-select {
+			min-height: var(--touch-min);
+		}
+	}
 </style>

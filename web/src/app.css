@@ -1,5 +1,6 @@
 /* blackhaul console — precision-mono design system
-   Semantic tokens; themes are pure variable swaps on [data-theme]. */
+   Semantic tokens; themes are pure variable swaps on [data-theme].
+   Base visual system = Stillwater. Mono leads everywhere (no second font). */
 
 /* JetBrains Mono — self-hosted (no CDN: privacy + offline) */
 @font-face {
@@ -44,19 +45,93 @@
 	--shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.25);
 	--backdrop: rgba(0, 0, 0, 0.72);
 
+	/* --- Structural tokens (theme-agnostic; defined once, inherited by all) --- */
 	--font-mono:
 		'JetBrains Mono', ui-monospace, 'Cascadia Code', 'SF Mono', Consolas, Monaco, 'Courier New',
 		monospace;
+
+	/* Spacing scale */
 	--space-xs: 0.25rem;
 	--space-sm: 0.5rem;
 	--space-md: 1rem;
 	--space-lg: 1.5rem;
 	--space-xl: 2rem;
 	--space-2xl: 3rem;
+
+	/* Layout / geometry */
+	--sidebar-width: 16rem;
+	--header-height: 3.25rem;
+	--content-width: 56rem;
+	--row-height: 2rem;
+	--rail-row-height: 2.25rem;
+	--touch-min: 2.75rem;
+	--grid-tile: 8.5rem;
+	--icon-col: 1.25rem;
+	--checkbox-col: 1.75rem;
+
+	/* Type scale (rem, 14px root, mono-first) */
+	--fs-2xs: 0.7rem;
+	--fs-xs: 0.8rem;
+	--fs-sm: 0.85rem;
+	--fs-md: 0.95rem;
+	--fs-lg: 1.15rem;
+	--fs-xl: 1.4rem;
+	--lh-tight: 1.3;
+	--lh-body: 1.6;
+	--tracking-label: 0.1em;
+	--tracking-tight: -0.02em;
+
+	/* Radius */
 	--radius: 8px;
 	--radius-sm: 6px;
-	--input-height: 2.5rem;
-	--content-width: 56rem;
+	--radius-lg: 12px;
+	--radius-xs: 4px;
+	--radius-pill: 999px;
+
+	/* Form geometry — input height bumped to a 44px touch target */
+	--input-height: 2.75rem;
+
+	/* Shadow ladder (layered above the single --shadow) */
+	--shadow-1: var(--shadow);
+	--shadow-pop: 0 4px 12px rgba(0, 0, 0, 0.35), 0 1px 3px rgba(0, 0, 0, 0.3);
+	--shadow-overlay: 0 16px 48px rgba(0, 0, 0, 0.45), 0 2px 8px rgba(0, 0, 0, 0.3);
+
+	/* Motion */
+	--dur-instant: 90ms;
+	--dur-fast: 140ms;
+	--dur-base: 180ms;
+	--dur-slow: 240ms;
+	--ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+	--ease-soft: cubic-bezier(0.32, 0.72, 0, 1);
+	--ease-std: cubic-bezier(0.4, 0, 0.2, 1);
+	--slide-y: 8px;
+
+	/* Z-index ladder (header 50, toast 100, drop-overlay 10, preview-backdrop 200) */
+	--z-sidebar: 40;
+	--z-drawer-scrim: 180;
+	--z-drawer: 185;
+	--z-context-menu: 210;
+	--z-modal-scrim: 220;
+	--z-modal: 225;
+	--z-palette-scrim: 230;
+	--z-palette: 235;
+
+	/* Safe-area insets */
+	--safe-top: env(safe-area-inset-top, 0px);
+	--safe-bottom: env(safe-area-inset-bottom, 0px);
+	--safe-left: env(safe-area-inset-left, 0px);
+	--safe-right: env(safe-area-inset-right, 0px);
+
+	/* Selected rows reuse the existing accent tint (theme-agnostic) */
+	--select-tint: var(--accent-soft);
+
+	/* --- Per-theme surface helpers (overridden in each theme block) --- */
+	--rail-bg: #0a0b0c;
+	--rail-active: #16181b;
+	--row-hover: rgba(255, 255, 255, 0.035);
+	--kbd-bg: #1c1f22;
+	--skeleton-base: var(--inset);
+	--skeleton-sheen: var(--border);
 }
 
 [data-theme='light'] {
@@ -77,6 +152,16 @@
 	--err-soft: rgba(192, 59, 45, 0.08);
 	--shadow: 0 1px 2px rgba(20, 22, 24, 0.06), 0 8px 24px rgba(20, 22, 24, 0.05);
 	--backdrop: rgba(26, 28, 30, 0.45);
+
+	--shadow-pop: 0 4px 12px rgba(20, 22, 24, 0.1), 0 1px 3px rgba(20, 22, 24, 0.08);
+	--shadow-overlay: 0 16px 48px rgba(20, 22, 24, 0.14), 0 2px 8px rgba(20, 22, 24, 0.08);
+
+	--rail-bg: #f0f0ed;
+	--rail-active: #ffffff;
+	--row-hover: rgba(20, 22, 24, 0.035);
+	--kbd-bg: #ecece8;
+	--skeleton-base: var(--inset);
+	--skeleton-sheen: var(--border);
 }
 
 [data-theme='nord'] {
@@ -97,6 +182,13 @@
 	--err-soft: rgba(191, 97, 106, 0.15);
 	--shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.2);
 	--backdrop: rgba(0, 0, 0, 0.6);
+
+	--rail-bg: #292e39;
+	--rail-active: #3b4252;
+	--row-hover: rgba(255, 255, 255, 0.045);
+	--kbd-bg: #353b48;
+	--skeleton-base: var(--inset);
+	--skeleton-sheen: var(--border);
 }
 
 * {
@@ -110,12 +202,17 @@ html {
 body {
 	font-family: var(--font-mono);
 	font-size: 14px;
-	line-height: 1.6;
+	line-height: var(--lh-body);
 	margin: 0;
 	min-height: 100vh;
 	background: var(--bg);
 	color: var(--text);
 	-webkit-font-smoothing: antialiased;
+}
+
+/* Tabular numerics so columns/disk/mtime never jitter on the 8s poll. */
+.num {
+	font-variant-numeric: tabular-nums;
 }
 
 /* ---- App shell ---------------------------------------------------- */
@@ -132,7 +229,9 @@ body {
 	justify-content: space-between;
 	gap: var(--space-md);
 	padding: 0 var(--space-lg);
-	height: 3.25rem;
+	padding-left: max(var(--space-lg), var(--safe-left));
+	padding-right: max(var(--space-lg), var(--safe-right));
+	height: var(--header-height);
 	border-bottom: 1px solid var(--border);
 	background: var(--surface);
 	position: sticky;
@@ -171,11 +270,25 @@ body {
 	flex-shrink: 0;
 }
 
+.app-header__lead {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--space-sm);
+	min-width: 0;
+}
+
 .app-header__actions {
 	display: flex;
 	align-items: center;
 	gap: var(--space-md);
 	flex-shrink: 0;
+}
+
+/* The shell body: rail + main pane. Plain block (no grid) when centered. */
+.app-body {
+	flex: 1;
+	display: flex;
+	min-height: 0;
 }
 
 .app-main {
@@ -184,9 +297,10 @@ body {
 	max-width: var(--content-width);
 	margin: 0 auto;
 	padding: var(--space-xl) var(--space-lg) var(--space-2xl);
+	min-width: 0;
 }
 
-/* Auth pages: center the card in the viewport */
+/* Auth pages: center the card in the viewport (no rail) */
 .app-main.centered {
 	display: flex;
 	align-items: center;
@@ -215,7 +329,7 @@ a:focus-visible {
 }
 
 h1.page-title {
-	font-size: 1.15rem;
+	font-size: var(--fs-lg);
 	font-weight: 600;
 	letter-spacing: 0.01em;
 	margin: 0;
@@ -224,27 +338,27 @@ h1.page-title {
 
 .page-sub {
 	margin: var(--space-xs) 0 0;
-	font-size: 0.85rem;
+	font-size: var(--fs-sm);
 	color: var(--text-muted);
 }
 
 /* Uppercase micro-label — section markers, table headers */
 .microlabel {
-	font-size: 0.7rem;
+	font-size: var(--fs-2xs);
 	font-weight: 600;
-	letter-spacing: 0.1em;
+	letter-spacing: var(--tracking-label);
 	text-transform: uppercase;
 	color: var(--text-faint);
 }
 
 .muted {
 	color: var(--text-muted);
-	font-size: 0.875rem;
+	font-size: var(--fs-sm);
 }
 
 .error {
 	color: var(--err);
-	font-size: 0.875rem;
+	font-size: var(--fs-sm);
 	margin: var(--space-md) 0;
 }
 
@@ -263,7 +377,7 @@ button,
 select,
 .btn {
 	font-family: var(--font-mono);
-	font-size: 0.85rem;
+	font-size: var(--fs-sm);
 }
 
 input[type='text'],
@@ -275,7 +389,7 @@ input[type='password'] {
 	border: 1px solid var(--border);
 	border-radius: var(--radius-sm);
 	color: var(--text);
-	transition: border-color 0.15s;
+	transition: border-color var(--dur-fast) var(--ease-std);
 }
 
 input::placeholder {
@@ -291,9 +405,9 @@ input:focus-visible {
 
 label.field-label {
 	display: block;
-	font-size: 0.7rem;
+	font-size: var(--fs-2xs);
 	font-weight: 600;
-	letter-spacing: 0.1em;
+	letter-spacing: var(--tracking-label);
 	text-transform: uppercase;
 	color: var(--text-faint);
 	margin-bottom: var(--space-sm);
@@ -311,9 +425,9 @@ button,
 	color: var(--text);
 	cursor: pointer;
 	transition:
-		background 0.15s,
-		border-color 0.15s,
-		color 0.15s;
+		background var(--dur-fast) var(--ease-std),
+		border-color var(--dur-fast) var(--ease-std),
+		color var(--dur-fast) var(--ease-std);
 }
 
 button:hover:not(:disabled),
@@ -349,7 +463,7 @@ button.quiet {
 	height: auto;
 	padding: var(--space-xs) var(--space-sm);
 	color: var(--text-muted);
-	font-size: 0.8rem;
+	font-size: var(--fs-xs);
 }
 
 button.quiet:hover:not(:disabled) {
@@ -365,9 +479,14 @@ button:disabled {
 	cursor: not-allowed;
 }
 
+/* The single focus-ring vocabulary, applied to every interactive element. */
 button:focus-visible,
 .btn:focus-visible,
-a.btn:focus-visible {
+a.btn:focus-visible,
+select:focus-visible,
+[tabindex]:focus-visible,
+[role='option']:focus-visible,
+[role='menuitem']:focus-visible {
 	outline: 2px solid var(--accent);
 	outline-offset: 2px;
 }
@@ -391,12 +510,12 @@ a.btn:focus-visible {
 	display: inline-flex;
 	align-items: center;
 	gap: 0.45rem;
-	font-size: 0.7rem;
+	font-size: var(--fs-2xs);
 	font-weight: 600;
 	letter-spacing: 0.08em;
 	text-transform: uppercase;
 	padding: 0.2rem 0.6rem;
-	border-radius: 999px;
+	border-radius: var(--radius-pill);
 	background: var(--accent-soft);
 	color: var(--ok);
 }
@@ -407,16 +526,65 @@ a.btn:focus-visible {
 	color: var(--text-faint);
 }
 
+/* ---- Keyboard hint chip (palette footer + hints) ------------------- */
+
+.kbd {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-width: 1.5rem;
+	height: 1.4rem;
+	padding: 0 0.4rem;
+	font-size: var(--fs-2xs);
+	font-weight: 500;
+	color: var(--text-muted);
+	background: var(--kbd-bg);
+	border: 1px solid var(--border);
+	border-radius: var(--radius-xs);
+	line-height: 1;
+}
+
+/* ---- Skeleton (shimmer placeholder) -------------------------------- */
+
+.skeleton {
+	display: block;
+	border-radius: var(--radius-xs);
+	background: var(--skeleton-base);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+	.skeleton {
+		background-image: linear-gradient(
+			100deg,
+			transparent 30%,
+			var(--skeleton-sheen) 50%,
+			transparent 70%
+		);
+		background-size: 200% 100%;
+		background-repeat: no-repeat;
+		animation: skeleton-sweep 1.4s linear infinite;
+	}
+}
+
+@keyframes skeleton-sweep {
+	from {
+		background-position: 200% 0;
+	}
+	to {
+		background-position: -200% 0;
+	}
+}
+
 /* ---- Toast --------------------------------------------------------- */
 
 .toast {
 	position: fixed;
-	bottom: var(--space-xl);
+	bottom: calc(var(--space-xl) + var(--safe-bottom));
 	left: 50%;
 	transform: translateX(-50%);
 	padding: var(--space-md) var(--space-lg);
 	border-radius: var(--radius);
-	font-size: 0.875rem;
+	font-size: var(--fs-sm);
 	background: var(--surface);
 	box-shadow: var(--shadow);
 	z-index: 100;
@@ -435,7 +603,7 @@ a.btn:focus-visible {
 
 @media (prefers-reduced-motion: no-preference) {
 	.toast {
-		animation: toast-in 0.25s ease-out;
+		animation: toast-in 0.25s var(--ease-out);
 	}
 }
 
@@ -450,11 +618,59 @@ a.btn:focus-visible {
 	}
 }
 
+/* ---- Overlay scaffolding (modal / palette / context-menu / drawer) -- */
+/* Shared scrim + surface primitives; per-component <style> blocks position
+   and animate. Motion is gated below. */
+
+.overlay-scrim {
+	position: fixed;
+	inset: 0;
+	background: var(--backdrop);
+}
+
+.overlay-surface {
+	background: var(--surface);
+	border: 1px solid var(--border);
+	border-radius: var(--radius-lg);
+	box-shadow: var(--shadow-overlay);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+	.overlay-scrim {
+		animation: scrim-in var(--dur-base) var(--ease-std);
+	}
+	.overlay-surface {
+		animation: surface-in var(--dur-base) var(--ease-soft);
+	}
+}
+
+@keyframes scrim-in {
+	from {
+		opacity: 0;
+	}
+	to {
+		opacity: 1;
+	}
+}
+
+@keyframes surface-in {
+	from {
+		opacity: 0;
+		transform: translateY(var(--slide-y));
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
 /* ---- Mobile -------------------------------------------------------- */
 
 @media (max-width: 640px) {
 	.app-header {
 		padding: 0 var(--space-md);
+		padding-left: max(var(--space-md), var(--safe-left));
+		padding-right: max(var(--space-md), var(--safe-right));
 		gap: var(--space-sm);
 	}
 
@@ -464,5 +680,7 @@ a.btn:focus-visible {
 
 	.app-main {
 		padding: var(--space-lg) var(--space-md) var(--space-xl);
+		padding-left: max(var(--space-md), var(--safe-left));
+		padding-right: max(var(--space-md), var(--safe-right));
 	}
 }

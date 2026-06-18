@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- A **command palette** (`⌘K` / `Ctrl+K`) for jumping between hosts, navigating,
+  and running file actions from the keyboard.
+- A persistent **sidebar** listing your hosts with live status faces, so you can
+  switch machines from anywhere in the console.
+- File browser power features: **multi-select** with shift-range selection and a
+  **bulk action bar** (download/delete), **right-click context menus** (a kebab
+  menu on touch), **file-type icons**, and a **list/grid view toggle**.
+- Loading **skeletons** and clearer empty/offline states across the dashboard and
+  file browser.
+
+### Changed
+
+- Major **console redesign** — a new app-shell layout with refreshed design
+  tokens, consistent focus rings and full keyboard navigation, motion that
+  respects `prefers-reduced-motion`, and a mobile pass (the file list collapses
+  to cards, safe-area insets, larger touch targets). The kaomoji status faces and
+  the JetBrains Mono identity are preserved.
+- Delete confirmations now use a themed in-app dialog instead of the browser's
+  native `confirm()` prompt.
+
 ### Fixed
 
 - The console favicon now matches the remembered theme on initial page load
