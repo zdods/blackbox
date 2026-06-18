@@ -38,7 +38,12 @@
 			});
 		}
 
-		items.push({ group: 'navigate', id: 'nav:dashboard', label: 'Dashboard', run: () => goto('/dashboard') });
+		items.push({
+			group: 'navigate',
+			id: 'nav:dashboard',
+			label: 'Dashboard',
+			run: () => goto('/dashboard')
+		});
 		if (onHost) {
 			items.push({
 				group: 'navigate',
@@ -88,7 +93,12 @@
 		return 500 + t.length; // worse than any substring hit
 	}
 
-	const GROUP_LABELS = { hosts: 'hosts', navigate: 'navigate', actions: 'actions', appearance: 'appearance' };
+	const GROUP_LABELS = {
+		hosts: 'hosts',
+		navigate: 'navigate',
+		actions: 'actions',
+		appearance: 'appearance'
+	};
 	const GROUP_ORDER = ['hosts', 'navigate', 'actions', 'appearance'];
 
 	$: allItems = buildItems($hosts, $page, $paletteActions);

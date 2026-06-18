@@ -1052,7 +1052,12 @@
 					<div class="file-grid">
 						{#if pathSegments.length > 0}
 							<!-- svelte-ignore a11y-click-events-have-key-events -->
-							<button type="button" class="tile tile--up" on:click={goUp} aria-label="parent directory">
+							<button
+								type="button"
+								class="tile tile--up"
+								on:click={goUp}
+								aria-label="parent directory"
+							>
 								<span class="tile__icon"><FileIcon name=".." is_dir={true} /></span>
 								<span class="tile__name">..</span>
 							</button>
@@ -1104,9 +1109,7 @@
 										><FileIcon name={entry.name} is_dir={entry.is_dir} size={30} /></span
 									>
 									<span class="tile__name">{entry.name}{entry.is_dir ? '/' : ''}</span>
-									<span class="tile__size num"
-										>{entry.is_dir ? '' : formatSize(entry.size)}</span
-									>
+									<span class="tile__size num">{entry.is_dir ? '' : formatSize(entry.size)}</span>
 								</button>
 							</div>
 						{/each}

@@ -26,13 +26,18 @@
 		bind:this={input}
 		type="checkbox"
 		class="cb__input"
-		checked={checked}
+		{checked}
 		aria-label={ariaLabel}
 		aria-checked={indeterminate ? 'mixed' : undefined}
 		on:change
 		on:click
 	/>
-	<span class="cb__box" class:cb__box--checked={checked} class:cb__box--mixed={indeterminate} aria-hidden="true">
+	<span
+		class="cb__box"
+		class:cb__box--checked={checked}
+		class:cb__box--mixed={indeterminate}
+		aria-hidden="true"
+	>
 		{#if indeterminate}
 			<svg class="cb__glyph" viewBox="0 0 16 16" width="16" height="16" fill="none">
 				<path d="M3.5 8 H12.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" />

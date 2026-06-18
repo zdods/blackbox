@@ -305,9 +305,7 @@
 							{#if usedFraction(daemon) != null}
 								<div
 									class="disk"
-									title="{formatBytes(daemon.disk_free)} free of {formatBytes(
-										daemon.disk_total
-									)}"
+									title="{formatBytes(daemon.disk_free)} free of {formatBytes(daemon.disk_total)}"
 								>
 									<div
 										class="disk__bar"
@@ -343,15 +341,13 @@
 			<p class="empty-state__face"><Face state="offline" /></p>
 			<h2 class="empty-state__title">no hosts yet</h2>
 			<p class="empty-state__body muted">
-				A <strong>host</strong> is a machine running the blackhaul daemon. Add one below to get a
-				connection token, then run the daemon on that machine to bring it online.
+				A <strong>host</strong> is a machine running the blackhaul daemon. Add one below to get a connection
+				token, then run the daemon on that machine to bring it online.
 			</p>
 			<ol class="empty-state__steps">
 				<li>Give the host a label and click <strong>add host</strong>.</li>
 				<li>The token is copied to your clipboard.</li>
-				<li>
-					Run the daemon with that token — it appears here and in the sidebar once connected.
-				</li>
+				<li>Run the daemon with that token — it appears here and in the sidebar once connected.</li>
 			</ol>
 			<button type="button" class="primary" on:click={focusAddHost}>
 				<span aria-hidden="true">+</span> add your first host

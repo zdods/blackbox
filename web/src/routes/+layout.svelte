@@ -179,7 +179,12 @@
 		</div>
 		<div class="app-header__actions">
 			{#if shellActive}
-				<button type="button" class="app-header__cmdk" on:click={openPalette} aria-label="open command palette">
+				<button
+					type="button"
+					class="app-header__cmdk"
+					on:click={openPalette}
+					aria-label="open command palette"
+				>
 					<span class="app-header__cmdk-glyph" aria-hidden="true">⌘K</span>
 					<span class="app-header__cmdk-text">search…</span>
 				</button>
@@ -220,7 +225,11 @@
 </div>
 
 {#if shellActive}
-	<CommandPalette bind:open={paletteOpen} on:close={() => (paletteOpen = false)} on:logout={logout} />
+	<CommandPalette
+		bind:open={paletteOpen}
+		on:close={() => (paletteOpen = false)}
+		on:logout={logout}
+	/>
 {/if}
 
 <!-- Single shared delete-confirmation dialog for every route (dashboard +

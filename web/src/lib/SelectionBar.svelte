@@ -24,11 +24,7 @@
 
 		<span class="selbar__sep" aria-hidden="true">·</span>
 
-		<button
-			type="button"
-			class="selbar__btn"
-			on:click={() => dispatch('download')}
-		>
+		<button type="button" class="selbar__btn" on:click={() => dispatch('download')}>
 			<svg
 				class="selbar__icon"
 				viewBox="0 0 16 16"

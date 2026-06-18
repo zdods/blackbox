@@ -138,7 +138,9 @@
 			stroke-linecap="round"
 			stroke-linejoin="round"
 		>
-			<path d="M1.75 4.25v8a1 1 0 0 0 1 1h10.5a1 1 0 0 0 1-1v-6.5a1 1 0 0 0-1-1H7.5L6 3.25H2.75a1 1 0 0 0-1 1Z" />
+			<path
+				d="M1.75 4.25v8a1 1 0 0 0 1 1h10.5a1 1 0 0 0 1-1v-6.5a1 1 0 0 0-1-1H7.5L6 3.25H2.75a1 1 0 0 0-1 1Z"
+			/>
 		</svg>
 	{:else if bucket === 'image'}
 		<svg
@@ -199,7 +201,9 @@
 			stroke-linecap="round"
 			stroke-linejoin="round"
 		>
-			<path d="M4 1.75h8a.5.5 0 0 1 .5.5v11.5a.5.5 0 0 1-.5.5H4a.5.5 0 0 1-.5-.5V2.25a.5.5 0 0 1 .5-.5Z" />
+			<path
+				d="M4 1.75h8a.5.5 0 0 1 .5.5v11.5a.5.5 0 0 1-.5.5H4a.5.5 0 0 1-.5-.5V2.25a.5.5 0 0 1 .5-.5Z"
+			/>
 			<path d="M8 1.75v1.5M8 4.75v1.5M8 7.75v1.5" />
 			<rect x="6.75" y="10" width="2.5" height="2.75" rx="0.4" />
 		</svg>
