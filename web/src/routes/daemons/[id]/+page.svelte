@@ -564,6 +564,10 @@
 	// own their own Esc handling.
 	function onWindowKeydown(e) {
 		if (e.key === 'Escape') {
+			// The context menu owns Esc while it's open (window-level listeners on
+			// the same target both fire, so guard here rather than rely on
+			// stopPropagation) — one Esc should close one surface.
+			if (ctxOpen) return;
 			if (previewEntry) {
 				closePreview();
 				return;
@@ -595,12 +599,9 @@
 	}
 
 	function setView(v) {
+		// ViewToggle owns persistence (it writes blackhaul_fileview on change);
+		// here we only mirror the value into local state.
 		fileView = v;
-		try {
-			localStorage.setItem('blackhaul_fileview', v);
-		} catch {
-			// ignore persistence failures
-		}
 	}
 
 	function formatSize(bytes) {
@@ -1685,7 +1686,7 @@
 	}
 	.tile__size {
 		font-size: var(--fs-2xs);
-		color: var(--text-faint);
+		color: var(--text-muted);
 	}
 	.empty-inline--grid {
 		grid-column: 1 / -1;

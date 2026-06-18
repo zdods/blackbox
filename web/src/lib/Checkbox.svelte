@@ -26,7 +26,7 @@
 		bind:this={input}
 		type="checkbox"
 		class="cb__input"
-		bind:checked
+		checked={checked}
 		aria-label={ariaLabel}
 		aria-checked={indeterminate ? 'mixed' : undefined}
 		on:change

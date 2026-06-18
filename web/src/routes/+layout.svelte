@@ -153,8 +153,11 @@
 
 <svelte:window on:keydown={onWindowKeydown} />
 
-<div class="app">
-	<header class="app-header">
+<!-- The palette is rendered outside .app, so making .app inert while it's open
+     keeps background controls out of the tab order / AT reach (the focus trap
+     covers keyboard; this also covers pointer + the SR virtual cursor). -->
+<div class="app" inert={paletteOpen}>
+	<header class="app-header" inert={drawerOpen}>
 		<div class="app-header__lead">
 			{#if shellActive}
 				<button
@@ -210,7 +213,7 @@
 			</div>
 		{/if}
 
-		<main class="app-main" class:centered>
+		<main class="app-main" class:centered inert={drawerOpen}>
 			<slot />
 		</main>
 	</div>
