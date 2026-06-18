@@ -66,10 +66,13 @@
 		}
 	}
 
-	/* Coarse-pointer / mobile: give the picker a ≥44px hit target without
-	   widening its visual footprint, so it meets the new touch minimum. */
+	/* Coarse-pointer / mobile: the tappable control is the <select> itself, so
+	   the touch minimum has to land on it (not just the wrapper). */
 	@media (pointer: coarse) {
 		.theme-select {
+			min-height: var(--touch-min);
+		}
+		select {
 			min-height: var(--touch-min);
 		}
 	}

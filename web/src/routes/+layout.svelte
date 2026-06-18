@@ -23,6 +23,38 @@
 	let drawerOpen = false;
 	let paletteOpen = false;
 	let hamburgerEl;
+	let sidebarEl;
+
+	const FOCUSABLE =
+		'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+	// When the mobile drawer opens, pull focus into it; Tab is trapped there
+	// (see onWindowKeydown) until it closes, when focus returns to the hamburger.
+	$: if (drawerOpen) focusDrawer();
+	async function focusDrawer() {
+		await tick();
+		if (!sidebarEl) return;
+		const first = sidebarEl.querySelector(FOCUSABLE);
+		if (first) first.focus();
+	}
+	function trapDrawerFocus(e) {
+		if (!sidebarEl) return;
+		const focusable = sidebarEl.querySelectorAll(FOCUSABLE);
+		if (focusable.length === 0) return;
+		const first = focusable[0];
+		const last = focusable[focusable.length - 1];
+		const active = document.activeElement;
+		if (!sidebarEl.contains(active)) {
+			e.preventDefault();
+			first.focus();
+		} else if (e.shiftKey && active === first) {
+			e.preventDefault();
+			last.focus();
+		} else if (!e.shiftKey && active === last) {
+			e.preventDefault();
+			first.focus();
+		}
+	}
 
 	// --- Hosts poll lifecycle: one shared poller, started when the shell is
 	// active and stopped otherwise (covers logout + navigation to auth pages).
@@ -87,6 +119,10 @@
 			if (!shellActive) return;
 			e.preventDefault();
 			paletteOpen = !paletteOpen;
+			return;
+		}
+		if (e.key === 'Tab' && drawerOpen && !paletteOpen) {
+			trapDrawerFocus(e);
 			return;
 		}
 		if (e.key === 'Escape') {
@@ -164,7 +200,12 @@
 					returnFocusToHamburger();
 				}}
 			></div>
-			<div id="app-sidebar" class="app-sidebar" class:app-sidebar--open={drawerOpen}>
+			<div
+				id="app-sidebar"
+				class="app-sidebar"
+				class:app-sidebar--open={drawerOpen}
+				bind:this={sidebarEl}
+			>
 				<Sidebar {drawerOpen} on:openPalette={openPalette} on:navigate={closeDrawer} />
 			</div>
 		{/if}
@@ -234,6 +275,8 @@
 	@media (max-width: 640px) {
 		.app-header__hamburger {
 			display: inline-flex;
+			min-height: var(--touch-min);
+			min-width: var(--touch-min);
 		}
 
 		.app-header__cmdk-text {
@@ -242,6 +285,9 @@
 
 		.app-header__cmdk {
 			padding: 0 var(--space-sm);
+			min-height: var(--touch-min);
+			min-width: var(--touch-min);
+			justify-content: center;
 		}
 
 		/* Sidebar leaves flow and becomes an off-canvas drawer. */
@@ -285,6 +331,7 @@
 
 		.logout-btn {
 			padding: 0 var(--space-sm);
+			min-height: var(--touch-min);
 		}
 	}
 </style>

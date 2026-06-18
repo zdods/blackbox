@@ -174,6 +174,11 @@
 		} else if (e.key === 'Enter') {
 			e.preventDefault();
 			activate(filtered[highlight]);
+		} else if (e.key === 'Tab') {
+			// The input is the only tab stop (result rows are arrow-driven and
+			// tabindex=-1), so trap focus on it while the palette is open.
+			e.preventDefault();
+			if (inputEl) inputEl.focus();
 		}
 		// Esc is handled by the layout's Esc-router so the topmost overlay wins.
 	}
@@ -203,6 +208,7 @@
 					spellcheck="false"
 					aria-controls="palette-list"
 					aria-label="command palette search"
+					aria-activedescendant={filtered.length ? `palette-opt-${highlight}` : undefined}
 				/>
 			</div>
 
@@ -218,6 +224,8 @@
 								class="palette__row"
 								class:palette__row--active={row.index === highlight}
 								role="option"
+								id="palette-opt-{row.index}"
+								tabindex="-1"
 								aria-selected={row.index === highlight}
 								data-idx={row.index}
 								on:mouseenter={() => (highlight = row.index)}

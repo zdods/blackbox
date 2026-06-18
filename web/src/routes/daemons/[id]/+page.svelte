@@ -1,5 +1,5 @@
 <script>
-	import { onMount, onDestroy } from 'svelte';
+	import { onMount, onDestroy, tick } from 'svelte';
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
 	import { isLoggedIn, clearLoggedIn, apiFetch } from '$lib/auth.js';
@@ -498,9 +498,37 @@
 	});
 
 	// ---- Preview modal -------------------------------------------------
+	let previewEl;
+	let previewPrevFocus = null;
+	const PREVIEW_FOCUSABLE =
+		'a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+	// Move focus into the preview when it opens; restore it on close.
+	$: if (previewEntry) focusPreview();
+	async function focusPreview() {
+		await tick();
+		if (previewEl) previewEl.focus();
+	}
+	function trapPreviewFocus(e) {
+		if (!previewEl) return;
+		const focusable = previewEl.querySelectorAll(PREVIEW_FOCUSABLE);
+		if (focusable.length === 0) return;
+		const first = focusable[0];
+		const last = focusable[focusable.length - 1];
+		const active = document.activeElement;
+		if (e.shiftKey && (active === first || active === previewEl)) {
+			e.preventDefault();
+			last.focus();
+		} else if (!e.shiftKey && active === last) {
+			e.preventDefault();
+			first.focus();
+		}
+	}
+
 	async function openPreview(entry) {
 		const fullPath = fullPathOf(entry);
 		const ext = getExt(entry.name);
+		previewPrevFocus = typeof document !== 'undefined' ? document.activeElement : null;
 		// Revoke the previous image URL before replacing it.
 		if (previewType === 'image' && previewContent) URL.revokeObjectURL(previewContent);
 		previewEntry = entry;
@@ -532,6 +560,8 @@
 		previewContent = null;
 		previewType = null;
 		previewError = '';
+		if (previewPrevFocus && typeof previewPrevFocus.focus === 'function') previewPrevFocus.focus();
+		previewPrevFocus = null;
 	}
 
 	// Esc routing: only the preview consumes Esc here (the layout's Esc-router
@@ -543,6 +573,10 @@
 				closePreview();
 				return;
 			}
+		}
+		if (e.key === 'Tab' && previewEntry) {
+			trapPreviewFocus(e);
+			return;
 		}
 		// Cmd/Ctrl+A selects all files when focus is inside the list pane and we're
 		// not typing in a field.
@@ -590,6 +624,7 @@
 	// ---- Delete (single + bulk) via themed ConfirmDialog ---------------
 	async function deleteEntry(entry) {
 		const fullPath = fullPathOf(entry);
+		if (deleting.has(fullPath)) return; // a DELETE for this path is already in flight
 		const ok = await confirmDelete(`${entry.is_dir ? 'directory' : 'file'} "${entry.name}"`, {
 			danger: true
 		});
@@ -620,6 +655,7 @@
 	async function bulkDelete() {
 		const list = selectedEntries;
 		if (!list.length) return;
+		if (list.some((e) => deleting.has(fullPathOf(e)))) return; // bulk delete already running
 		const sample = list
 			.slice(0, 3)
 			.map((e) => e.name)
@@ -1141,6 +1177,7 @@
 			tabindex="-1"
 			aria-modal="true"
 			aria-labelledby="preview-title"
+			bind:this={previewEl}
 			on:click|stopPropagation
 		>
 			<div class="preview-header">

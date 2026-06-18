@@ -71,7 +71,10 @@
 	}
 
 	function onScroll() {
-		// Any scroll/resize dismisses the popover (anchor would otherwise drift).
+		// A scroll/resize dismisses the cursor-anchored popover (the anchor would
+		// otherwise drift). The mobile bottom-sheet is viewport-fixed, so scrolling
+		// inside it must not close it.
+		if (mobileSheet) return;
 		close();
 	}
 

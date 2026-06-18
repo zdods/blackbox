@@ -155,9 +155,13 @@
 		color: var(--text);
 		text-align: left;
 		cursor: pointer;
-		transition:
-			background var(--dur-instant) var(--ease-std),
-			border-color var(--dur-instant) var(--ease-std);
+	}
+	@media (prefers-reduced-motion: no-preference) {
+		.host-row {
+			transition:
+				background var(--dur-instant) var(--ease-std),
+				border-color var(--dur-instant) var(--ease-std);
+		}
 	}
 
 	.host-row:hover {
