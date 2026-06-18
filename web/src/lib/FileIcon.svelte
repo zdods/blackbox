@@ -3,6 +3,7 @@
 	// currentColor, 16px, aria-hidden (the file name carries the label).
 	export let name;
 	export let is_dir = false;
+	export let size = 16;
 
 	// Buckets mirror the file-browser's IMAGE_EXTS/TEXT_EXTS and extend them.
 	const IMAGE_EXTS = new Set([
@@ -124,7 +125,7 @@
 	$: bucket = bucketFor(name, is_dir);
 </script>
 
-<span class="file-icon file-icon--{bucket}" aria-hidden="true">
+<span class="file-icon file-icon--{bucket}" aria-hidden="true" style="--file-icon-size: {size}px">
 	{#if bucket === 'folder'}
 		<svg
 			class="file-icon__svg"
@@ -256,15 +257,15 @@
 		display: inline-flex;
 		align-items: center;
 		justify-content: center;
-		width: 16px;
-		height: 16px;
+		width: var(--file-icon-size, 16px);
+		height: var(--file-icon-size, 16px);
 		flex-shrink: 0;
 		color: var(--text-muted);
 	}
 	.file-icon__svg {
 		display: block;
-		width: 16px;
-		height: 16px;
+		width: var(--file-icon-size, 16px);
+		height: var(--file-icon-size, 16px);
 	}
 	/* Folder reads as the primary affordance — tinted accent. */
 	.file-icon--folder {

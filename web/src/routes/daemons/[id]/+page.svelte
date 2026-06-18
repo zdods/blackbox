@@ -3,7 +3,7 @@
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
 	import { isLoggedIn, clearLoggedIn, apiFetch } from '$lib/auth.js';
-	import { getHost } from '$lib/hosts.js';
+	import { hosts } from '$lib/hosts.js';
 	import { registerActions } from '$lib/palette-actions.js';
 	import Face from '$lib/Face.svelte';
 	import FileIcon from '$lib/FileIcon.svelte';
@@ -20,7 +20,9 @@
 	let loading = true;
 	let error = '';
 	let offline = false;
-	let daemonLabel = '';
+	// Resolve the host label reactively from the shared hosts store (the layout
+	// owns the 8s poll). Falls back to the id until the store first populates.
+	$: daemonLabel = $hosts.find((h) => h.id === daemonId)?.label || daemonId;
 	let uploadPath = '';
 	let uploading = false;
 	let selectedFileName = '';
@@ -163,9 +165,6 @@
 			goto('/login');
 			return;
 		}
-		// Resolve the label from the shared hosts store (the layout owns the poll).
-		const host = getHost(daemonId);
-		if (host) daemonLabel = host.label;
 		load();
 
 		// Register route-contextual command-palette actions.
@@ -219,10 +218,6 @@
 		error = '';
 		offline = false;
 		try {
-			if (!daemonLabel) {
-				const host = getHost(daemonId);
-				if (host) daemonLabel = host.label;
-			}
 			const q = path ? `?path=${encodeURIComponent(path)}` : '';
 			const res = await apiFetch(`/api/daemons/${daemonId}/files${q}`);
 			if (res.status === 401) {
@@ -1105,7 +1100,7 @@
 									title={entry.name}
 								>
 									<span class="tile__icon tile__icon--lg"
-										><FileIcon name={entry.name} is_dir={entry.is_dir} /></span
+										><FileIcon name={entry.name} is_dir={entry.is_dir} size={30} /></span
 									>
 									<span class="tile__name">{entry.name}{entry.is_dir ? '/' : ''}</span>
 									<span class="tile__size num"
@@ -1409,10 +1404,11 @@
 	.file-row.is-selected {
 		border-left-color: var(--accent);
 	}
-	/* Reveal kebab/download on hover (always visible on coarse pointers). */
+	/* Dim the row actions at rest (full strength on hover/focus/selection), but
+	   keep them perceivable — 0.55 was below a comfortable contrast floor. */
 	.file-row .dl-btn,
 	.file-row .kebab-btn {
-		opacity: 0.55;
+		opacity: 0.75;
 	}
 	.file-row:hover .dl-btn,
 	.file-row:hover .kebab-btn,
@@ -1646,6 +1642,10 @@
 		align-items: center;
 		gap: var(--space-xs);
 		width: 100%;
+		/* Reset the global button height/whitespace so the tile grows to fit
+		   its icon + name + size column instead of clamping to --input-height. */
+		height: auto;
+		white-space: normal;
 		padding: var(--space-lg) var(--space-sm) var(--space-md);
 		background: none;
 		border: none;
@@ -1660,12 +1660,12 @@
 	.tile--up {
 		align-items: center;
 		justify-content: center;
+		height: auto;
 		padding: var(--space-lg) var(--space-sm);
 		cursor: pointer;
 		color: var(--text-muted);
 	}
 	.tile__icon--lg {
-		transform: scale(2);
 		margin: var(--space-sm) 0;
 		color: var(--text-muted);
 	}
@@ -1866,7 +1866,8 @@
 			grid-template-columns: var(--touch-min) 1fr auto;
 			grid-template-areas:
 				'select name actions'
-				'select meta actions';
+				'select size actions'
+				'select mtime actions';
 			align-items: center;
 			gap: 0 var(--space-sm);
 			margin-bottom: var(--space-sm);
@@ -1891,7 +1892,9 @@
 			grid-area: select;
 			width: auto;
 		}
-		.file-list td.col-icon {
+		/* Must out-specify `.file-list tbody tr.file-row td { display:block }`
+		   above, or the icon cell reappears at the card's bottom-left. */
+		.file-list tbody tr.file-row td.col-icon {
 			display: none;
 		}
 		.file-list td.col-name {
@@ -1906,25 +1909,21 @@
 			display: flex;
 			align-items: center;
 		}
-		/* mtime is shown inline as meta inside the card (the <th> stays hidden). */
+		/* size + mtime each get their own meta line in the card (the <th> stays
+		   hidden, but the td.col-mtime cell stays visible per the e2e contract). */
 		.file-list td.col-size,
 		.file-list td.col-mtime {
-			grid-area: meta;
 			width: auto;
 			text-align: left;
 			font-size: var(--fs-2xs);
-			color: var(--text-faint);
-			display: inline;
+			color: var(--text-muted);
+			display: block;
 		}
-		.file-list td.col-size::before {
-			content: '';
-		}
-		.file-list td.col-mtime::before {
-			content: ' · ';
+		.file-list td.col-size {
+			grid-area: size;
 		}
 		.file-list td.col-mtime {
-			/* override the desktop col-mtime th display:none only — td stays visible */
-			display: inline;
+			grid-area: mtime;
 		}
 		.file-list td.col-actions {
 			grid-area: actions;
