@@ -34,6 +34,8 @@ func main() {
 	hostedPath := flag.String("hosted-path", "", "Root directory to expose (e.g. /path/to/dir or C:\\Users\\you\\files)")
 	configPath := flag.String("config", "", "Path to config file (default: ~/.blackhaul-daemon)")
 	showVersion := flag.Bool("version", false, "Print version and exit")
+	logout := flag.Bool("logout", false, "Remove the stored daemon token from the OS keyring and exit")
+	reset := flag.Bool("reset", false, "Remove the stored token (keyring) and the config file, then exit")
 	flag.Parse()
 
 	if *showVersion {
@@ -50,6 +52,13 @@ func main() {
 	cfgPath, err = resolveDir(cfgPath)
 	if err != nil {
 		log.Fatalf("config path: %v", err)
+	}
+
+	// Credential cleanup commands: clear locally stored credentials and exit.
+	// --logout removes the keyring token; --reset also removes the config file.
+	if *logout || *reset {
+		runCleanup(cfgPath, *reset)
+		return
 	}
 
 	// Load config file (missing file is not an error)
@@ -114,7 +123,7 @@ func main() {
 		case errAuthFailed:
 			authFailures++
 			if authFailures >= 3 {
-				log.Fatalf("auth failed repeatedly; check your token in blackhaul-console and restart the daemon")
+				log.Fatalf("auth failed repeatedly — the server rejected this token (it may have been deleted in the console). Verify the host in blackhaul-console, or run 'blackhaul-daemon --logout' to clear the stored token, then restart.")
 			}
 			log.Printf("auth failed (%d/3); reconnecting in %v...", authFailures, backoff)
 		case errDialFailed:
@@ -155,6 +164,37 @@ func dialFailureMessage(bastionURL string, resp *http.Response, err error) strin
 	default:
 		return fmt.Sprintf("dial %s: %v (HTTP %d)", bastionURL, err, resp.StatusCode)
 	}
+}
+
+// runCleanup removes locally stored daemon credentials and prints what it did.
+// It always clears the OS keyring token; when full is true (--reset) it also
+// removes the config file. Both operations are idempotent. Server-side
+// revocation is done by deleting the host in the console.
+func runCleanup(cfgPath string, full bool) {
+	removed, err := deleteToken()
+	switch {
+	case err != nil:
+		log.Printf("warning: could not remove token from the OS keyring: %v", err)
+	case removed:
+		fmt.Println("  removed the daemon token from the OS keyring")
+	default:
+		fmt.Println("  no daemon token was stored in the OS keyring")
+	}
+
+	if full {
+		switch err := os.Remove(cfgPath); {
+		case err == nil:
+			fmt.Printf("  removed config file %s\n", cfgPath)
+		case os.IsNotExist(err):
+			fmt.Printf("  no config file at %s\n", cfgPath)
+		default:
+			log.Printf("warning: could not remove config %s: %v", cfgPath, err)
+		}
+	}
+
+	fmt.Println()
+	fmt.Println("  local credentials cleared. To fully revoke access, also delete")
+	fmt.Println("  this host in the blackhaul console.")
 }
 
 // firstNonEmpty returns the first non-empty string from vals.

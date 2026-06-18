@@ -63,7 +63,11 @@ test('register page fits the viewport', async ({ page }) => {
 test('dashboard renders the daemon list without overflow', async ({ page }) => {
 	await loginAndMock(page);
 	await page.goto('/dashboard');
-	await expect(page.getByText('test-host')).toBeVisible();
+	// The host label now renders in both the sidebar rail and the dashboard
+	// card (shared roster), so scope to the dashboard card's label. It keeps
+	// overflow:hidden + ellipsis, so it must still render without overflowing.
+	const hostLabel = page.locator('a.host-card__label', { hasText: 'test-host' });
+	await expect(hostLabel).toBeVisible();
 	await expectNoHorizontalScroll(page);
 	const viewport = page.viewportSize();
 	await page.screenshot({
@@ -79,12 +83,18 @@ test('file browser adapts columns to the viewport', async ({ page }) => {
 	await expect(page.getByText('notes.txt')).toBeVisible();
 
 	const viewport = page.viewportSize();
+	// The modified date for notes.txt — rendered in the table's mtime column on
+	// desktop, and inline as a card meta field on mobile (the same td.col-mtime).
+	const mtimeCell = page.locator('td.col-mtime', { hasText: '2026-02-02T10:30:00Z' });
 	if (isMobile(viewport)) {
-		// The modified column collapses on small screens.
+		// The modified-column header collapses on small screens, but the date
+		// itself survives as the mobile card's inline meta field.
 		await expect(page.locator('th.col-mtime')).toBeHidden();
+		await expect(mtimeCell).toBeVisible();
 	} else {
+		// On desktop the dedicated modified column is shown with its date.
 		await expect(page.locator('th.col-mtime')).toBeVisible();
-		await expect(page.getByText('2026-02-02T10:30:00Z')).toBeVisible();
+		await expect(mtimeCell).toBeVisible();
 	}
 
 	// Long filenames must not force horizontal scrolling.

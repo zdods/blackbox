@@ -4,6 +4,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/zalando/go-keyring"
 )
 
 func TestLoadConfigValid(t *testing.T) {
@@ -106,6 +108,36 @@ func TestSaveConfig(t *testing.T) {
 	perm := info.Mode().Perm()
 	if perm != 0600 {
 		t.Errorf("permissions = %o, want 0600", perm)
+	}
+}
+
+func TestDeleteToken(t *testing.T) {
+	keyring.MockInit() // in-memory keyring, no real OS keychain touched
+
+	// Nothing stored yet: idempotent, reports nothing removed.
+	removed, err := deleteToken()
+	if err != nil {
+		t.Fatalf("deleteToken (empty): %v", err)
+	}
+	if removed {
+		t.Errorf("removed = true, want false when no token stored")
+	}
+
+	// Store a token, then delete it.
+	if err := saveToken("secret-token"); err != nil {
+		t.Fatalf("saveToken: %v", err)
+	}
+	removed, err = deleteToken()
+	if err != nil {
+		t.Fatalf("deleteToken: %v", err)
+	}
+	if !removed {
+		t.Errorf("removed = false, want true after a token was stored")
+	}
+
+	// It is really gone.
+	if _, err := loadToken(); err != keyring.ErrNotFound {
+		t.Errorf("loadToken after delete: err = %v, want ErrNotFound", err)
 	}
 }
 

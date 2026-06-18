@@ -65,4 +65,15 @@
 			padding: 0.25rem 1.2rem 0.25rem 0.5rem;
 		}
 	}
+
+	/* Coarse-pointer / mobile: the tappable control is the <select> itself, so
+	   the touch minimum has to land on it (not just the wrapper). */
+	@media (pointer: coarse) {
+		.theme-select {
+			min-height: var(--touch-min);
+		}
+		select {
+			min-height: var(--touch-min);
+		}
+	}
 </style>

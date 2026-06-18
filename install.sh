@@ -17,10 +17,15 @@ VERSION="${BLACKHAUL_VERSION:-latest}"
 say() { printf '%s\n' "$*" >&2; }
 fail() { say "error: $*"; exit 1; }
 
-command -v curl >/dev/null 2>&1 || fail "curl is required"
-command -v tar >/dev/null 2>&1 || fail "tar is required"
+# Action: install (default) or uninstall.
+ACTION=install
+case "${1:-}" in
+  --uninstall | uninstall) ACTION=uninstall ;;
+  "") ;;
+  *) fail "unknown argument: $1 (supported: --uninstall)" ;;
+esac
 
-# --- Detect OS/arch -------------------------------------------------------
+# --- Detect OS (needed for install and uninstall) -------------------------
 OS=$(uname -s)
 case "$OS" in
   Linux) OS=linux ;;
@@ -29,6 +34,51 @@ case "$OS" in
     fail "on Windows, download the zip from https://github.com/$REPO/releases and see packaging/windows/README.md" ;;
   *) fail "unsupported OS: $OS" ;;
 esac
+
+# --- Uninstall ------------------------------------------------------------
+if [ "$ACTION" = uninstall ]; then
+  BIN="$INSTALL_DIR/$BINARY"
+  say "uninstalling $BINARY"
+
+  # 1. Stop and remove the service unit if one was installed.
+  if [ "$OS" = darwin ]; then
+    PLIST="$HOME/Library/LaunchAgents/io.github.blackhaul.daemon.plist"
+    if [ -f "$PLIST" ]; then
+      launchctl unload "$PLIST" 2>/dev/null || true
+      rm -f "$PLIST"
+      say "  removed launchd agent"
+    fi
+  else
+    if command -v systemctl >/dev/null 2>&1 &&
+      systemctl list-unit-files 2>/dev/null | grep -q '^blackhaul-daemon\.service'; then
+      sudo systemctl disable --now blackhaul-daemon 2>/dev/null || true
+      sudo rm -f /etc/systemd/system/blackhaul-daemon.service
+      sudo systemctl daemon-reload 2>/dev/null || true
+      say "  removed systemd service"
+    fi
+  fi
+
+  # 2. Clear local credentials (keyring token + config) BEFORE removing the
+  #    binary, since the binary does this cleanup itself.
+  if [ -x "$BIN" ]; then
+    "$BIN" --reset || true
+  else
+    say "  $BIN not found; if the daemon is elsewhere, run '$BINARY --reset' to clear stored credentials"
+  fi
+
+  # 3. Remove the binary.
+  if [ -e "$BIN" ]; then
+    if [ -w "$INSTALL_DIR" ]; then rm -f "$BIN"; else sudo rm -f "$BIN"; fi
+    say "  removed $BIN"
+  fi
+
+  say ""
+  say "uninstalled. To fully revoke access, also delete this host in the blackhaul console."
+  exit 0
+fi
+
+command -v curl >/dev/null 2>&1 || fail "curl is required"
+command -v tar >/dev/null 2>&1 || fail "tar is required"
 
 ARCH=$(uname -m)
 case "$ARCH" in
@@ -101,3 +151,6 @@ else
   say "  3. (optional) run it as a service — launchd agent with instructions:"
   say "     https://github.com/$REPO/blob/main/packaging/launchd/io.github.blackhaul.daemon.plist"
 fi
+say ""
+say "to remove: curl -fsSL https://raw.githubusercontent.com/$REPO/main/install.sh | sh -s -- --uninstall"
+say "  (or '$BINARY --reset' to clear just the stored token + config)"

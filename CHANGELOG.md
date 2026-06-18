@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- A **command palette** (`⌘K` / `Ctrl+K`) for jumping between hosts, navigating,
+  and running file actions from the keyboard.
+- A persistent **sidebar** listing your hosts with live status faces, so you can
+  switch machines from anywhere in the console.
+- File browser power features: **multi-select** with shift-range selection and a
+  **bulk action bar** (download/delete), **right-click context menus** (a kebab
+  menu on touch), **file-type icons**, and a **list/grid view toggle**.
+- Loading **skeletons** and clearer empty/offline states across the dashboard and
+  file browser.
+- The daemon can now clean up its own stored credentials so they're never
+  orphaned. `blackhaul-daemon --logout` removes the token from the OS keyring;
+  `blackhaul-daemon --reset` removes the token **and** the config file. Both are
+  idempotent and report exactly what they removed. When the server rejects a
+  token repeatedly (e.g. the host was deleted in the console), the daemon now
+  points you at `--logout` to clear the now-defunct token.
+- `install.sh --uninstall` does a full clean removal: stops and removes the
+  launchd/systemd service if present, clears the stored token + config, and
+  removes the binary.
+
+### Changed
+
+- Major **console redesign** — a new app-shell layout with refreshed design
+  tokens, consistent focus rings and full keyboard navigation, motion that
+  respects `prefers-reduced-motion`, and a mobile pass (the file list collapses
+  to cards, safe-area insets, larger touch targets). The kaomoji status faces and
+  the JetBrains Mono identity are preserved.
+- Delete confirmations now use a themed in-app dialog instead of the browser's
+  native `confirm()` prompt.
+
 ### Fixed
 
 - The console favicon now matches the remembered theme on initial page load
