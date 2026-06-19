@@ -146,6 +146,10 @@
 		align-items: center;
 		gap: var(--space-sm);
 		width: 100%;
+		/* Reset the global button height so the row grows to fit its three
+		   lines (label/path/meta); otherwise the fixed --input-height clips it
+		   and the active highlight doesn't cover the label. */
+		height: auto;
 		min-height: var(--rail-row-height);
 		padding: var(--space-sm);
 		border: none;
