@@ -9,9 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- The hosts sidebar's active-host highlight now encloses the whole row (label,
-  path, and free-space line). The row button inherited the fixed single-line
-  input height, so the highlight clipped and the label spilled above it.
+- The hosts sidebar now sizes each row to its content: the active-host
+  highlight encloses the whole row and adjacent rows no longer overlap. The row
+  button inherited the global fixed single-line input height, which clipped the
+  three-line label/path/free-space content.
 
 ## [0.7.0] - 2026-06-18
 
