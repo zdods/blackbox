@@ -51,19 +51,25 @@ For production, set `JWT_SECRET` (e.g. in `.env`; generate one with `openssl ran
 
 ### 2. Run blackhaul-daemon (on each host)
 
-The daemon runs on **Linux**, **macOS**, and **Windows**. Install a prebuilt binary (no Go toolchain needed):
+The daemon runs on **Linux**, **macOS**, and **Windows**. Install a prebuilt binary (no Go toolchain needed) — pick whichever fits the host.
+
+**Homebrew (macOS & Linux)** — the simplest path; `brew` handles upgrades and removal:
 
 ```bash
-# Linux / macOS — detects OS/arch, verifies checksums, installs to /usr/local/bin
-curl -fsSL https://raw.githubusercontent.com/zdods/blackhaul/main/install.sh | sh
-
-# Homebrew (macOS & Linux)
 brew install zdods/tap/blackhaul-daemon
 ```
 
-On **Windows**, download the zip from the [latest release](https://github.com/zdods/blackhaul/releases/latest) and see [packaging/windows/README.md](packaging/windows/README.md).
+**Install script (macOS & Linux)** — detects your OS/arch, verifies the release checksum, and installs to `/usr/local/bin`:
 
-Or build from source:
+```bash
+curl -fsSL https://raw.githubusercontent.com/zdods/blackhaul/main/install.sh | sh
+```
+
+Override the location with `BLACKHAUL_INSTALL_DIR`, or pin a version with `BLACKHAUL_VERSION=vX.Y.Z`.
+
+**Windows** — download the zip from the [latest release](https://github.com/zdods/blackhaul/releases/latest) and follow [packaging/windows/README.md](packaging/windows/README.md).
+
+**From source** (needs the Go toolchain):
 
 | Platform | Build | Run |
 |----------|-------|-----|
@@ -130,6 +136,22 @@ The config lives at `~/.blackhaul-daemon` (owner-read-only, `0600`).
 See [`packaging/windows/README.md`](packaging/windows/README.md) for NSSM (recommended) and `sc.exe` instructions.
 
 The config lives at `%USERPROFILE%\.blackhaul-daemon` (e.g. `C:\Users\You\.blackhaul-daemon`).
+
+## Updating & uninstalling
+
+**Homebrew:** `brew upgrade blackhaul-daemon` to update. To remove, clear the stored token + config first (so nothing is orphaned), then uninstall:
+
+```bash
+blackhaul-daemon --reset && brew uninstall blackhaul-daemon
+```
+
+**Install script:** re-run the install one-liner to update. To remove everything — the launchd/systemd service, the stored token + config, and the binary — run:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/zdods/blackhaul/main/install.sh | sh -s -- --uninstall
+```
+
+To clear only the stored credentials without removing the binary, run `blackhaul-daemon --reset`. To fully revoke access, also delete the host in the blackhaul console.
 
 ---
 
