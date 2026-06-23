@@ -484,12 +484,17 @@ func handleWriteChunk(root string, req *pkg.WriteChunkRequest, chunkData []byte)
 		activeUploads.Lock()
 		delete(activeUploads.m, req.UploadID)
 		activeUploads.Unlock()
-		// %q (not %s): destPath is read back from the shared activeUploads map, a
-		// field/content flow that CodeQL's go/log-injection query can't see
-		// logSafe sanitize through the function return. The %q verb is its other
-		// recognized sanitizer (SafeFormatArgumentSanitizer) and applies at the
-		// sink regardless of how the value flowed in. logSafe still runs first.
-		log.Printf("assembled chunked upload: %q (%d chunks)", logSafe(u.destPath), u.totalChunks)
+		// destPath round-trips through the shared activeUploads map — a content
+		// flow CodeQL can't track logSafe's barrier through, because it models the
+		// logSafe call via a taint-propagating summary that bypasses the internal
+		// sanitizer (the other 5 direct-flow sinks cleared fine in #42/#43). Apply
+		// the recognized strings.ReplaceAll sanitizer inline here, in the sink's
+		// own function, so the barrier sits directly on the value feeding the log
+		// with no call boundary to bypass. logSafe still strips ESC/other controls.
+		destForLog := logSafe(u.destPath)
+		destForLog = strings.ReplaceAll(destForLog, "\n", " ")
+		destForLog = strings.ReplaceAll(destForLog, "\r", " ")
+		log.Printf("assembled chunked upload: %s (%d chunks)", destForLog, u.totalChunks)
 	}
 
 	return pkg.WriteChunkResponse{
