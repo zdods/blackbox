@@ -98,5 +98,5 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # Fine-grained PAT with contents:write on zdods/homebrew-tap.
-          # When unset, the Homebrew cask publish is skipped (see .goreleaser.yaml).
+          # When unset, the Homebrew formula publish is skipped (see .goreleaser.yaml).
           TAP_GITHUB_TOKEN: ${{ secrets.TAP_GITHUB_TOKEN }}

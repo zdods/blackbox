@@ -57,7 +57,7 @@ The daemon runs on **Linux**, **macOS**, and **Windows**. Install a prebuilt bin
 # Linux / macOS — detects OS/arch, verifies checksums, installs to /usr/local/bin
 curl -fsSL https://raw.githubusercontent.com/zdods/blackhaul/main/install.sh | sh
 
-# macOS (Homebrew)
+# Homebrew (macOS & Linux)
 brew install zdods/tap/blackhaul-daemon
 ```
 
