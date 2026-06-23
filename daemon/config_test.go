@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
@@ -139,6 +140,25 @@ func TestDeleteToken(t *testing.T) {
 	if _, err := loadToken(); err != keyring.ErrNotFound {
 		t.Errorf("loadToken after delete: err = %v, want ErrNotFound", err)
 	}
+}
+
+func TestKeyringAvailable(t *testing.T) {
+	// A working in-memory keyring: a sentinel read returns ErrNotFound, which
+	// counts as available (backend reachable, entry just absent).
+	keyring.MockInit()
+	if !keyringAvailable() {
+		t.Errorf("keyringAvailable() = false with a working keyring, want true")
+	}
+
+	// A backend that errors on every operation (e.g. no Secret Service on a
+	// headless host) is reported as unavailable.
+	keyring.MockInitWithError(errors.New("The name is not activatable"))
+	if keyringAvailable() {
+		t.Errorf("keyringAvailable() = true with an erroring keyring, want false")
+	}
+
+	// Restore a clean mock so later tests aren't affected by ordering.
+	keyring.MockInit()
 }
 
 func TestSaveAndLoadConfigRoundTrip(t *testing.T) {

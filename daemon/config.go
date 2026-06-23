@@ -12,6 +12,9 @@ import (
 const (
 	keyringService = "blackhaul-daemon"
 	keyringAccount = "token"
+	// keyringProbeAccount is a sentinel account used only by keyringAvailable
+	// to test whether the keyring backend is reachable. It is never written.
+	keyringProbeAccount = "__probe__"
 )
 
 // loadConfig reads a key = value config file at path.
@@ -54,6 +57,17 @@ func loadConfig(path string) (bastionURL, hostedPath string, err error) {
 func saveConfig(path, bastionURL, hostedPath string) error {
 	content := fmt.Sprintf("bastion_url = %s\nhosted_path = %s\n", bastionURL, hostedPath)
 	return os.WriteFile(path, []byte(content), 0600)
+}
+
+// keyringAvailable reports whether the OS keyring (Secret Service on Linux,
+// Keychain on macOS, Credential Manager on Windows) is usable on this host.
+// It probes with a read of a sentinel entry: ErrNotFound means the backend is
+// reachable (the entry simply doesn't exist), while any other error — most
+// commonly a missing D-Bus Secret Service on a headless Linux box — means the
+// keyring can't be used and the token must be supplied another way.
+func keyringAvailable() bool {
+	_, err := keyring.Get(keyringService, keyringProbeAccount)
+	return err == nil || err == keyring.ErrNotFound
 }
 
 // loadToken retrieves the daemon token from the OS keyring.

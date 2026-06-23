@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- The daemon's interactive setup now detects whether the host has a usable OS
+  keyring before offering to store the token there. On headless Linux with no
+  D-Bus Secret Service, it saves the config (URL + serve path) and explains how
+  to supply the token via `BLACKHAUL_TOKEN` / an `EnvironmentFile` instead of
+  failing to save and printing a raw D-Bus error. A token passed by flag or
+  environment also no longer triggers a spurious "keyring unavailable" warning,
+  since the keyring is only consulted when no token was supplied directly.
+
 ## [0.7.3] - 2026-06-23
 
 ### Fixed

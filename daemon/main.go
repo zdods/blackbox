@@ -67,15 +67,19 @@ func main() {
 		log.Printf("warning: could not read config %s: %v", cfgPath, err)
 	}
 
-	// Load token from OS keyring
-	keyringTok, err := loadToken()
-	if err != nil && err != keyring.ErrNotFound {
-		log.Printf("warning: could not read token from keyring: %v", err)
-	}
-
-	// Priority: flags > env vars > keyring > config file
+	// Priority: flags > env vars > keyring > config file.
+	// Only consult the keyring when the token wasn't supplied directly — this
+	// avoids a spurious "keyring unavailable" warning on headless hosts that
+	// pass the token via flag or environment.
 	url := firstNonEmpty(*bastionURL, os.Getenv("BLACKHAUL_BASTION_URL"), cfgURL)
-	tok := firstNonEmpty(*token, os.Getenv("BLACKHAUL_TOKEN"), keyringTok)
+	tok := firstNonEmpty(*token, os.Getenv("BLACKHAUL_TOKEN"))
+	if tok == "" {
+		keyringTok, err := loadToken()
+		if err != nil && err != keyring.ErrNotFound {
+			log.Printf("warning: could not read token from keyring: %v", err)
+		}
+		tok = keyringTok
+	}
 	path := firstNonEmpty(*hostedPath, os.Getenv("BLACKHAUL_HOSTED_PATH"), cfgHosted)
 
 	// Fall back to interactive setup if required values are still missing
@@ -88,22 +92,35 @@ func main() {
 		url = defaultBastionURL
 	}
 
-	// Offer to save config after interactive setup
+	// Offer to save config after interactive setup. Only offer to store the
+	// token when this host actually has a usable keyring — on headless Linux
+	// with no Secret Service there's nowhere secure to put it, so we save the
+	// config (URL + path) and explain how to supply the token on each start.
 	if fromSetup {
-		fmt.Printf("\n  save settings? (config: %s, token: OS keyring) [y/N]: ", cfgPath)
+		keyringOK := keyringAvailable()
+		tokenDest := "OS keyring"
+		if !keyringOK {
+			tokenDest = "not stored — no keyring on this host"
+		}
+		fmt.Printf("\n  save settings? (config: %s, token: %s) [y/N]: ", cfgPath, tokenDest)
 		reader := bufio.NewReader(os.Stdin)
 		ans, _ := reader.ReadString('\n')
 		if strings.ToLower(strings.TrimSpace(ans)) == "y" {
-			if err := saveToken(tok); err != nil {
-				log.Printf("warning: could not save token to keyring: %v", err)
-			} else {
-				log.Printf("token saved to OS keyring")
+			if keyringOK {
+				if err := saveToken(tok); err != nil {
+					log.Printf("warning: could not save token to keyring: %v", err)
+				} else {
+					log.Printf("token saved to OS keyring")
+				}
 			}
 			if err := saveConfig(cfgPath, url, path); err != nil {
 				log.Printf("warning: could not save config: %v", err)
 			} else {
 				log.Printf("config saved to %s", cfgPath)
 			}
+		}
+		if !keyringOK {
+			printNoKeyringHelp()
 		}
 	}
 
@@ -205,6 +222,21 @@ func firstNonEmpty(vals ...string) string {
 		}
 	}
 	return ""
+}
+
+// printNoKeyringHelp explains how to supply the token on hosts without a usable
+// OS keyring (typically headless Linux with no D-Bus Secret Service), where the
+// token can't be stored and must be provided on each start.
+func printNoKeyringHelp() {
+	fmt.Println()
+	fmt.Println("  note: no OS keyring is available on this host (common on headless")
+	fmt.Println("        Linux with no desktop session). The token can't be stored, so")
+	fmt.Println("        provide it on each start via an environment variable:")
+	fmt.Println()
+	fmt.Println("          BLACKHAUL_TOKEN=<token> blackhaul-daemon")
+	fmt.Println()
+	fmt.Println("        or a 0600 EnvironmentFile in your systemd unit. See")
+	fmt.Println("        docs/deployment.md for a headless service example.")
 }
 
 // runSetup prompts for host, directory, and token when not provided. Returns (url, token, hostedPath).
