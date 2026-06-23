@@ -4,6 +4,9 @@
 # Usage:
 #   curl -fsSL https://raw.githubusercontent.com/zdods/blackhaul/main/install.sh | sh
 #
+#   Or, with Homebrew (macOS & Linux):
+#   brew install zdods/tap/blackhaul-daemon
+#
 # Environment overrides:
 #   BLACKHAUL_VERSION      release tag to install (default: latest, e.g. v0.1.0)
 #   BLACKHAUL_INSTALL_DIR  install directory (default: /usr/local/bin)
@@ -37,8 +40,19 @@ esac
 
 # --- Uninstall ------------------------------------------------------------
 if [ "$ACTION" = uninstall ]; then
-  BIN="$INSTALL_DIR/$BINARY"
   say "uninstalling $BINARY"
+
+  # Resolve the binary: prefer the default install dir, else fall back to PATH
+  # (e.g. a Homebrew install under /opt/homebrew/bin or linuxbrew).
+  BIN="$INSTALL_DIR/$BINARY"
+  [ -x "$BIN" ] || BIN=$(command -v "$BINARY" 2>/dev/null || true)
+
+  # A Homebrew-managed install must be removed with brew, not rm (the binary in
+  # PATH is a symlink into brew's Cellar).
+  BREW_MANAGED=no
+  if command -v brew >/dev/null 2>&1 && brew list "$BINARY" >/dev/null 2>&1; then
+    BREW_MANAGED=yes
+  fi
 
   # 1. Stop and remove the service unit if one was installed.
   if [ "$OS" = darwin ]; then
@@ -60,15 +74,18 @@ if [ "$ACTION" = uninstall ]; then
 
   # 2. Clear local credentials (keyring token + config) BEFORE removing the
   #    binary, since the binary does this cleanup itself.
-  if [ -x "$BIN" ]; then
+  if [ -n "$BIN" ] && [ -x "$BIN" ]; then
     "$BIN" --reset || true
   else
-    say "  $BIN not found; if the daemon is elsewhere, run '$BINARY --reset' to clear stored credentials"
+    say "  $BINARY not found on PATH; run '$BINARY --reset' to clear stored credentials"
   fi
 
-  # 3. Remove the binary.
-  if [ -e "$BIN" ]; then
-    if [ -w "$INSTALL_DIR" ]; then rm -f "$BIN"; else sudo rm -f "$BIN"; fi
+  # 3. Remove the binary (or hand off to brew for a Homebrew-managed install).
+  if [ "$BREW_MANAGED" = yes ]; then
+    say "  installed via Homebrew — run 'brew uninstall $BINARY' to remove the binary"
+  elif [ -n "$BIN" ] && [ -e "$BIN" ]; then
+    BIN_DIR=$(dirname "$BIN")
+    if [ -w "$BIN_DIR" ]; then rm -f "$BIN"; else sudo rm -f "$BIN"; fi
     say "  removed $BIN"
   fi
 

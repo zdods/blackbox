@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- `install.sh --uninstall` now detects a Homebrew-managed daemon: it clears the
+  stored token + config and points you at `brew uninstall blackhaul-daemon`
+  instead of failing to find the binary under `/usr/local/bin` (Homebrew installs
+  live under the brew prefix). It also resolves the binary from `PATH` when it
+  isn't in the default install dir.
+
 ## [0.7.2] - 2026-06-23
 
 ### Changed
