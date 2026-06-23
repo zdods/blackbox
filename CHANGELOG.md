@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.2] - 2026-06-23
+
 ### Changed
 
 - `brew install zdods/tap/blackhaul-daemon` now works on **Linux** as well as
@@ -281,7 +283,8 @@ console.
 - Compose binds Postgres to `127.0.0.1`; bastion container runs as
   non-root.
 
-[Unreleased]: https://github.com/zdods/blackhaul/compare/v0.7.1...HEAD
+[Unreleased]: https://github.com/zdods/blackhaul/compare/v0.7.2...HEAD
+[0.7.2]: https://github.com/zdods/blackhaul/compare/v0.7.1...v0.7.2
 [0.7.1]: https://github.com/zdods/blackhaul/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/zdods/blackhaul/compare/v0.6.1...v0.7.0
 [0.6.1]: https://github.com/zdods/blackhaul/compare/v0.6.0...v0.6.1
