@@ -63,10 +63,13 @@ release:
     **Server image:** `docker pull ghcr.io/zdods/blackhaul-bastion:{{ .Version }}`
     **Daemon install:** `curl -fsSL https://raw.githubusercontent.com/zdods/blackhaul/main/install.sh | sh`
 
-# Homebrew tap (macOS). Skipped automatically until the tap repo + token
-# exist: set the TAP_GITHUB_TOKEN secret (a fine-grained PAT with contents
-# write on zdods/homebrew-tap) in this repo's Actions secrets.
-homebrew_casks:
+# Homebrew tap — a *formula* (not a cask) so `brew install zdods/tap/blackhaul-daemon`
+# works on both macOS and Linux. Casks are macOS-only (Linuxbrew rejects them),
+# whereas a formula's auto-generated on_macos/on_linux + on_arm/on_intel blocks
+# select the right release archive per platform. Skipped automatically until the
+# tap repo + token exist: set the TAP_GITHUB_TOKEN secret (a fine-grained PAT with
+# contents:write on zdods/homebrew-tap) in this repo's Actions secrets.
+brews:
   - name: blackhaul-daemon
     # NOTE: token is evaluated in env-only template mode — plain {{ .Env.X }}
     # only, no template functions (envOrDefault broke the v0.1.0 release).
@@ -79,11 +82,7 @@ homebrew_casks:
     homepage: https://github.com/zdods/blackhaul
     description: Outbound-only file daemon for blackhaul — browse your machines from a hosted console with zero network config
     commit_msg_template: "blackhaul-daemon {{ .Tag }}"
-    # The binaries are not signed/notarized; strip the quarantine flag so
-    # Gatekeeper does not block them (recommended by GoReleaser docs).
-    hooks:
-      post:
-        install: |
-          if system_command("/usr/bin/xattr", args: ["-h"]).exit_status == 0
-            system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/blackhaul-daemon"]
-          end
+    install: |
+      bin.install "blackhaul-daemon"
+    test: |
+      system "#{bin}/blackhaul-daemon", "--version"

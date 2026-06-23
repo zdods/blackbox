@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- `brew install zdods/tap/blackhaul-daemon` now works on **Linux** as well as
+  macOS. The Homebrew tap ships a cross-platform *formula* instead of a
+  macOS-only cask (Linuxbrew refuses to install casks); the formula selects the
+  correct release archive per OS/arch.
+
 ## [0.7.1] - 2026-06-18
 
 ### Fixed
