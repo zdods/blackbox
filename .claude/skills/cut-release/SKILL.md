@@ -12,8 +12,9 @@ Releases are driven by semver git tags (`vX.Y.Z`). Pushing a tag triggers
   `ghcr.io/<owner>/blackhaul-bastion` with SBOM + provenance, and
 - runs **GoReleaser** (`.goreleaser.yaml`): daemon binaries for
   linux/darwin/windows × amd64/arm64, archives + `checksums.txt` attached to
-  a **GitHub Release it creates itself**, and a Homebrew cask pushed to
-  `zdods/homebrew-tap` (auto-skipped when `TAP_GITHUB_TOKEN` is unset).
+  a **GitHub Release it creates itself**, and a cross-platform Homebrew
+  *formula* pushed to `zdods/homebrew-tap` as a root-level
+  `blackhaul-daemon.rb` (auto-skipped when `TAP_GITHUB_TOKEN` is unset).
 
 ## 1. Establish the range
 
@@ -99,8 +100,10 @@ docker pull ghcr.io/<owner>/blackhaul-bastion:X.Y.Z   # or inspect via gh api
 # Release assets: 4 tar.gz + 2 zip + checksums.txt
 gh release view vX.Y.Z --json assets --jq '.assets[].name'
 
-# Cask updated (only if TAP_GITHUB_TOKEN is configured)
-gh api repos/<owner>/homebrew-tap/contents/Casks/blackhaul-daemon.rb --jq '.size' 2>/dev/null
+# Tap formula bumped (only if TAP_GITHUB_TOKEN is configured).
+# It lives at the repo root as blackhaul-daemon.rb, not under Casks/ or Formula/.
+gh api repos/<owner>/homebrew-tap/contents/blackhaul-daemon.rb --jq '.content' 2>/dev/null \
+  | base64 -d | grep -m1 'version "'   # expect: version "X.Y.Z"
 ```
 
 If the workflow fails, report the failure and do NOT delete/re-push the tag
