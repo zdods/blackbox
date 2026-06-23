@@ -66,3 +66,31 @@ func TestResolveDirTildeAlone(t *testing.T) {
 		t.Errorf("resolveDir(~) = %q, want %q", got, home)
 	}
 }
+
+// logSafe must strip the control characters that log injection relies on, so a
+// remote- or user-controlled value can't forge log lines or inject terminal
+// escapes. (It also keeps the explicit \n/\r replacement CodeQL recognizes as a
+// sanitizer — see logSafe's doc comment.)
+func TestLogSafe(t *testing.T) {
+	tests := []struct {
+		name string
+		in   string
+		want string
+	}{
+		{"newline", "a\nb", "a b"},
+		{"carriage return", "a\rb", "a b"},
+		{"crlf forged entry", "ok\r\nADMIN logged in", "ok  ADMIN logged in"},
+		{"tab", "a\tb", "a b"},
+		{"escape sequence", "a\x1b[31mred", "a [31mred"},
+		{"del", "a\x7fb", "a b"},
+		{"plain text untouched", "hello world-123_/path", "hello world-123_/path"},
+		{"unicode untouched", "café ☃", "café ☃"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := logSafe(tt.in); got != tt.want {
+				t.Errorf("logSafe(%q) = %q, want %q", tt.in, got, tt.want)
+			}
+		})
+	}
+}

@@ -720,13 +720,27 @@ func safePath(root, rel string) string {
 // logSafe strips control characters (notably CR/LF) from an attacker-influenced
 // value before it is logged, so a crafted path, filename, or remote message
 // cannot forge or inject log lines.
+// logSafe neutralizes a remote- or user-controlled string for safe logging: it
+// maps every control character (< 0x20, which includes newlines, tab, and ESC)
+// and DEL (0x7f) to a space, so the value can't forge log lines or inject
+// terminal escape sequences.
+//
+// The trailing strings.ReplaceAll calls for "\n" and "\r" are redundant at
+// runtime (strings.Map has already removed them), but they are the exact
+// pattern CodeQL's go/log-injection query recognizes as a sanitizer
+// (ReplaceSanitizer). Without them the analyzer can't see through strings.Map
+// and reports false-positive log-injection alerts at every logSafe call site.
+// Keep them.
 func logSafe(s string) string {
-	return strings.Map(func(r rune) rune {
+	s = strings.Map(func(r rune) rune {
 		if r < 0x20 || r == 0x7f {
 			return ' '
 		}
 		return r
 	}, s)
+	s = strings.ReplaceAll(s, "\n", " ")
+	s = strings.ReplaceAll(s, "\r", " ")
+	return s
 }
 
 // resolveExisting resolves the deepest existing ancestor of p with EvalSymlinks
