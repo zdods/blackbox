@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- The mobile theme switcher now shows only its icon. Previously some mobile
+  browsers (notably iOS Safari) still painted the theme name behind the icon, so
+  the label and glyph overlapped.
+
 ## [0.8.4] - 2026-06-26
 
 ### Fixed
