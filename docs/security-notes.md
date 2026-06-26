@@ -5,9 +5,15 @@ For the disclosure policy, see the root [SECURITY.md](../SECURITY.md).
 
 ## Authentication & sessions (bastion)
 
-- Passwords hashed with **bcrypt**; **TOTP is mandatory** for every account.
-  A missing user still runs a bcrypt comparison so login timing can't reveal
-  whether a username exists.
+- Passwords hashed with **bcrypt**; **TOTP is mandatory** for every
+  password account. A missing user still runs a bcrypt comparison so login
+  timing can't reveal whether a username exists.
+- **Passkeys (WebAuthn)** are an alternative sign-in factor (`AUTH_MODE`
+  `passkey`/`both`), handled by `go-webauthn` with **user verification
+  required** and usernameless discoverable login. Ceremony state is single-use
+  (server-side cache keyed by an httpOnly cookie); credentials store only public
+  keys + signature counters, never a shared secret. The bastion refuses to
+  delete the last credential when it's the only remaining way to sign in.
 - **TOTP secrets are encrypted at rest** (AES-256-GCM, `enc:v1:` tagged). The
   key comes from `TOTP_ENC_KEY` (base64 of 32 bytes) or, if unset, is derived
   via HKDF from a stable `JWT_SECRET`; with neither, secrets stay plaintext

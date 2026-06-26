@@ -14,9 +14,10 @@ daemons — no files, no directory listings.
 
 What protects access:
 
-- One account, **bcrypt** password, **mandatory TOTP (2FA)**. The 2FA secret is
-  **encrypted at rest** (set `TOTP_ENC_KEY`, or it's derived from a stable
-  `JWT_SECRET`).
+- One account. Sign in with a **bcrypt** password + **mandatory TOTP (2FA)**, or
+  with a **passkey** (WebAuthn) when `AUTH_MODE` is `passkey`/`both`. The 2FA
+  secret is **encrypted at rest** (set `TOTP_ENC_KEY`, or it's derived from a
+  stable `JWT_SECRET`).
 - Sessions are signed JWTs in **httpOnly cookies** (not readable by JS, never in
   localStorage); logging out **revokes all sessions** at once.
 - Daemon tokens are stored **hashed** (SHA-256); the plaintext exists only in
@@ -67,12 +68,14 @@ daemon registrations (no files). Your actual files are already on your machines;
 back those up however you already do. Re-registering a daemon just means issuing
 a new token.
 
-### I lost my password / 2FA device. How do I reset?
+### I lost my password / 2FA device / passkey. How do I reset?
 
 There is no email-based recovery (single-user, no mail server). Recover by
 editing the database directly: clear or update the row in the `users` table
-(e.g. reset `totp_secret` to re-enroll, or remove the user to re-run
-registration). Keep your TOTP recovery in your password manager.
+(e.g. reset `totp_secret` to re-enroll, or remove the user — which cascades to
+`webauthn_credentials` — to re-run registration). To drop a lost passkey while
+keeping the account, delete its row from `webauthn_credentials`. Keep your TOTP
+recovery (and a backup passkey) in your password manager.
 
 ## Troubleshooting
 
