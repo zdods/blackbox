@@ -101,6 +101,10 @@ Traefik forwards WebSocket upgrades by default.
 | `JWT_SECRET` | Set a stable secret (`openssl rand -base64 32`, **≥32 bytes** or the server won't start) or sessions reset on every restart. |
 | `COOKIE_SECURE=1` | Sets the `Secure` flag on the session cookie. Needed when TLS terminates at the proxy and the bastion speaks plain HTTP. |
 | `TOTP_ENC_KEY` | Encrypts 2FA secrets at rest with a dedicated key (base64 of 32 bytes); otherwise derived from `JWT_SECRET`. |
+| `AUTH_MODE` | `password` (default), `passkey`, or `both`. Selects the sign-in methods offered. `passkey` requires `RP_ID`; `both` shows passkey + password side by side (and degrades to password-only if `RP_ID` is unset). Passkey enrollment/management works in every mode, so you can add a passkey in password mode and then switch. |
+| `RP_ID` | WebAuthn Relying Party ID for passkeys — the registrable **domain only**, no scheme/port (e.g. `blackhaul.example.com`). Must equal the public hostname the browser uses (the same host the proxy serves). Use `localhost` for local HTTP dev. |
+| `RP_ORIGINS` | Comma-separated full origins allowed for passkey ceremonies (scheme + host + non-default port). Defaults to `https://<RP_ID>`. Set explicitly when the public origin differs (e.g. a non-443 port). |
+| `RP_DISPLAY_NAME` | Relying-party name shown by authenticators during a passkey prompt. Defaults to `Blackhaul`. |
 
 TLS between the proxy and the bastion on the same host is unnecessary; if
 the proxy is on a different machine, either run the link over a private

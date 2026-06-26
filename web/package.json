@@ -24,6 +24,7 @@
 		"vite": "^8.1.0"
 	},
 	"dependencies": {
+		"@simplewebauthn/browser": "^13.1.0",
 		"qrcode": "^1.5.4"
 	},
 	"overrides": {

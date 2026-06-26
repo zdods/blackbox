@@ -66,11 +66,23 @@ func (s *Server) Setup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(map[string]bool{"registration_open": !hasUser})
+	_ = json.NewEncoder(w).Encode(map[string]any{
+		"registration_open": !hasUser,
+		// Capability flags tell the SPA which sign-in methods to render. In
+		// "both" mode both are true; the frontend shows passkey + password
+		// together. auth_mode is included for reference/telemetry.
+		"auth_mode":        s.cfg.AuthMode,
+		"password_enabled": s.passwordAuthEnabled(),
+		"passkey_enabled":  s.passkeyAuthEnabled(),
+	})
 }
 
 func (s *Server) Register(w http.ResponseWriter, r *http.Request) {
 	if !s.rateLimitAuth(w, r) {
+		return
+	}
+	if !s.passwordAuthEnabled() {
+		writeJSONError(w, http.StatusForbidden, errMsgUnavailable)
 		return
 	}
 	ctx := r.Context()
@@ -129,6 +141,10 @@ func (s *Server) RegisterTOTPSetup(w http.ResponseWriter, r *http.Request) {
 	if !s.rateLimitAuth(w, r) {
 		return
 	}
+	if !s.passwordAuthEnabled() {
+		writeJSONError(w, http.StatusForbidden, errMsgUnavailable)
+		return
+	}
 	hasUser, err := HasAnyUser(r.Context(), s.pool)
 	if err != nil {
 		writeJSONError(w, http.StatusInternalServerError, "internal error")
@@ -159,6 +175,10 @@ func isDuplicate(err error) bool {
 
 func (s *Server) Login(w http.ResponseWriter, r *http.Request) {
 	if !s.rateLimitAuth(w, r) {
+		return
+	}
+	if !s.passwordAuthEnabled() {
+		writeJSONError(w, http.StatusForbidden, errMsgUnavailable)
 		return
 	}
 	var req struct {

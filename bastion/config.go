@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"os"
+	"strings"
 )
 
 // devJWTSecret is the well-known development secret. It is never used to sign
@@ -36,7 +37,28 @@ type Config struct {
 	// CookieSecure: force the Secure flag on the session cookie (COOKIE_SECURE=1),
 	// for deployments that terminate TLS at a reverse proxy.
 	CookieSecure bool
+	// AuthMode selects the unauthenticated login/registration methods offered:
+	// "password" (username+password+TOTP, the default), "passkey" (WebAuthn), or
+	// "both" (offer each side by side). Passkey enrollment/management is
+	// authenticated and available regardless of mode.
+	AuthMode string
+	// RPID is the WebAuthn Relying Party ID — the registrable domain only, with
+	// no scheme or port (e.g. "blackhaul.example.com"). Empty disables passkeys.
+	RPID string
+	// RPOrigins are the full allowed origins for WebAuthn ceremonies, with scheme
+	// and (non-default) port (RP_ORIGINS, comma-separated). Defaults to
+	// ["https://"+RPID] when RP_ID is set and RP_ORIGINS is empty.
+	RPOrigins []string
+	// RPDisplayName is the human-facing relying-party name shown by authenticators
+	// (RP_DISPLAY_NAME). Defaults to "Blackhaul".
+	RPDisplayName string
 }
+
+const (
+	authModePassword = "password"
+	authModePasskey  = "passkey"
+	authModeBoth     = "both"
+)
 
 func LoadConfig() Config {
 	dbURL := os.Getenv("DATABASE_URL")
@@ -47,20 +69,43 @@ func LoadConfig() Config {
 	if addr == "" {
 		addr = ":8080"
 	}
+	authMode := os.Getenv("AUTH_MODE")
+	if authMode == "" {
+		authMode = authModePassword
+	}
+	rpID := os.Getenv("RP_ID")
+	rpDisplay := os.Getenv("RP_DISPLAY_NAME")
+	if rpDisplay == "" {
+		rpDisplay = "Blackhaul"
+	}
+	var rpOrigins []string
+	if v := os.Getenv("RP_ORIGINS"); v != "" {
+		for _, o := range strings.Split(v, ",") {
+			if o = strings.TrimSpace(o); o != "" {
+				rpOrigins = append(rpOrigins, o)
+			}
+		}
+	} else if rpID != "" {
+		rpOrigins = []string{"https://" + rpID}
+	}
 	return Config{
-		DatabaseURL:  dbURL,
-		ServerAddr:   addr,
-		JWTSecret:    os.Getenv("JWT_SECRET"),
-		StaticDir:    os.Getenv("STATIC_DIR"),
-		TLSCertFile:  os.Getenv("TLS_CERT_FILE"),
-		TLSKeyFile:   os.Getenv("TLS_KEY_FILE"),
-		CORSOrigin:   os.Getenv("CORS_ORIGIN"),
-		DevMode:      boolEnv("DEV_MODE"),
-		TrustProxy:   boolEnv("TRUST_PROXY"),
-		LogFormat:    os.Getenv("LOG_FORMAT"),
-		LogLevel:     os.Getenv("LOG_LEVEL"),
-		TOTPEncKey:   os.Getenv("TOTP_ENC_KEY"),
-		CookieSecure: boolEnv("COOKIE_SECURE"),
+		DatabaseURL:   dbURL,
+		ServerAddr:    addr,
+		JWTSecret:     os.Getenv("JWT_SECRET"),
+		StaticDir:     os.Getenv("STATIC_DIR"),
+		TLSCertFile:   os.Getenv("TLS_CERT_FILE"),
+		TLSKeyFile:    os.Getenv("TLS_KEY_FILE"),
+		CORSOrigin:    os.Getenv("CORS_ORIGIN"),
+		DevMode:       boolEnv("DEV_MODE"),
+		TrustProxy:    boolEnv("TRUST_PROXY"),
+		LogFormat:     os.Getenv("LOG_FORMAT"),
+		LogLevel:      os.Getenv("LOG_LEVEL"),
+		TOTPEncKey:    os.Getenv("TOTP_ENC_KEY"),
+		CookieSecure:  boolEnv("COOKIE_SECURE"),
+		AuthMode:      authMode,
+		RPID:          rpID,
+		RPOrigins:     rpOrigins,
+		RPDisplayName: rpDisplay,
 	}
 }
 
