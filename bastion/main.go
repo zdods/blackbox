@@ -162,6 +162,9 @@ func (s *Server) routes() http.Handler {
 	mux.HandleFunc("DELETE /api/passkeys/{id}", s.AuthMiddleware(s.DeletePasskey))
 	// Protected
 	mux.HandleFunc("GET /api/me", s.AuthMiddleware(s.Me))
+	mux.HandleFunc("GET /api/account", s.AuthMiddleware(s.Account))
+	mux.HandleFunc("PATCH /api/account", s.AuthMiddleware(s.UpdateAccount))
+	mux.HandleFunc("POST /api/account/password", s.AuthMiddleware(s.ChangePassword))
 	mux.HandleFunc("GET /api/daemons", s.AuthMiddleware(s.ListDaemons))
 	mux.HandleFunc("POST /api/daemons", s.AuthMiddleware(s.CreateDaemon))
 	mux.HandleFunc("PATCH /api/daemons/{id}", s.AuthMiddleware(s.UpdateDaemon))
