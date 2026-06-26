@@ -18,8 +18,9 @@
 			<option value={t.value}>{t.label}</option>
 		{/each}
 	</select>
-	<!-- Painted over the select on mobile (after it in the DOM so it stacks on
-	     top); pointer-events: none keeps the native picker tappable. -->
+	<!-- Shown only on mobile, where the select goes fully transparent and this
+	     glyph is the visible control (the select stays on top as the tap/keyboard
+	     target). -->
 	<span class="theme-select__glyph" aria-hidden="true">{glyph}</span>
 </label>
 
@@ -69,38 +70,56 @@
 		outline: 2px solid var(--accent);
 		outline-offset: 2px;
 	}
+
 	@media (max-width: 640px) {
 		.theme-select__label {
 			display: none;
 		}
-		/* Collapse the picker to an icon: the <select> becomes a square tap
-		   target with its label text and caret hidden, and the glyph is painted
-		   on top (pointer-events: none so taps still reach the native picker). */
-		.theme-select__glyph {
-			display: grid;
-			place-items: center;
-			position: absolute;
-			inset: 0;
-			pointer-events: none;
-			font-size: 0.95rem;
-			color: var(--text-muted);
+		/* Collapse to an icon. The wrapper becomes the visible, bordered control
+		   and shows the glyph; the native <select> is laid over it fully
+		   transparent. We use opacity:0 (not color:transparent) because mobile
+		   browsers — iOS Safari especially — still paint a select's value text
+		   when only the color is transparent, which would clash with the glyph.
+		   opacity:0 hides the value text and arrow on every engine while keeping
+		   the element tappable and focusable. */
+		.theme-select {
+			width: var(--touch-min);
+			height: var(--touch-min);
+			justify-content: center;
+			border: 1px solid var(--border);
+			border-radius: 6px;
+		}
+		.theme-select:hover {
+			border-color: var(--border-strong);
+		}
+		.theme-select:focus-within {
+			outline: 2px solid var(--accent);
+			outline-offset: 2px;
 		}
 		select {
-			width: var(--touch-min);
-			min-height: var(--touch-min);
+			position: absolute;
+			inset: 0;
+			width: 100%;
+			height: 100%;
+			min-height: 0;
 			padding: 0;
-			color: transparent;
-			background-image: none;
-			text-align: center;
+			border: none;
+			opacity: 0;
 		}
-		.theme-select:hover .theme-select__glyph,
-		select:focus-visible + .theme-select__glyph {
+		.theme-select__glyph {
+			display: block;
+			font-size: 0.95rem;
+			line-height: 1;
+			color: var(--text-muted);
+			pointer-events: none;
+		}
+		.theme-select:hover .theme-select__glyph {
 			color: var(--text);
 		}
 	}
 
-	/* Coarse-pointer / mobile: the tappable control is the <select> itself, so
-	   the touch minimum has to land on it (not just the wrapper). */
+	/* Coarse-pointer (touch) at any width: keep the control at the touch minimum
+	   so the tap target is big enough even on tablets that miss the width query. */
 	@media (pointer: coarse) {
 		.theme-select {
 			min-height: var(--touch-min);
