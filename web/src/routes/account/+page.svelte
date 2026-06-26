@@ -1,9 +1,10 @@
 <script>
 	import { onMount, onDestroy, tick } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { isLoggedIn, clearLoggedIn, apiFetch } from '$lib/auth.js';
+	import { isLoggedIn, apiFetch, redirectIfUnauthorized } from '$lib/auth.js';
 	import { account, loadAccount } from '$lib/account.js';
 	import { registerActions } from '$lib/palette-actions.js';
+	import { showToast } from '$lib/toast.js';
 	import Avatar from '$lib/Avatar.svelte';
 	import Face from '$lib/Face.svelte';
 	import Skeleton from '$lib/Skeleton.svelte';
@@ -28,24 +29,12 @@
 	let passwordError = '';
 	let showPasswords = false;
 
-	let toast = { show: false, message: '', type: 'success' };
-	let toastTimeout = null;
-
 	$: acct = $account;
 	$: hasPassword = acct?.has_password === true;
 	$: passwordEnabled = acct?.password_enabled === true;
 	$: passkeyEnabled = acct?.passkey_enabled === true;
 	// Whether the typed email differs from what's saved (enables Save).
 	$: emailDirty = email.trim() !== (acct?.email ?? '');
-
-	function handle401(res) {
-		if (res.status === 401) {
-			clearLoggedIn();
-			goto('/login');
-			return true;
-		}
-		return false;
-	}
 
 	// ---- Command-palette actions --------------------------------------------
 	// Registered once the account capabilities have loaded (the password/passkey
@@ -102,18 +91,8 @@
 	});
 
 	onDestroy(() => {
-		if (toastTimeout) clearTimeout(toastTimeout);
 		if (unregisterActions) unregisterActions();
 	});
-
-	function showToast(message, type = 'success', duration = 3000) {
-		if (toastTimeout) clearTimeout(toastTimeout);
-		toast = { show: true, message, type };
-		toastTimeout = setTimeout(() => {
-			toast = { ...toast, show: false };
-			toastTimeout = null;
-		}, duration);
-	}
 
 	async function saveEmail(e) {
 		e.preventDefault();
@@ -125,7 +104,7 @@
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ email: email.trim() })
 			});
-			if (handle401(res)) return;
+			if (redirectIfUnauthorized(res)) return;
 			if (!res.ok) {
 				const data = await res.json().catch(() => ({}));
 				throw new Error(data.error || 'Could not save email');
@@ -328,12 +307,6 @@
 	{#if passkeyEnabled}
 		<PasskeysSection bind:this={passkeysRef} />
 	{/if}
-{/if}
-
-{#if toast.show}
-	<div class="toast toast-{toast.type}" role="status" aria-live="polite">
-		{toast.message}
-	</div>
 {/if}
 
 <style>

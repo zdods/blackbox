@@ -7,6 +7,7 @@
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
 	import { hosts, hostsStatus } from '$lib/hosts.js';
+	import { scaleBytes } from '$lib/format.js';
 	import Face from '$lib/Face.svelte';
 	import Skeleton from '$lib/Skeleton.svelte';
 
@@ -16,16 +17,13 @@
 
 	$: activeId = $page.params.id ?? null;
 
+	// The compact rail rounds to whole numbers once past 10 of a unit (e.g.
+	// "37 GB free") — deliberately tighter than the 1-decimal formatBytes used
+	// elsewhere — so it shares only the byte-scaling step.
 	function formatFree(n) {
 		if (n == null || n < 0) return '';
-		const units = ['B', 'KB', 'MB', 'GB', 'TB'];
-		let v = n;
-		let i = 0;
-		while (v >= 1024 && i < units.length - 1) {
-			v /= 1024;
-			i += 1;
-		}
-		return `${v.toFixed(v >= 10 || i === 0 ? 0 : 1)} ${units[i]} free`;
+		const { value, unit, exact } = scaleBytes(n);
+		return `${value.toFixed(value >= 10 || exact ? 0 : 1)} ${unit} free`;
 	}
 
 	function pickHost(id) {

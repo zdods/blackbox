@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- The file browser now shows sizes of 1 TB and up in **TB** (e.g. `5.0 TB`)
+  instead of a large gigabyte figure, matching the dashboard.
+
 ## [0.8.3] - 2026-06-26
 
 ### Changed

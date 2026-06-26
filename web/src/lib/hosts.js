@@ -9,8 +9,7 @@
 // logout. Every fetch is guarded by isLoggedIn(); a 401 clears the auth flag
 // and redirects to /login.
 import { writable } from 'svelte/store';
-import { goto } from '$app/navigation';
-import { isLoggedIn, clearLoggedIn, apiFetch } from '$lib/auth.js';
+import { isLoggedIn, apiFetch, redirectIfUnauthorized } from '$lib/auth.js';
 
 const POLL_INTERVAL_MS = 8000;
 
@@ -35,9 +34,8 @@ async function fetchOnce() {
 	try {
 		const res = await apiFetch('/api/daemons');
 		if (res.status === 401) {
-			clearLoggedIn();
-			stop();
-			goto('/login');
+			stop(); // halt the poll loop before the shared helper navigates away
+			redirectIfUnauthorized(res);
 			return;
 		}
 		if (!res.ok) throw new Error(await res.text());
