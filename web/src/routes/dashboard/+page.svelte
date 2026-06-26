@@ -1,10 +1,12 @@
 <script>
-	import { onMount, onDestroy, tick } from 'svelte';
+	import { onMount, tick } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { isLoggedIn, clearLoggedIn, apiFetch } from '$lib/auth.js';
+	import { isLoggedIn, apiFetch, redirectIfUnauthorized } from '$lib/auth.js';
 	import { hosts, hostsStatus, refresh } from '$lib/hosts.js';
 	import { registerActions } from '$lib/palette-actions.js';
 	import { confirmDelete } from '$lib/ConfirmDialog.svelte';
+	import { formatBytes } from '$lib/format.js';
+	import { showToast } from '$lib/toast.js';
 	import Face from '$lib/Face.svelte';
 	import Skeleton from '$lib/Skeleton.svelte';
 
@@ -18,8 +20,6 @@
 	let editingId = null;
 	let editLabel = '';
 	let deletingId = null;
-	let toast = { show: false, message: '', type: 'success' };
-	let toastTimeout = null;
 
 	let labelInput; // add-host field, focused by the palette action / sidebar "+ add host"
 	let renameInput;
@@ -48,25 +48,12 @@
 		return off;
 	});
 
-	onDestroy(() => {
-		if (toastTimeout) clearTimeout(toastTimeout);
-	});
-
 	async function focusAddHost() {
 		await tick();
 		if (labelInput) {
 			labelInput.focus();
 			labelInput.scrollIntoView({ block: 'center' });
 		}
-	}
-
-	function showToast(message, type = 'success', duration = 3000) {
-		if (toastTimeout) clearTimeout(toastTimeout);
-		toast = { show: true, message, type };
-		toastTimeout = setTimeout(() => {
-			toast = { ...toast, show: false };
-			toastTimeout = null;
-		}, duration);
 	}
 
 	async function createDaemon(e) {
@@ -80,11 +67,7 @@
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ label: newLabel.trim() })
 			});
-			if (res.status === 401) {
-				clearLoggedIn();
-				goto('/login');
-				return;
-			}
+			if (redirectIfUnauthorized(res)) return;
 			if (!res.ok) throw new Error(await res.text());
 			const data = await res.json();
 			newLabel = '';
@@ -131,11 +114,7 @@
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ label: editLabel.trim() })
 			});
-			if (res.status === 401) {
-				clearLoggedIn();
-				goto('/login');
-				return;
-			}
+			if (redirectIfUnauthorized(res)) return;
 			if (!res.ok) throw new Error(await res.text());
 			editingId = null;
 			editLabel = '';
@@ -143,19 +122,6 @@
 		} catch (err) {
 			error = err.message;
 		}
-	}
-
-	function formatBytes(n) {
-		if (n == null || n < 0) return '—';
-		const k = 1024;
-		const units = ['B', 'KB', 'MB', 'GB', 'TB'];
-		let i = 0;
-		let v = n;
-		while (v >= k && i < units.length - 1) {
-			v /= k;
-			i += 1;
-		}
-		return (i === 0 ? v : v.toFixed(1)) + ' ' + units[i];
 	}
 
 	// Fraction of disk used (0–1), or null when totals are unknown.
@@ -179,11 +145,7 @@
 		error = '';
 		try {
 			const res = await apiFetch(`/api/daemons/${daemon.id}`, { method: 'DELETE' });
-			if (res.status === 401) {
-				clearLoggedIn();
-				goto('/login');
-				return;
-			}
+			if (redirectIfUnauthorized(res)) return;
 			if (!res.ok) throw new Error(await res.text());
 			await refresh();
 		} catch (err) {
@@ -378,12 +340,6 @@
 			</p>
 		</form>
 	</section>
-{/if}
-
-{#if toast.show}
-	<div class="toast toast-{toast.type}" role="status" aria-live="polite">
-		{toast.message}
-	</div>
 {/if}
 
 <style>

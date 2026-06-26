@@ -1,9 +1,9 @@
 <script>
 	import { onMount } from 'svelte';
-	import { goto } from '$app/navigation';
-	import { apiFetch, clearLoggedIn } from '$lib/auth.js';
+	import { apiFetch, redirectIfUnauthorized } from '$lib/auth.js';
 	import { passkeyEnroll, browserSupportsWebAuthn } from '$lib/passkey.js';
 	import { confirmDelete } from '$lib/ConfirmDialog.svelte';
+	import { formatDate } from '$lib/format.js';
 	import Face from '$lib/Face.svelte';
 
 	let passkeys = [];
@@ -14,20 +14,11 @@
 	let newName = '';
 	let supported = true;
 
-	function handle401(res) {
-		if (res.status === 401) {
-			clearLoggedIn();
-			goto('/login');
-			return true;
-		}
-		return false;
-	}
-
 	async function load() {
 		error = '';
 		try {
 			const res = await apiFetch('/api/passkeys');
-			if (handle401(res)) return;
+			if (redirectIfUnauthorized(res)) return;
 			if (!res.ok) throw new Error(await res.text());
 			passkeys = await res.json();
 		} catch (e) {
@@ -71,7 +62,7 @@
 		error = '';
 		try {
 			const res = await apiFetch(`/api/passkeys/${passkey.id}`, { method: 'DELETE' });
-			if (handle401(res)) return;
+			if (redirectIfUnauthorized(res)) return;
 			if (res.status === 409) {
 				const data = await res.json().catch(() => ({}));
 				throw new Error(data.error || 'Cannot remove the last passkey');
@@ -83,13 +74,6 @@
 		} finally {
 			removingId = null;
 		}
-	}
-
-	function formatDate(iso) {
-		if (!iso) return '';
-		const d = new Date(iso);
-		if (isNaN(d)) return '';
-		return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
 	}
 </script>
 

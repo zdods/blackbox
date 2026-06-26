@@ -2,9 +2,13 @@
 	import { onMount, onDestroy, tick } from 'svelte';
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
-	import { isLoggedIn, clearLoggedIn, apiFetch } from '$lib/auth.js';
+	import { isLoggedIn, apiFetch, redirectIfUnauthorized } from '$lib/auth.js';
 	import { hosts } from '$lib/hosts.js';
 	import { registerActions } from '$lib/palette-actions.js';
+	import { formatBytes, formatDate } from '$lib/format.js';
+	import { showToast as showToastFor } from '$lib/toast.js';
+	import { getExt, isImageExt, isPreviewable } from '$lib/preview.js';
+	import { uploadFile as uploadOneFile } from '$lib/upload.js';
 	import Face from '$lib/Face.svelte';
 	import FileIcon from '$lib/FileIcon.svelte';
 	import ViewToggle from '$lib/ViewToggle.svelte';
@@ -53,10 +57,6 @@
 	// File input element (for the palette "upload files…" action).
 	let fileInput;
 
-	// Toast (reuse the global .toast classes).
-	let toast = { show: false, message: '', type: 'success' };
-	let toastTimeout;
-
 	// Drag-and-drop
 	let dragCounter = 0;
 	let draggingOver = false;
@@ -67,62 +67,6 @@
 	let previewType = null; // 'image' | 'text'
 	let previewLoading = false;
 	let previewError = '';
-
-	const IMAGE_EXTS = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'bmp', 'ico', 'avif']);
-	const TEXT_EXTS = new Set([
-		'txt',
-		'md',
-		'json',
-		'yaml',
-		'yml',
-		'toml',
-		'xml',
-		'csv',
-		'log',
-		'sh',
-		'bash',
-		'zsh',
-		'py',
-		'js',
-		'ts',
-		'jsx',
-		'tsx',
-		'css',
-		'html',
-		'htm',
-		'sql',
-		'go',
-		'rs',
-		'java',
-		'c',
-		'cpp',
-		'h',
-		'rb',
-		'php',
-		'swift',
-		'kt',
-		'env',
-		'conf',
-		'ini',
-		'cfg',
-		'gitignore',
-		'dockerignore'
-	]);
-	const TEXT_PREVIEW_MAX = 1024 * 1024; // 1 MB
-	const IMAGE_PREVIEW_MAX = 20 * 1024 * 1024; // 20 MB
-
-	function getExt(name) {
-		const i = name.lastIndexOf('.');
-		return i >= 0 ? name.slice(i + 1).toLowerCase() : '';
-	}
-
-	function isPreviewable(entry) {
-		if (entry.is_dir) return false;
-		const ext = getExt(entry.name);
-		if (IMAGE_EXTS.has(ext)) return entry.size == null || entry.size <= IMAGE_PREVIEW_MAX;
-		if (TEXT_EXTS.has(ext)) return entry.size == null || entry.size <= TEXT_PREVIEW_MAX;
-		return false;
-	}
 
 	function fullPathOf(entry) {
 		return path ? `${path}/${entry.name}` : entry.name;
@@ -225,11 +169,8 @@
 		return off;
 	});
 
-	function showToast(message, type = 'success') {
-		toast = { show: true, message, type };
-		clearTimeout(toastTimeout);
-		toastTimeout = setTimeout(() => (toast = { ...toast, show: false }), 3500);
-	}
+	// File-browser toasts linger slightly longer than the 3000ms default.
+	const showToast = (message, type = 'success') => showToastFor(message, type, 3500);
 
 	async function load() {
 		loading = true;
@@ -238,11 +179,7 @@
 		try {
 			const q = path ? `?path=${encodeURIComponent(path)}` : '';
 			const res = await apiFetch(`/api/daemons/${daemonId}/files${q}`);
-			if (res.status === 401) {
-				clearLoggedIn();
-				goto('/login');
-				return;
-			}
+			if (redirectIfUnauthorized(res)) return;
 			if (res.status === 503) {
 				offline = true;
 				entries = [];
@@ -391,55 +328,17 @@
 	}
 
 	// ---- Upload --------------------------------------------------------
-	const CHUNK_SIZE = 5 * 1024 * 1024;
-
-	function generateUploadId() {
-		return crypto.randomUUID
-			? crypto.randomUUID()
-			: Math.random().toString(36).slice(2) + Date.now().toString(36);
-	}
-
-	async function uploadFile(file, targetPath) {
-		if (file.size <= CHUNK_SIZE) {
-			const res = await apiFetch(
-				`/api/daemons/${daemonId}/files?path=${encodeURIComponent(targetPath)}`,
-				{
-					method: 'PUT',
-					body: file
-				}
-			);
-			if (!res.ok) {
-				const msg = await res.text();
-				throw new Error(msg ? `${file.name}: ${msg}` : `Upload failed for ${file.name}`);
-			}
-			return;
-		}
-		const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
-		const uploadId = generateUploadId();
-		uploadProgress = { ...uploadProgress, chunkCurrent: 0, chunkTotal: totalChunks };
-
-		for (let i = 0; i < totalChunks; i++) {
-			const start = i * CHUNK_SIZE;
-			const end = Math.min(start + CHUNK_SIZE, file.size);
-			const chunk = file.slice(start, end);
-			const params = new URLSearchParams({
-				path: targetPath,
-				upload_id: uploadId,
-				chunk_index: String(i),
-				total_chunks: String(totalChunks)
-			});
-			const res = await apiFetch(`/api/daemons/${daemonId}/files?${params}`, {
-				method: 'PUT',
-				body: chunk
-			});
-			if (!res.ok) {
-				const msg = await res.text();
-				throw new Error(
-					msg ? `${file.name}: ${msg}` : `Chunk ${i + 1}/${totalChunks} failed for ${file.name}`
-				);
-			}
-			uploadProgress = { ...uploadProgress, chunkCurrent: i + 1 };
-		}
+	// The transfer mechanics live in $lib/upload.js; here we just thread the
+	// per-chunk progress back into the reactive UI state.
+	function uploadFile(file, targetPath) {
+		return uploadOneFile({
+			apiFetch,
+			daemonId,
+			file,
+			targetPath,
+			onChunk: (done, total) =>
+				(uploadProgress = { ...uploadProgress, chunkCurrent: done, chunkTotal: total })
+		});
 	}
 
 	async function uploadFiles(files) {
@@ -507,7 +406,6 @@
 	// isn't leaked for the tab's lifetime on client navigation.
 	onDestroy(() => {
 		if (previewType === 'image' && previewContent) URL.revokeObjectURL(previewContent);
-		clearTimeout(toastTimeout);
 	});
 
 	// ---- Preview modal -------------------------------------------------
@@ -553,7 +451,7 @@
 			const url = `/api/daemons/${daemonId}/files?path=${encodeURIComponent(fullPath)}&download=1`;
 			const res = await apiFetch(url);
 			if (!res.ok) throw new Error(await res.text());
-			if (IMAGE_EXTS.has(ext)) {
+			if (isImageExt(ext)) {
 				previewContent = URL.createObjectURL(await res.blob());
 				previewType = 'image';
 			} else {
@@ -622,26 +520,10 @@
 		fileView = v;
 	}
 
-	function formatSize(bytes) {
-		if (bytes === 0) return '0 B';
-		const k = 1024;
-		const units = ['B', 'KB', 'MB', 'GB'];
-		let i = 0;
-		let n = bytes;
-		while (n >= k && i < units.length - 1) {
-			n /= k;
-			i += 1;
-		}
-		return (i === 0 ? n : n.toFixed(1)) + ' ' + units[i];
-	}
-
-	// Friendly modified date (e.g. "Mar 3, 2026"); the raw ISO stays in a
-	// title tooltip. Falls back to the raw string if it can't be parsed.
+	// Friendly modified date (e.g. "Mar 3, 2026"); the raw ISO stays in a title
+	// tooltip. Em dash for no date; the raw string if it can't be parsed.
 	function formatMtime(iso) {
-		if (!iso) return '—';
-		const d = new Date(iso);
-		if (isNaN(d.getTime())) return iso;
-		return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+		return iso ? formatDate(iso) || iso : '—';
 	}
 
 	// ---- Delete (single + bulk) via themed ConfirmDialog ---------------
@@ -1001,7 +883,7 @@
 									>
 								</td>
 								<td class="col-size num" data-label="size"
-									>{entry.is_dir ? '—' : formatSize(entry.size)}</td
+									>{entry.is_dir ? '—' : formatBytes(entry.size)}</td
 								>
 								<td class="col-mtime num" data-label="modified" title={entry.mtime || ''}
 									>{formatMtime(entry.mtime)}</td
@@ -1138,7 +1020,7 @@
 										><FileIcon name={entry.name} is_dir={entry.is_dir} size={30} /></span
 									>
 									<span class="tile__name">{entry.name}{entry.is_dir ? '/' : ''}</span>
-									<span class="tile__size num">{entry.is_dir ? '' : formatSize(entry.size)}</span>
+									<span class="tile__size num">{entry.is_dir ? '' : formatBytes(entry.size)}</span>
 								</button>
 							</div>
 						{/each}
@@ -1243,10 +1125,6 @@
 	on:select={onMenuSelect}
 	on:close={closeContextMenu}
 />
-
-{#if toast.show}
-	<div class="toast toast-{toast.type}" role="status" aria-live="polite">{toast.message}</div>
-{/if}
 
 <style>
 	.back-link {

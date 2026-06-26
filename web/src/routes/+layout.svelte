@@ -11,6 +11,7 @@
 	import Sidebar from '$lib/Sidebar.svelte';
 	import CommandPalette from '$lib/CommandPalette.svelte';
 	import ConfirmDialog from '$lib/ConfirmDialog.svelte';
+	import Toast from '$lib/Toast.svelte';
 	import '../app.css';
 
 	// Auth pages (login / register / register/totp) and the landing redirector
@@ -254,6 +255,9 @@
 <!-- Single shared delete-confirmation dialog for every route (dashboard +
      file browser call confirmDelete() from $lib/ConfirmDialog.svelte). -->
 <ConfirmDialog />
+
+<!-- Single shared toast surface; routes call showToast() from $lib/toast.js. -->
+<Toast />
 
 <style>
 	.logout-btn {
