@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- The mobile host menu now closes when you tap its hamburger button a second
+  time, not only when tapping outside it.
+
 ## [0.8.5] - 2026-06-26
 
 ### Fixed
