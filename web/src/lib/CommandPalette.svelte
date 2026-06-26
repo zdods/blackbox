@@ -23,7 +23,10 @@
 	let prevFocus = null;
 
 	// Build the flat, sectioned command list from live sources, then filter.
-	function buildItems(allHosts, pageObj, actions) {
+	// `_open` is unused but listing it makes the palette rebuild each time it
+	// opens, so contextual `when` predicates (file selection, current directory)
+	// are evaluated against current state rather than a stale snapshot.
+	function buildItems(allHosts, pageObj, actions, _open) {
 		const items = [];
 		const onHost = pageObj?.params?.id;
 
@@ -107,7 +110,7 @@
 	};
 	const GROUP_ORDER = ['hosts', 'navigate', 'actions', 'appearance'];
 
-	$: allItems = buildItems($hosts, $page, $paletteActions);
+	$: allItems = buildItems($hosts, $page, $paletteActions, open);
 
 	$: filtered = (() => {
 		const q = query.trim();
