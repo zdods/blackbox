@@ -678,6 +678,14 @@ select:focus-visible,
 		gap: var(--space-sm);
 	}
 
+	/* On the authed app shell the header carries the hamburger, ⌘K, theme,
+	   avatar, and log out — too much for the wordmark, which would ellipsize to
+	   a meaningless sliver. Show just the face logo there. Auth pages (no
+	   --compact modifier) keep the full wordmark; they have the room. */
+	.app-header__brand--compact .app-header__wordmark {
+		display: none;
+	}
+
 	.app-main {
 		padding: var(--space-lg) var(--space-md) var(--space-xl);
 		padding-left: max(var(--space-md), var(--safe-left));

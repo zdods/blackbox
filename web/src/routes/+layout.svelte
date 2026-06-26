@@ -177,9 +177,13 @@
 					<span aria-hidden="true">☰</span>
 				</button>
 			{/if}
-			<a class="app-header__brand" href={authed ? '/dashboard' : '/'}>
+			<a
+				class="app-header__brand"
+				class:app-header__brand--compact={shellActive}
+				href={authed ? '/dashboard' : '/'}
+			>
 				<Face state="ok" />
-				<span>blackhaul</span>
+				<span class="app-header__wordmark">blackhaul</span>
 			</a>
 		</div>
 		<div class="app-header__actions">

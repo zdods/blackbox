@@ -85,7 +85,9 @@ test('file browser adapts columns to the viewport', async ({ page }) => {
 	const viewport = page.viewportSize();
 	// The modified date for notes.txt — rendered in the table's mtime column on
 	// desktop, and inline as a card meta field on mobile (the same td.col-mtime).
-	const mtimeCell = page.locator('td.col-mtime', { hasText: '2026-02-02T10:30:00Z' });
+	// The visible text is a friendly date ("Feb 2, 2026"); the raw ISO lives in
+	// the title attribute, which we match on (locale-independent).
+	const mtimeCell = page.locator('td.col-mtime[title="2026-02-02T10:30:00Z"]');
 	if (isMobile(viewport)) {
 		// The modified-column header collapses on small screens, but the date
 		// itself survives as the mobile card's inline meta field.

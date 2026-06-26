@@ -1,5 +1,10 @@
 <script>
 	import { theme, setTheme, THEMES } from '$lib/theme.js';
+
+	// On mobile the picker collapses to a single glyph (the native <select> still
+	// drives selection underneath). The glyph reflects the current theme.
+	const GLYPHS = { system: '◐', light: '○', dark: '●', nord: '◆' };
+	$: glyph = GLYPHS[$theme] || '◐';
 </script>
 
 <label class="theme-select">
@@ -13,10 +18,14 @@
 			<option value={t.value}>{t.label}</option>
 		{/each}
 	</select>
+	<!-- Painted over the select on mobile (after it in the DOM so it stacks on
+	     top); pointer-events: none keeps the native picker tappable. -->
+	<span class="theme-select__glyph" aria-hidden="true">{glyph}</span>
 </label>
 
 <style>
 	.theme-select {
+		position: relative;
 		display: inline-flex;
 		align-items: center;
 		gap: 0.5rem;
@@ -26,6 +35,10 @@
 		letter-spacing: 0.08em;
 		text-transform: uppercase;
 		color: var(--text-faint);
+	}
+	/* The glyph only stands in for the picker on mobile (see the media query). */
+	.theme-select__glyph {
+		display: none;
 	}
 	select {
 		appearance: none;
@@ -60,9 +73,29 @@
 		.theme-select__label {
 			display: none;
 		}
-		/* Trim the picker so the brand wordmark keeps its room on small phones. */
+		/* Collapse the picker to an icon: the <select> becomes a square tap
+		   target with its label text and caret hidden, and the glyph is painted
+		   on top (pointer-events: none so taps still reach the native picker). */
+		.theme-select__glyph {
+			display: grid;
+			place-items: center;
+			position: absolute;
+			inset: 0;
+			pointer-events: none;
+			font-size: 0.95rem;
+			color: var(--text-muted);
+		}
 		select {
-			padding: 0.25rem 1.2rem 0.25rem 0.5rem;
+			width: var(--touch-min);
+			min-height: var(--touch-min);
+			padding: 0;
+			color: transparent;
+			background-image: none;
+			text-align: center;
+		}
+		.theme-select:hover .theme-select__glyph,
+		select:focus-visible + .theme-select__glyph {
+			color: var(--text);
 		}
 	}
 
