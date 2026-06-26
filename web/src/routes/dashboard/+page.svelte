@@ -7,7 +7,6 @@
 	import { confirmDelete } from '$lib/ConfirmDialog.svelte';
 	import Face from '$lib/Face.svelte';
 	import Skeleton from '$lib/Skeleton.svelte';
-	import PasskeysSection from '$lib/PasskeysSection.svelte';
 
 	// Host roster + live status come from the shared store (the layout owns the
 	// 8s poll on this route — no local setInterval here, else we'd double-poll).
@@ -379,8 +378,6 @@
 			</p>
 		</form>
 	</section>
-
-	<PasskeysSection />
 {/if}
 
 {#if toast.show}

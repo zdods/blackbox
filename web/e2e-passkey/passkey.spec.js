@@ -37,7 +37,10 @@ test('register, discoverable login, enroll, remove, last-passkey guard', async (
 	expect(creds.credentials.length).toBe(1);
 	expect(creds.credentials[0].isResidentCredential).toBe(true);
 
-	// The dashboard lists the one enrolled passkey.
+	// Passkey management lives on the account screen. It lists the one enrolled
+	// passkey.
+	await page.goto('/account');
+	await expect(page.getByRole('heading', { name: 'passkeys' })).toBeVisible();
 	await expect(page.locator('.passkeys__item')).toHaveCount(1);
 
 	// --- logout revokes the session ---
@@ -48,6 +51,10 @@ test('register, discoverable login, enroll, remove, last-passkey guard', async (
 	await page.getByRole('button', { name: 'sign in with passkey' }).click();
 	await page.waitForURL('**/dashboard');
 	await expect(page.getByRole('heading', { name: 'hosts', exact: true })).toBeVisible();
+
+	// Back to the account screen to manage passkeys.
+	await page.goto('/account');
+	await expect(page.getByRole('heading', { name: 'passkeys' })).toBeVisible();
 
 	// --- enroll a second passkey while authenticated ---
 	// A real second passkey lives on a different device. The enroll ceremony

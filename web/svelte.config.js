@@ -22,7 +22,10 @@ const config = {
 				'default-src': ['self'],
 				'script-src': ['self'],
 				'style-src': ['self', 'unsafe-inline'],
-				'img-src': ['self', 'blob:', 'data:'],
+				// www.gravatar.com is allowed so the account screen can render the
+				// user's Gravatar avatar (opt-in — only fetched once an email is
+				// set; Gravatar receives only a one-way SHA-256 hash of it).
+				'img-src': ['self', 'blob:', 'data:', 'https://www.gravatar.com'],
 				'font-src': ['self'],
 				'connect-src': ['self'],
 				'object-src': ['none'],
