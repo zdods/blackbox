@@ -636,15 +636,28 @@
 		.page-header__cta {
 			min-height: var(--touch-min);
 		}
+		/* Even 2x2 stat grid instead of the lopsided 2+1+1 the flex-wrap
+		   produced at narrow widths. The disk tile spans nothing special — its
+		   label just wraps rather than ellipsizing so the totals stay readable. */
+		.overview {
+			display: grid;
+			grid-template-columns: 1fr 1fr;
+			gap: var(--space-sm);
+		}
+		.overview__stat--disk .overview__label {
+			white-space: normal;
+		}
 		.host-card {
 			padding: var(--space-md);
 		}
 		.host-card__main {
 			flex-wrap: wrap;
 		}
+		/* Left-align the trailing actions under the host name instead of letting
+		   them float right against an empty gutter. */
 		.host-card__actions {
 			width: 100%;
-			justify-content: flex-end;
+			justify-content: flex-start;
 			gap: var(--space-sm);
 		}
 		.host-card__actions .quiet {

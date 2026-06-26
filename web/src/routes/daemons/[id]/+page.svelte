@@ -635,6 +635,15 @@
 		return (i === 0 ? n : n.toFixed(1)) + ' ' + units[i];
 	}
 
+	// Friendly modified date (e.g. "Mar 3, 2026"); the raw ISO stays in a
+	// title tooltip. Falls back to the raw string if it can't be parsed.
+	function formatMtime(iso) {
+		if (!iso) return '—';
+		const d = new Date(iso);
+		if (isNaN(d.getTime())) return iso;
+		return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+	}
+
 	// ---- Delete (single + bulk) via themed ConfirmDialog ---------------
 	async function deleteEntry(entry) {
 		const fullPath = fullPathOf(entry);
@@ -994,7 +1003,9 @@
 								<td class="col-size num" data-label="size"
 									>{entry.is_dir ? '—' : formatSize(entry.size)}</td
 								>
-								<td class="col-mtime num" data-label="modified">{entry.mtime || '—'}</td>
+								<td class="col-mtime num" data-label="modified" title={entry.mtime || ''}
+									>{formatMtime(entry.mtime)}</td
+								>
 								<td class="col-actions">
 									{#if !entry.is_dir}
 										<button
@@ -1883,14 +1894,16 @@
 			display: block;
 			width: 100%;
 		}
+		/* Two-line card: name on top, a single "size · date" meta line below.
+		   The checkbox and actions top-align with the name (align-items: start)
+		   instead of floating centered across the whole card. */
 		.file-list tbody tr.file-row {
 			display: grid;
-			grid-template-columns: var(--touch-min) 1fr auto;
+			grid-template-columns: var(--touch-min) auto 1fr auto;
 			grid-template-areas:
-				'select name actions'
-				'select size actions'
-				'select mtime actions';
-			align-items: center;
+				'select name name actions'
+				'select size mtime actions';
+			align-items: start;
 			gap: 0 var(--space-sm);
 			margin-bottom: var(--space-sm);
 			padding: var(--space-xs);
@@ -1943,9 +1956,17 @@
 		}
 		.file-list td.col-size {
 			grid-area: size;
+			padding-top: 2px;
 		}
 		.file-list td.col-mtime {
 			grid-area: mtime;
+			padding-top: 2px;
+		}
+		/* "size · date" reads as one meta line. */
+		.file-list td.col-mtime::before {
+			content: '·';
+			margin-right: 0.4rem;
+			color: var(--text-faint);
 		}
 		.file-list td.col-actions {
 			grid-area: actions;

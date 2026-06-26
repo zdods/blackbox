@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Mobile console polish.** On phones the app header now shows just the
+  `[▪‿▪]` logo (the wordmark was getting truncated) and a compact icon-only
+  theme switcher, so the hosts/files/account screens no longer crowd the top
+  bar. File-browser rows are tidier (the modified date is now a friendly
+  `Mar 3, 2026` with the full timestamp on hover, paired with the size on one
+  line, and the checkbox aligns with the file name), and the dashboard's
+  overview stats sit in an even 2×2 grid.
+
 ## [0.8.2] - 2026-06-26
 
 ### Added
