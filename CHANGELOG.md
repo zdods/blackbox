@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.4] - 2026-06-26
+
 ### Fixed
 
 - The file browser now shows sizes of 1 TB and up in **TB** (e.g. `5.0 TB`)
@@ -371,7 +373,8 @@ console.
 - Compose binds Postgres to `127.0.0.1`; bastion container runs as
   non-root.
 
-[Unreleased]: https://github.com/zdods/blackhaul/compare/v0.8.3...HEAD
+[Unreleased]: https://github.com/zdods/blackhaul/compare/v0.8.4...HEAD
+[0.8.4]: https://github.com/zdods/blackhaul/compare/v0.8.3...v0.8.4
 [0.8.3]: https://github.com/zdods/blackhaul/compare/v0.8.2...v0.8.3
 [0.8.2]: https://github.com/zdods/blackhaul/compare/v0.8.1...v0.8.2
 [0.8.1]: https://github.com/zdods/blackhaul/compare/v0.8.0...v0.8.1
