@@ -4,7 +4,9 @@
 	import { onDestroy, tick } from 'svelte';
 	import { isLoggedIn, clearLoggedIn, apiFetch } from '$lib/auth.js';
 	import { start as startHosts, stop as stopHosts } from '$lib/hosts.js';
+	import { account, loadAccount, clearAccount } from '$lib/account.js';
 	import Face from '$lib/Face.svelte';
+	import Avatar from '$lib/Avatar.svelte';
 	import ThemeSelect from '$lib/ThemeSelect.svelte';
 	import Sidebar from '$lib/Sidebar.svelte';
 	import CommandPalette from '$lib/CommandPalette.svelte';
@@ -65,6 +67,8 @@
 		if (active && !polling) {
 			polling = true;
 			startHosts();
+			// Lazily hydrate the account profile so the header avatar can render.
+			if (!$account) loadAccount().catch(() => {});
 		} else if (!active && polling) {
 			polling = false;
 			stopHosts();
@@ -82,6 +86,7 @@
 			await apiFetch('/api/logout', { method: 'POST' });
 		} catch (_) {}
 		clearLoggedIn();
+		clearAccount();
 		goto('/login');
 	}
 
@@ -190,6 +195,16 @@
 				</button>
 			{/if}
 			<ThemeSelect />
+			{#if shellActive}
+				<a
+					class="app-header__account"
+					href="/account"
+					aria-label="account settings"
+					aria-current={$page.url.pathname === '/account' ? 'page' : undefined}
+				>
+					<Avatar email={$account?.email ?? ''} username={$account?.username ?? ''} size={28} />
+				</a>
+			{/if}
 			{#if authed}
 				<button type="button" class="secondary logout-btn" on:click={logout}>log out</button>
 			{/if}
@@ -242,6 +257,22 @@
 		padding: 0 var(--space-md);
 		font-size: var(--fs-xs);
 		white-space: nowrap;
+	}
+
+	.app-header__account {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		padding: 2px;
+		border-radius: 50%;
+		border: 1px solid transparent;
+		flex-shrink: 0;
+	}
+	.app-header__account:hover {
+		border-color: var(--border-strong);
+	}
+	.app-header__account[aria-current='page'] {
+		border-color: var(--accent);
 	}
 
 	.app-header__hamburger {

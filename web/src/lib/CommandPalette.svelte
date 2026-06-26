@@ -44,6 +44,12 @@
 			label: 'Dashboard',
 			run: () => goto('/dashboard')
 		});
+		items.push({
+			group: 'navigate',
+			id: 'nav:account',
+			label: 'Account settings',
+			run: () => goto('/account')
+		});
 		if (onHost) {
 			items.push({
 				group: 'navigate',

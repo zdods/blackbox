@@ -12,6 +12,7 @@ import (
 type User struct {
 	ID           string
 	Username     string
+	Email        string
 	PasswordHash string
 	TotpSecret   string
 	TokenVersion int
@@ -86,9 +87,9 @@ func HasAnyUser(ctx context.Context, pool *pgxpool.Pool) (bool, error) {
 func GetUserByUsername(ctx context.Context, pool *pgxpool.Pool, username string) (*User, error) {
 	var u User
 	err := pool.QueryRow(ctx,
-		`SELECT id, username, COALESCE(password_hash, ''), COALESCE(totp_secret, ''), token_version FROM users WHERE username = $1`,
+		`SELECT id, username, COALESCE(email, ''), COALESCE(password_hash, ''), COALESCE(totp_secret, ''), token_version FROM users WHERE username = $1`,
 		username,
-	).Scan(&u.ID, &u.Username, &u.PasswordHash, &u.TotpSecret, &u.TokenVersion)
+	).Scan(&u.ID, &u.Username, &u.Email, &u.PasswordHash, &u.TotpSecret, &u.TokenVersion)
 	if err != nil {
 		return nil, err
 	}
@@ -98,9 +99,9 @@ func GetUserByUsername(ctx context.Context, pool *pgxpool.Pool, username string)
 func GetUserByID(ctx context.Context, pool *pgxpool.Pool, userID string) (*User, error) {
 	var u User
 	err := pool.QueryRow(ctx,
-		`SELECT id, username, COALESCE(password_hash, ''), COALESCE(totp_secret, ''), token_version FROM users WHERE id = $1`,
+		`SELECT id, username, COALESCE(email, ''), COALESCE(password_hash, ''), COALESCE(totp_secret, ''), token_version FROM users WHERE id = $1`,
 		userID,
-	).Scan(&u.ID, &u.Username, &u.PasswordHash, &u.TotpSecret, &u.TokenVersion)
+	).Scan(&u.ID, &u.Username, &u.Email, &u.PasswordHash, &u.TotpSecret, &u.TokenVersion)
 	if err != nil {
 		return nil, err
 	}
