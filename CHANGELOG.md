@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Account settings screen.** A new **account** page (reachable from the avatar
+  in the header or the command palette) gathers everything about your account in
+  one place. It lets you change your password — setting a new one signs out every
+  other session — and, for passkey-only accounts, set a password to enable
+  password sign-in as well. You can also set an optional email used to show your
+  [Gravatar](https://gravatar.com) avatar in the header and on the account page
+  (only a one-way SHA-256 hash of the address is ever sent to Gravatar; leave it
+  blank for a monogram).
+
+### Changed
+
+- **Passkey management moved off the dashboard** onto the new account settings
+  screen, where it sits alongside the password controls.
+
 ## [0.8.0] - 2026-06-26
 
 ### Added
