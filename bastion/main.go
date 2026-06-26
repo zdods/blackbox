@@ -13,6 +13,7 @@ import (
 
 	"blackhaul/pkg/version"
 
+	"github.com/go-webauthn/webauthn/webauthn"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -21,11 +22,13 @@ type Server struct {
 	cfg              Config
 	hub              *Hub
 	totpCache        *TotpSetupCache
-	authLimiter      *RateLimiter  // per-IP gate on auth endpoints
-	loginFailLimiter *RateLimiter  // per-account gate on failed passwords
-	totpFailLimiter  *RateLimiter  // per-user lockout on failed TOTP codes
-	totpKey          []byte        // TOTP-secret encryption key (nil = disabled)
-	transferSem      chan struct{} // bounds concurrent file uploads/downloads
+	authLimiter      *RateLimiter          // per-IP gate on auth endpoints
+	loginFailLimiter *RateLimiter          // per-account gate on failed passwords
+	totpFailLimiter  *RateLimiter          // per-user lockout on failed TOTP codes
+	totpKey          []byte                // TOTP-secret encryption key (nil = disabled)
+	transferSem      chan struct{}         // bounds concurrent file uploads/downloads
+	webAuthn         *webauthn.WebAuthn    // nil when RP_ID unset (passkeys disabled)
+	passkeyCache     *WebAuthnSessionCache // in-progress WebAuthn ceremony state
 }
 
 func main() {
@@ -55,6 +58,27 @@ func main() {
 	if totpKey == nil {
 		slog.Warn("TOTP secrets stored in plaintext — set JWT_SECRET (or TOTP_ENC_KEY) to encrypt them at rest")
 	}
+	switch cfg.AuthMode {
+	case authModePassword, authModePasskey, authModeBoth:
+	default:
+		slog.Error("invalid AUTH_MODE (want \"password\", \"passkey\", or \"both\")", "value", cfg.AuthMode)
+		os.Exit(1)
+	}
+	if cfg.AuthMode == authModePasskey && cfg.RPID == "" {
+		slog.Error("AUTH_MODE=passkey requires RP_ID (the WebAuthn relying-party domain)")
+		os.Exit(1)
+	}
+	if cfg.AuthMode == authModeBoth && cfg.RPID == "" {
+		slog.Warn("AUTH_MODE=both but RP_ID is unset — passkeys disabled, password sign-in only")
+	}
+	webAuthn, err := newWebAuthn(cfg)
+	if err != nil {
+		slog.Error("webauthn init", "err", err)
+		os.Exit(1)
+	}
+	if webAuthn != nil {
+		slog.Info("passkeys enabled", "rp_id", cfg.RPID, "rp_origins", cfg.RPOrigins, "auth_mode", cfg.AuthMode)
+	}
 	ctx := context.Background()
 	pool, err := OpenDB(ctx, cfg.DatabaseURL)
 	if err != nil {
@@ -83,6 +107,8 @@ func main() {
 		totpFailLimiter:  NewRateLimiter(5, 15*time.Minute),
 		totpKey:          totpKey,
 		transferSem:      make(chan struct{}, maxConcurrentTransfers),
+		webAuthn:         webAuthn,
+		passkeyCache:     NewWebAuthnSessionCache(),
 	}
 	httpServer := &http.Server{Addr: cfg.ServerAddr, Handler: srv.routes()}
 	go func() {
@@ -124,6 +150,16 @@ func (s *Server) routes() http.Handler {
 	mux.HandleFunc("POST /api/login", s.Login)
 	mux.HandleFunc("POST /api/login/totp", s.LoginTOTP)
 	mux.HandleFunc("POST /api/logout", s.AuthMiddleware(s.Logout))
+	// Passkey auth (public; live only when AUTH_MODE=passkey and RP_ID is set)
+	mux.HandleFunc("POST /api/passkey/login/begin", s.PasskeyLoginBegin)
+	mux.HandleFunc("POST /api/passkey/login/finish", s.PasskeyLoginFinish)
+	mux.HandleFunc("POST /api/passkey/register/begin", s.PasskeyRegisterBegin)
+	mux.HandleFunc("POST /api/passkey/register/finish", s.PasskeyRegisterFinish)
+	// Passkey enrollment + management (authenticated; available in both modes)
+	mux.HandleFunc("GET /api/passkeys", s.AuthMiddleware(s.ListPasskeys))
+	mux.HandleFunc("POST /api/passkeys/enroll/begin", s.AuthMiddleware(s.PasskeyEnrollBegin))
+	mux.HandleFunc("POST /api/passkeys/enroll/finish", s.AuthMiddleware(s.PasskeyEnrollFinish))
+	mux.HandleFunc("DELETE /api/passkeys/{id}", s.AuthMiddleware(s.DeletePasskey))
 	// Protected
 	mux.HandleFunc("GET /api/me", s.AuthMiddleware(s.Me))
 	mux.HandleFunc("GET /api/daemons", s.AuthMiddleware(s.ListDaemons))

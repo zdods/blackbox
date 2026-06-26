@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Passkey (WebAuthn) authentication.** A new `AUTH_MODE` selects which sign-in
+  methods are offered: `password` (the existing username + password + TOTP,
+  default), `passkey` (usernameless, discoverable WebAuthn login), or `both`
+  (passkey **and** password+TOTP shown side by side on the login and register
+  screens). Configure the relying party with `RP_ID` (your domain), optional
+  `RP_ORIGINS` (defaults to `https://<RP_ID>`), and `RP_DISPLAY_NAME`. Passkey
+  enrollment and management live in the dashboard and work in every mode, so an
+  existing password+TOTP user can add a passkey and then switch to `passkey` or
+  `both`. Multiple passkeys are supported; the last remaining passkey can't be
+  removed when it's the only way to sign in.
+
 ## [0.7.4] - 2026-06-22
 
 ### Changed

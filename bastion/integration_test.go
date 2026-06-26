@@ -87,13 +87,14 @@ func newTestServer(t *testing.T) (*Server, *httptest.Server) {
 	}
 	srv := &Server{
 		pool:             pool,
-		cfg:              Config{JWTSecret: testJWTSecret},
+		cfg:              Config{JWTSecret: testJWTSecret, AuthMode: authModePassword},
 		hub:              NewHub(),
 		totpCache:        NewTotpSetupCache(),
 		authLimiter:      NewRateLimiter(10, time.Minute),
 		loginFailLimiter: NewRateLimiter(5, 15*time.Minute),
 		totpFailLimiter:  NewRateLimiter(5, 15*time.Minute),
 		transferSem:      make(chan struct{}, maxConcurrentTransfers),
+		passkeyCache:     NewWebAuthnSessionCache(),
 	}
 	ts := httptest.NewServer(srv.routes())
 	t.Cleanup(func() {
@@ -401,7 +402,7 @@ func TestIntegrationRegistrationFlow(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if open := decodeJSON[map[string]bool](t, resp); !open["registration_open"] {
+	if open := decodeJSON[map[string]any](t, resp); open["registration_open"] != true {
 		t.Fatal("fresh instance should have registration open")
 	}
 
@@ -411,7 +412,7 @@ func TestIntegrationRegistrationFlow(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if open := decodeJSON[map[string]bool](t, resp); open["registration_open"] {
+	if open := decodeJSON[map[string]any](t, resp); open["registration_open"] == true {
 		t.Fatal("registration must close after the first user")
 	}
 

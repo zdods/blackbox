@@ -2,6 +2,7 @@
 	import { onMount, tick } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { isLoggedIn, setLoggedIn } from '$lib/auth.js';
+	import { passkeyLogin } from '$lib/passkey.js';
 	import Face from '$lib/Face.svelte';
 
 	let username = '';
@@ -14,6 +15,9 @@
 	let loginToken = '';
 	let step = 'password'; // 'password' | 'totp'
 	let showPassword = false;
+	// Which sign-in methods to offer (server-driven; both may be true in "both" mode).
+	let passwordAuth = true;
+	let passkeyAuth = false;
 
 	// Field-level invalid flags (cleared on edit / step change).
 	let userInvalid = false;
@@ -34,6 +38,8 @@
 			if (res.ok) {
 				const data = await res.json();
 				registrationOpen = data.registration_open === true;
+				passwordAuth = data.password_enabled === true;
+				passkeyAuth = data.passkey_enabled === true;
 				if (registrationOpen) {
 					goto('/register');
 					return;
@@ -44,8 +50,22 @@
 		}
 		setupLoading = false;
 		await tick();
-		if (usernameInput) usernameInput.focus();
+		if (passwordAuth && usernameInput) usernameInput.focus();
 	});
+
+	async function handlePasskeyLogin() {
+		error = '';
+		loading = true;
+		try {
+			await passkeyLogin();
+			setLoggedIn();
+			goto('/dashboard');
+		} catch (e) {
+			error = e?.message || 'Passkey sign-in failed';
+		} finally {
+			loading = false;
+		}
+	}
 
 	async function handleSubmit(e) {
 		e.preventDefault();
@@ -184,63 +204,79 @@
 		</form>
 	{:else}
 		<header class="auth-head">
-			<p class="microlabel auth-step">step 1 of 2 · sign in</p>
+			<p class="microlabel auth-step">sign in</p>
 		</header>
 		<h1 class="page-title">log in</h1>
 		<p class="page-sub">Welcome back.</p>
-		<form method="post" action="/login" on:submit={handleSubmit} class="auth-form">
-			<div class="form-row">
-				<label class="field-label" for="username">username</label>
-				<input
-					id="username"
-					name="username"
-					type="text"
-					autocomplete="username"
-					autocapitalize="none"
-					spellcheck="false"
-					class:input--invalid={userInvalid}
-					aria-invalid={userInvalid}
-					bind:this={usernameInput}
-					bind:value={username}
-					on:input={() => (userInvalid = false)}
-					placeholder="your-username"
-					required
-				/>
+
+		{#if error}
+			<p class="error" id="auth-error" role="alert"><Face state="error" /> {error}</p>
+		{/if}
+
+		{#if passkeyAuth}
+			<div class="auth-form">
+				<button type="button" class="primary" on:click={handlePasskeyLogin} disabled={loading}>
+					{loading ? 'waiting for passkey…' : 'sign in with passkey'}
+				</button>
 			</div>
-			<div class="form-row">
-				<label class="field-label" for="password">password</label>
-				<div class="auth-pass" class:auth-pass--invalid={passInvalid}>
+		{/if}
+
+		{#if passkeyAuth && passwordAuth}
+			<div class="auth-or" aria-hidden="true"><span>or</span></div>
+		{/if}
+
+		{#if passwordAuth}
+			<form method="post" action="/login" on:submit={handleSubmit} class="auth-form">
+				<div class="form-row">
+					<label class="field-label" for="username">username</label>
 					<input
-						id="password"
-						name="password"
-						type={showPassword ? 'text' : 'password'}
-						autocomplete="current-password"
-						class="auth-pass__input"
-						class:input--invalid={passInvalid}
-						aria-invalid={passInvalid}
-						bind:value={password}
-						on:input={() => (passInvalid = false)}
-						placeholder="••••••••"
+						id="username"
+						name="username"
+						type="text"
+						autocomplete="username"
+						autocapitalize="none"
+						spellcheck="false"
+						class:input--invalid={userInvalid}
+						aria-invalid={userInvalid}
+						bind:this={usernameInput}
+						bind:value={username}
+						on:input={() => (userInvalid = false)}
+						placeholder="your-username"
 						required
 					/>
-					<button
-						type="button"
-						class="auth-pass__toggle"
-						aria-pressed={showPassword}
-						aria-label={showPassword ? 'hide password' : 'show password'}
-						on:click={() => (showPassword = !showPassword)}
-					>
-						{showPassword ? 'hide' : 'show'}
-					</button>
 				</div>
-			</div>
-			{#if error}
-				<p class="error" id="auth-error" role="alert"><Face state="error" /> {error}</p>
-			{/if}
-			<button type="submit" class="primary" disabled={loading || !username.trim() || !password}
-				>{loading ? 'logging in…' : 'log in'}</button
-			>
-		</form>
+				<div class="form-row">
+					<label class="field-label" for="password">password</label>
+					<div class="auth-pass" class:auth-pass--invalid={passInvalid}>
+						<input
+							id="password"
+							name="password"
+							type={showPassword ? 'text' : 'password'}
+							autocomplete="current-password"
+							class="auth-pass__input"
+							class:input--invalid={passInvalid}
+							aria-invalid={passInvalid}
+							bind:value={password}
+							on:input={() => (passInvalid = false)}
+							placeholder="••••••••"
+							required
+						/>
+						<button
+							type="button"
+							class="auth-pass__toggle"
+							aria-pressed={showPassword}
+							aria-label={showPassword ? 'hide password' : 'show password'}
+							on:click={() => (showPassword = !showPassword)}
+						>
+							{showPassword ? 'hide' : 'show'}
+						</button>
+					</div>
+				</div>
+				<button type="submit" class="primary" disabled={loading || !username.trim() || !password}
+					>{loading ? 'logging in…' : 'log in'}</button
+				>
+			</form>
+		{/if}
 		{#if !setupLoading && registrationOpen}
 			<p class="muted auth-footnote"><a href="/register">register</a> (one-time setup)</p>
 		{/if}
@@ -293,6 +329,25 @@
 	}
 	.auth-footnote {
 		margin: var(--space-lg) 0 0;
+	}
+
+	/* "or" divider between the passkey and password sign-in options. */
+	.auth-or {
+		display: flex;
+		align-items: center;
+		gap: var(--space-sm);
+		margin: var(--space-lg) 0;
+		color: var(--text-faint);
+		font-size: var(--fs-xs);
+		text-transform: uppercase;
+		letter-spacing: 0.1em;
+	}
+	.auth-or::before,
+	.auth-or::after {
+		content: '';
+		flex: 1;
+		height: 1px;
+		background: var(--border);
 	}
 
 	/* Field-level error state: accent the border with --err. */
