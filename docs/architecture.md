@@ -50,18 +50,33 @@ dial `wss://`. See [deployment.md](deployment.md).
 ## Auth and sessions (the console user)
 
 There is exactly one user account. Registration is a one-time setup
-(`GET /api/setup` reports whether a user exists; the `/register` flow is gated
-on there being none).
+(`GET /api/setup` reports whether a user exists and which sign-in methods are
+offered; the `/register` flow is gated on there being none).
 
-- Password is hashed with **bcrypt**; **TOTP (2FA) is mandatory** and enrolled
-  during registration.
-- Login is two steps: `POST /api/login` (password) then
-  `POST /api/login/totp` (code). On success the bastion issues a **JWT carried
-  only in an httpOnly cookie** — never in a response body, never in
-  localStorage.
+`AUTH_MODE` selects the sign-in methods: `password` (the default), `passkey`,
+or `both`. Either factor yields the **same session** — a JWT in an httpOnly
+cookie.
+
+- **Password + TOTP.** The password is hashed with **bcrypt**; **TOTP (2FA) is
+  mandatory** for password accounts and enrolled during registration. Login is
+  two steps: `POST /api/login` (password) then `POST /api/login/totp` (code).
+- **Passkeys (WebAuthn).** When `AUTH_MODE` is `passkey`/`both` and a relying
+  party is configured (`RP_ID`, `RP_ORIGINS`), the bastion runs WebAuthn
+  ceremonies (`/api/passkey/login/*`, `/api/passkey/register/*`) via
+  [`go-webauthn`](https://github.com/go-webauthn/webauthn); login is
+  usernameless (discoverable credentials, user verification required).
+  Credentials live in `webauthn_credentials`. Passkey enrollment and management
+  (`/api/passkeys*`) are available in **every** mode, so a password account can
+  add a passkey and then switch modes; the last credential that's the only way
+  in can't be removed.
+- On success the bastion issues a **JWT carried only in an httpOnly cookie** —
+  never in a response body, never in localStorage.
 - Each JWT embeds the user's `token_version`. Logout bumps `token_version`,
-  which **revokes every outstanding session** at once. Every authenticated
-  request re-checks it.
+  which **revokes every outstanding session** at once; changing the password
+  bumps it too (re-issuing the current session). Every authenticated request
+  re-checks it.
+- The **Account** screen (`/api/account`, `/api/account/password`) manages the
+  profile email, password change/set, and passkeys.
 - Abuse controls: auth endpoints are rate-limited (10/min per IP); TOTP locks
   for 15 minutes after 5 failed codes. Behind a reverse proxy, set
   `TRUST_PROXY=1` so the limiter keys on `X-Forwarded-For`.
@@ -156,7 +171,8 @@ file listings**. Migrations run on boot via a small `schema_migrations` runner
 
 | Table | Columns |
 |-------|---------|
-| `users` | `id`, `username`, `password_hash`, `totp_secret`, `token_version`, `created_at` |
+| `users` | `id`, `username`, `email`, `password_hash` (nullable for passkey-only accounts), `totp_secret`, `token_version`, `created_at` |
+| `webauthn_credentials` | `id`, `user_id`, `credential_id`, `public_key`, `sign_count`, `transports`, `name`, `created_at`, `last_used_at` — one row per enrolled passkey |
 | `daemons` | `id`, `label`, `token_hash`, `hosted_path`, `created_at` |
 
 Because the database is tiny and content-free, backups are cheap and contain no
@@ -173,6 +189,8 @@ The bastion is configured entirely via environment variables (see
 | `SERVER_ADDR` | listen address (default `:8080`) |
 | `JWT_SECRET` | session signing key; if unset, an **ephemeral** random key is generated (secure, but sessions reset on restart). An explicit value must be **≥32 bytes** |
 | `TOTP_ENC_KEY` | base64 of 32 bytes used to encrypt TOTP secrets at rest; if unset, a key is derived from a stable `JWT_SECRET` |
+| `AUTH_MODE` | sign-in methods offered: `password` (default), `passkey`, or `both`. `passkey` requires `RP_ID`; `both` degrades to password-only if `RP_ID` is unset |
+| `RP_ID` / `RP_ORIGINS` / `RP_DISPLAY_NAME` | WebAuthn relying-party config for passkeys: registrable domain (no scheme/port), comma-separated allowed origins (default `https://<RP_ID>`), and the name authenticators show |
 | `STATIC_DIR` | directory to serve the console from |
 | `TLS_CERT_FILE` / `TLS_KEY_FILE` | terminate TLS in-process instead of at a proxy |
 | `COOKIE_SECURE` | force the `Secure` flag on the session cookie (TLS at a proxy) |
@@ -186,8 +204,10 @@ The bastion is configured entirely via environment variables (see
 - **No inbound ports on your hosts** — daemons dial out.
 - **No file content at rest on the server** — the bastion proxies bytes; it
   never writes them to disk or the database.
-- **Single user, mandatory 2FA, httpOnly-cookie sessions, revocable in bulk.**
-  TOTP secrets are encrypted at rest; sessions get a same-origin (CSRF) check.
+- **Single user; strong auth, httpOnly-cookie sessions, revocable in bulk.**
+  Password accounts require TOTP (2FA); passkey accounts authenticate with
+  phishing-resistant WebAuthn (user verification). TOTP secrets are encrypted at
+  rest; sessions get a same-origin (CSRF) check.
 - **Daemon tokens hashed at rest;** plaintext lives only in the host's `0600`
   config.
 - **Symlink-safe path containment at the daemon**, scoped to one hosted

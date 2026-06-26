@@ -7,7 +7,7 @@
 [![Image Build](https://github.com/zdods/blackhaul/actions/workflows/image.yml/badge.svg?branch=main)](https://github.com/zdods/blackhaul/actions/workflows/image.yml)
 [![Release](https://github.com/zdods/blackhaul/actions/workflows/release.yml/badge.svg)](https://github.com/zdods/blackhaul/releases/latest)
 
-Self-hosted, single-user cloud storage. Run a server, log in with username/password, and run daemons on your machines to expose directories. Browse, upload, and download from one place.
+Self-hosted, single-user cloud storage. Run a server, sign in with a passkey or username + password (with TOTP two-factor), and run daemons on your machines to expose directories. Browse, upload, and download from one place.
 
 **Requirements:** Go 1.25+, Node 22+ (for building blackhaul-console), Docker (optional), Postgres. The daemon can be built for Linux, macOS, and Windows.
 
@@ -23,7 +23,7 @@ Self-hosted, single-user cloud storage. Run a server, log in with username/passw
 
 ![file browser](./assets/console-file-browser.png)
 
-The **Hosts** view lists hosts and connection status; add a host with a label and the token is copied to your clipboard automatically (or shown if the browser blocks clipboard access). Open a host to browse **Files**, navigate directories, and upload, download, or delete. The console ships with light, dark, and Nord themes (follows your OS by default).
+The **Hosts** view lists hosts and connection status; add a host with a label and the token is copied to your clipboard automatically (or shown if the browser blocks clipboard access). Open a host to browse **Files**, navigate directories, and upload, download, or delete (including multi-select). An **Account** screen manages your sign-in credentials — add passkeys, change your password, and set an optional email for a [Gravatar](https://gravatar.com) avatar — and a **⌘K command palette** jumps to any host, screen, or action. The console ships with light, dark, and Nord themes (follows your OS by default).
 
 ## Quick start
 
@@ -48,6 +48,8 @@ Or use the Makefile / PowerShell script from the repo root:
 - Log in, add a host (label); the daemon token is copied to your clipboard automatically.
 
 For production, set `JWT_SECRET` (e.g. in `.env`; generate one with `openssl rand -base64 32`, **at least 32 bytes** or the server refuses to start). If unset, the server generates a random ephemeral secret at startup — secure by default, but all sessions reset on restart. Set `TOTP_ENC_KEY` to encrypt 2FA secrets at rest with a dedicated key, and `COOKIE_SECURE=1` when TLS terminates at a reverse proxy. Ports, Postgres credentials, and other options can be overridden via environment variables; see [.env.example](.env.example).
+
+By default, sign-in is username + password + TOTP. To enable **passkeys** (WebAuthn), set `AUTH_MODE=passkey` (usernameless passkey login) or `AUTH_MODE=both` (passkey **and** password shown side by side) along with `RP_ID` (your domain) and `RP_ORIGINS`. Passkey enrollment works in every mode from the **Account** screen, so you can add one while in password mode and switch later. See [.env.example](.env.example) and [docs/deployment.md](docs/deployment.md) for the full passkey configuration.
 
 ### 2. Run blackhaul-daemon (on each host)
 
@@ -216,7 +218,6 @@ Then use **https://** for the console and **wss://** for daemons, e.g. `--bastio
 - [ ] **Share links** — time-limited public download links, proxied through the bastion
 - [ ] Folder upload (entire directory trees)
 - [ ] Rename/move files and directories; create directories
-- [ ] Batch operations (multi-select delete, download, move)
 - [ ] File search across hosted directories
 - [ ] Live daemon status via WebSocket push instead of polling
 - [ ] Volumes — group multiple daemons into one logical volume, with files sharded across them
