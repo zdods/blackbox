@@ -1,12 +1,16 @@
 <script>
-	import { onMount, onDestroy } from 'svelte';
+	import { onMount, onDestroy, tick } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { isLoggedIn, clearLoggedIn, apiFetch } from '$lib/auth.js';
 	import { account, loadAccount } from '$lib/account.js';
+	import { registerActions } from '$lib/palette-actions.js';
 	import Avatar from '$lib/Avatar.svelte';
 	import Face from '$lib/Face.svelte';
 	import Skeleton from '$lib/Skeleton.svelte';
 	import PasskeysSection from '$lib/PasskeysSection.svelte';
+
+	let passkeysRef; // PasskeysSection instance, for the "Add a passkey" action
+	let unregisterActions = null;
 
 	let loading = true;
 	let loadError = '';
@@ -43,6 +47,45 @@
 		return false;
 	}
 
+	// ---- Command-palette actions --------------------------------------------
+	// Registered once the account capabilities have loaded (the password/passkey
+	// entries depend on them) and re-registered when they change. registerActions
+	// is idempotent on id, so re-running just refreshes the labels/predicates.
+	async function focusField(selector) {
+		await tick();
+		const el = document.querySelector(selector);
+		if (el) {
+			el.focus();
+			el.scrollIntoView({ block: 'center' });
+		}
+	}
+
+	function registerPaletteActions() {
+		const actions = [
+			{ id: 'acct-edit-email', label: 'Edit email', run: () => focusField('#email') }
+		];
+		if (passwordEnabled) {
+			actions.push({
+				id: 'acct-change-password',
+				label: hasPassword ? 'Change password' : 'Set password',
+				run: () => focusField(hasPassword ? '#current-password' : '#new-password')
+			});
+		}
+		if (passkeyEnabled) {
+			actions.push({
+				id: 'acct-add-passkey',
+				label: 'Add a passkey',
+				hint: 'this account',
+				run: () => passkeysRef?.enroll()
+			});
+		}
+		if (unregisterActions) unregisterActions();
+		unregisterActions = registerActions(actions);
+	}
+
+	// Capabilities arrive asynchronously; (re)register whenever they resolve.
+	$: if (acct) registerPaletteActions();
+
 	onMount(async () => {
 		if (!isLoggedIn()) {
 			goto('/login');
@@ -60,6 +103,7 @@
 
 	onDestroy(() => {
 		if (toastTimeout) clearTimeout(toastTimeout);
+		if (unregisterActions) unregisterActions();
 	});
 
 	function showToast(message, type = 'success', duration = 3000) {
@@ -282,7 +326,7 @@
 
 	<!-- Passkeys (only when a relying party is configured) -->
 	{#if passkeyEnabled}
-		<PasskeysSection />
+		<PasskeysSection bind:this={passkeysRef} />
 	{/if}
 {/if}
 

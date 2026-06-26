@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **More command-palette actions.** The ⌘K palette now covers the account screen
+  (**Edit email**, **Change/Set password**, **Add a passkey**) and adds **Refresh
+  files**, **Go up a directory**, and **Clear selection** to the file browser, so
+  it stays in step with the rest of the platform.
+
+### Fixed
+
+- The command palette now re-evaluates contextual actions each time it opens, so
+  selection- and directory-dependent entries (e.g. **Download selected**, **Go up
+  a directory**) reflect the current state immediately instead of after the next
+  host refresh.
+
 ## [0.8.1] - 2026-06-26
 
 ### Added

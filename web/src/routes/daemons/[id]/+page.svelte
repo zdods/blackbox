@@ -176,6 +176,18 @@
 				run: () => fileInput && fileInput.click()
 			},
 			{
+				id: 'fb-refresh',
+				label: 'Refresh files',
+				hint: 'this host',
+				run: () => load()
+			},
+			{
+				id: 'fb-go-up',
+				label: 'Go up a directory',
+				when: () => pathSegments.length > 0,
+				run: goUp
+			},
+			{
 				id: 'fb-toggle-view',
 				label: 'Toggle list/grid view',
 				run: () => setView(fileView === 'list' ? 'grid' : 'list')
@@ -190,6 +202,12 @@
 				label: 'Select all files',
 				when: () => selectableEntries.length > 0,
 				run: selectAll
+			},
+			{
+				id: 'fb-clear-selection',
+				label: 'Clear selection',
+				when: () => selected.size > 0,
+				run: clearSelection
 			},
 			{
 				id: 'fb-download-selected',

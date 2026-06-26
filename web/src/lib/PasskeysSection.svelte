@@ -57,6 +57,13 @@
 		}
 	}
 
+	// Exposed for the account screen's command-palette "Add a passkey" action,
+	// which triggers the same enrollment ceremony as the in-card button. No-op
+	// while a ceremony is already in flight or the browser lacks WebAuthn.
+	export function enroll() {
+		if (supported && !adding) add();
+	}
+
 	async function remove(passkey) {
 		const ok = await confirmDelete(`passkey "${passkey.name || 'unnamed'}"`, { danger: true });
 		if (!ok) return;
