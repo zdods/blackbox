@@ -85,8 +85,12 @@ test('saving an email PATCHes the account and updates the avatar', async ({ page
 
 	await expect(page.locator('.toast')).toContainText('email saved');
 	expect(calls.patch).toBe(1);
-	// The avatar image now points at Gravatar (header + profile).
-	await expect(page.locator('.profile-head img')).toHaveAttribute('src', /gravatar\.com/);
+	// The avatar image now points at Gravatar (header + profile). Anchor the
+	// host so the pattern can't match an attacker-controlled prefix/suffix.
+	await expect(page.locator('.profile-head img')).toHaveAttribute(
+		'src',
+		/^https:\/\/www\.gravatar\.com\//
+	);
 });
 
 test('mismatched new passwords are rejected client-side', async ({ page }) => {
