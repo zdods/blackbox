@@ -163,7 +163,11 @@
      keeps background controls out of the tab order / AT reach (the focus trap
      covers keyboard; this also covers pointer + the SR virtual cursor). -->
 <div class="app" inert={paletteOpen}>
-	<header class="app-header" inert={drawerOpen}>
+	<!-- The header is NOT made inert while the drawer is open: the hamburger is
+	     the drawer's own toggle and must stay clickable to dismiss it. The other
+	     header controls (brand + actions) are individually inert instead, so the
+	     background still leaves the tab order / AT reach while the drawer is up. -->
+	<header class="app-header">
 		<div class="app-header__lead">
 			{#if shellActive}
 				<button
@@ -182,12 +186,13 @@
 				class="app-header__brand"
 				class:app-header__brand--compact={shellActive}
 				href={authed ? '/dashboard' : '/'}
+				inert={drawerOpen}
 			>
 				<Face state="ok" />
 				<span class="app-header__wordmark">blackhaul</span>
 			</a>
 		</div>
-		<div class="app-header__actions">
+		<div class="app-header__actions" inert={drawerOpen}>
 			{#if shellActive}
 				<button
 					type="button"
