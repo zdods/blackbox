@@ -20,7 +20,7 @@ export function scaleBytes(n) {
 // formatBytes renders a byte count as "12.3 GB" (one decimal, whole numbers for
 // raw bytes). Unknown/negative renders as an em dash.
 export function formatBytes(n) {
-	if (n == null || n < 0) return '—';
+	if (n == null || n < 0 || Number.isNaN(n)) return '—';
 	const { value, unit, exact } = scaleBytes(n);
 	return (exact ? value : value.toFixed(1)) + ' ' + unit;
 }
