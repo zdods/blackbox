@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.7] - 2026-06-29
+
 ### Fixed
 
 - Large or slow file downloads are no longer cut off after 30 seconds. The
@@ -407,7 +409,8 @@ console.
 - Compose binds Postgres to `127.0.0.1`; bastion container runs as
   non-root.
 
-[Unreleased]: https://github.com/zdods/blackhaul/compare/v0.8.6...HEAD
+[Unreleased]: https://github.com/zdods/blackhaul/compare/v0.8.7...HEAD
+[0.8.7]: https://github.com/zdods/blackhaul/compare/v0.8.6...v0.8.7
 [0.8.6]: https://github.com/zdods/blackhaul/compare/v0.8.5...v0.8.6
 [0.8.5]: https://github.com/zdods/blackhaul/compare/v0.8.4...v0.8.5
 [0.8.4]: https://github.com/zdods/blackhaul/compare/v0.8.3...v0.8.4
