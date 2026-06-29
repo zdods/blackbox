@@ -1,6 +1,9 @@
 package main
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestValidEmail(t *testing.T) {
 	cases := []struct {
@@ -34,5 +37,28 @@ func TestValidEmailLengthCap(t *testing.T) {
 	}
 	if validEmail(long + "@example.com") {
 		t.Errorf("over-long address should be rejected")
+	}
+}
+
+func TestPasswordPolicyError(t *testing.T) {
+	cases := []struct {
+		name   string
+		pw     string
+		wantOK bool
+	}{
+		{"too short", "short", false},
+		{"min boundary", "12345678", true},
+		{"typical", "correct horse battery", true},
+		{"max boundary", strings.Repeat("a", maxPasswordLen), true},
+		{"too long", strings.Repeat("a", maxPasswordLen+1), false},
+		{"empty", "", false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			msg := passwordPolicyError(tc.pw)
+			if (msg == "") != tc.wantOK {
+				t.Errorf("passwordPolicyError(%q) = %q, wantOK=%v", tc.pw, msg, tc.wantOK)
+			}
+		})
 	}
 }

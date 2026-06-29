@@ -105,8 +105,12 @@ func (s *Server) Register(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, errMsgBadRequest)
 		return
 	}
-	if req.Username == "" || req.Password == "" || req.TotpCode == "" || req.SetupID == "" {
+	if req.Username == "" || req.TotpCode == "" || req.SetupID == "" {
 		writeJSONError(w, http.StatusBadRequest, errMsgBadRequest)
+		return
+	}
+	if msg := passwordPolicyError(req.Password); msg != "" {
+		writeJSONError(w, http.StatusBadRequest, msg)
 		return
 	}
 	secret, ok := s.totpCache.Get(req.SetupID)
