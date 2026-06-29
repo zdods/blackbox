@@ -3,6 +3,8 @@ package main
 import (
 	"testing"
 	"time"
+
+	"github.com/golang-jwt/jwt/v5"
 )
 
 func TestHashAndCheckPassword(t *testing.T) {
@@ -95,6 +97,28 @@ func TestValidateTokenRejectsNonHMAC(t *testing.T) {
 	_, err := ValidateToken("not.a.token", "secret")
 	if err == nil {
 		t.Error("ValidateToken should reject garbage token")
+	}
+}
+
+// TestValidateTokenRejectsAlgNone forges a well-formed but unsigned alg:none
+// token and confirms the keyfunc's SigningMethodHMAC type check rejects it —
+// the actual alg-confusion / "none" attack the garbage-string test never drives.
+func TestValidateTokenRejectsAlgNone(t *testing.T) {
+	claims := SessionClaims{
+		UserID:   "attacker",
+		Username: "attacker",
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour)),
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
+		},
+	}
+	tok := jwt.NewWithClaims(jwt.SigningMethodNone, claims)
+	signed, err := tok.SignedString(jwt.UnsafeAllowNoneSignatureType)
+	if err != nil {
+		t.Fatalf("sign none: %v", err)
+	}
+	if _, err := ValidateToken(signed, "secret"); err == nil {
+		t.Error("ValidateToken must reject an alg:none token")
 	}
 }
 
