@@ -3,6 +3,8 @@ package main
 import (
 	"testing"
 	"time"
+
+	"github.com/pquerna/otp/totp"
 )
 
 func TestTotpSetupCacheSetAndGet(t *testing.T) {
@@ -83,5 +85,26 @@ func TestValidateTOTPRejectsGarbage(t *testing.T) {
 	if ValidateTOTP("000000", "JBSWY3DPEHPK3PXP") {
 		// This could occasionally pass by chance (1 in ~333k), but is extremely unlikely
 		t.Log("warning: TOTP validated 000000 — could be coincidence")
+	}
+}
+
+// TestValidateTOTPAcceptsCurrentCode generates a real code for the current time
+// step and confirms ValidateTOTP accepts it — the positive case the garbage test
+// never covered.
+func TestValidateTOTPAcceptsCurrentCode(t *testing.T) {
+	_, secret, _, err := GenerateTOTPSetup("blackhaul", "user@example.com")
+	if err != nil {
+		t.Fatalf("GenerateTOTPSetup: %v", err)
+	}
+	code, err := totp.GenerateCode(secret, time.Now())
+	if err != nil {
+		t.Fatalf("GenerateCode: %v", err)
+	}
+	if !ValidateTOTP(code, secret) {
+		t.Errorf("ValidateTOTP rejected a freshly generated valid code")
+	}
+	// A clearly wrong code for the same secret must fail.
+	if ValidateTOTP("123456", secret) && code != "123456" {
+		t.Errorf("ValidateTOTP accepted an unrelated code")
 	}
 }

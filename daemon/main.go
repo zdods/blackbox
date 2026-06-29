@@ -344,8 +344,15 @@ const uploadTimeout = 10 * time.Minute
 const (
 	maxReadBytes     = 8 << 20   // 8 MB cap on read_chunk / read_file responses
 	maxChunkBytes    = 8 << 20   // 8 MB cap on an accepted upload chunk
+	maxWriteBytes    = 8 << 20   // 8 MB cap on a single-shot write_file payload
 	maxTotalChunks   = 1_000_000 // bounds the assembly loop and state map
 	maxActiveUploads = 128       // concurrent chunked uploads
+	// maxInboundFrame hard-caps any single frame the daemon reads from the
+	// bastion. The threat model treats the bastion as untrusted, so this bounds
+	// worst-case per-frame memory regardless of what it claims to send. It sits
+	// above the largest legitimate frame: a base64 write_file body (~8 MB raw ≈
+	// 10.9 MB encoded, plus JSON overhead) and a 6 MB binary upload chunk.
+	maxInboundFrame = 16 << 20
 )
 
 // uploadIDRe constrains upload_id to a safe charset before it is ever used in a
@@ -544,6 +551,8 @@ func runDaemon(bastionURL, token, root string) error {
 		return errDialFailed
 	}
 	defer conn.Close()
+	// Bound per-frame memory from an untrusted bastion.
+	conn.SetReadLimit(maxInboundFrame)
 	// Send auth
 	if err := conn.WriteJSON(pkg.Auth{Type: pkg.TypeAuth, Token: token}); err != nil {
 		log.Printf("auth send: %v", err)
@@ -843,6 +852,12 @@ func handleWriteFile(root string, req *pkg.WriteFileRequest) pkg.WriteFileRespon
 	path := safePath(root, req.Path)
 	if path == "" {
 		return pkg.WriteFileResponse{Type: pkg.TypeWriteFile, RequestID: req.RequestID, Error: "invalid path"}
+	}
+	// Reject before decoding so an oversized payload never allocates. The decoded
+	// size is at most 3/4 of the base64 length; the single-shot path is for small
+	// files only — larger files must use the chunked upload protocol.
+	if (len(req.Data)/4)*3 > maxWriteBytes {
+		return pkg.WriteFileResponse{Type: pkg.TypeWriteFile, RequestID: req.RequestID, Error: "file too large; use chunked upload"}
 	}
 	data, err := base64Decode(req.Data)
 	if err != nil {

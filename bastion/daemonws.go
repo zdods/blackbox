@@ -53,7 +53,8 @@ func (s *Server) HandleDaemonWS(w http.ResponseWriter, r *http.Request) {
 		slog.Warn("daemon ws: write auth ok", "err", err)
 		return
 	}
+	// readLoop's teardown unregisters this exact connection (compare-and-delete),
+	// so no separate Unregister defer here — that would race a reconnect.
 	ac := s.hub.Register(daemonID, conn)
-	defer s.hub.Unregister(daemonID)
 	ac.readLoop(s.hub)
 }

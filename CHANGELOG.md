@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Large or slow file downloads are no longer cut off after 30 seconds. The
+  download time limit now applies per chunk instead of to the whole transfer, so
+  big files complete over slow connections.
+- A daemon that reconnects (e.g. after a flaky network drop) is no longer
+  occasionally left showing as offline until it reconnected a second time.
+
+### Changed
+
+- Registration now enforces the same password rules as changing your password:
+  at least 8 characters and at most 72 bytes.
+
+### Security
+
+- The daemon now caps the size of a single-shot file write and bounds the size
+  of any individual message it accepts from the server, hardening it against a
+  compromised or malicious server.
+
 ## [0.8.6] - 2026-06-26
 
 ### Fixed

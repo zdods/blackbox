@@ -17,6 +17,9 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+// shutdownTimeout bounds graceful shutdown so a stuck connection can't hang exit.
+const shutdownTimeout = 30 * time.Second
+
 type Server struct {
 	pool             *pgxpool.Pool
 	cfg              Config
@@ -129,7 +132,11 @@ func main() {
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
 	slog.Info("shutdown signal received, stopping server")
-	if err := httpServer.Shutdown(context.Background()); err != nil {
+	// Bound graceful shutdown: an in-flight streaming download or a hung daemon
+	// WebSocket must not block the process from exiting forever.
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
+	defer cancel()
+	if err := httpServer.Shutdown(shutdownCtx); err != nil {
 		slog.Error("shutdown", "err", err)
 	} else {
 		slog.Info("server stopped")

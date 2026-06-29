@@ -55,13 +55,14 @@ func TestHubRegisterAndGet(t *testing.T) {
 
 func TestHubUnregister(t *testing.T) {
 	hub := NewHub()
+	acCh := make(chan *DaemonConn, 1)
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		upgrader := websocket.Upgrader{CheckOrigin: func(r *http.Request) bool { return true }}
 		conn, err := upgrader.Upgrade(w, r, nil)
 		if err != nil {
 			return
 		}
-		hub.Register("daemon-2", conn)
+		acCh <- hub.Register("daemon-2", conn)
 		// Don't start readLoop so we can control lifecycle
 	}))
 	defer srv.Close()
@@ -73,14 +74,77 @@ func TestHubUnregister(t *testing.T) {
 	}
 	defer conn.Close()
 
-	time.Sleep(50 * time.Millisecond)
+	ac := <-acCh
 
 	if !hub.Connected("daemon-2") {
 		t.Fatal("daemon-2 should be connected before unregister")
 	}
-	hub.Unregister("daemon-2")
+	hub.Unregister("daemon-2", ac)
 	if hub.Connected("daemon-2") {
 		t.Error("daemon-2 should not be connected after unregister")
+	}
+}
+
+// TestHubUnregisterStaleConnNoOp verifies the compare-and-delete guard: a stale
+// connection unregistering itself must not evict a different connection that has
+// since taken its daemon ID (the reconnect race).
+func TestHubUnregisterStaleConnNoOp(t *testing.T) {
+	hub := NewHub()
+	old := &DaemonConn{DaemonID: "d", pending: map[string]chan json.RawMessage{}}
+	fresh := &DaemonConn{DaemonID: "d", pending: map[string]chan json.RawMessage{}}
+
+	hub.mu.Lock()
+	hub.daemons["d"] = old
+	hub.mu.Unlock()
+	// Simulate: fresh reconnect replaces old in the map.
+	hub.mu.Lock()
+	hub.daemons["d"] = fresh
+	hub.mu.Unlock()
+
+	// The old connection's teardown fires Unregister with the stale ac.
+	hub.Unregister("d", old)
+
+	if got := hub.Get("d"); got != fresh {
+		t.Fatalf("stale Unregister evicted the fresh connection: Get(d) = %v, want fresh", got)
+	}
+}
+
+// TestHubRegisterReplaceClosesOld verifies that re-registering a daemon ID closes
+// the previously registered connection and installs the new one.
+func TestHubRegisterReplaceClosesOld(t *testing.T) {
+	hub := NewHub()
+	dialOnce := func(id string) (*DaemonConn, func()) {
+		acCh := make(chan *DaemonConn, 1)
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			upgrader := websocket.Upgrader{CheckOrigin: func(r *http.Request) bool { return true }}
+			conn, err := upgrader.Upgrade(w, r, nil)
+			if err != nil {
+				return
+			}
+			acCh <- hub.Register(id, conn)
+			select {} // keep handler goroutine alive
+		}))
+		wsURL := "ws" + strings.TrimPrefix(srv.URL, "http")
+		c, _, err := websocket.DefaultDialer.Dial(wsURL, nil)
+		if err != nil {
+			t.Fatalf("dial: %v", err)
+		}
+		return <-acCh, func() { c.Close(); srv.Close() }
+	}
+
+	first, cleanup1 := dialOnce("dup")
+	defer cleanup1()
+	second, cleanup2 := dialOnce("dup")
+	defer cleanup2()
+
+	// The first connection must have been closed by the second Register.
+	select {
+	case <-first.done:
+	case <-time.After(time.Second):
+		t.Fatal("first connection was not closed when a second registered the same ID")
+	}
+	if got := hub.Get("dup"); got != second {
+		t.Fatalf("Get(dup) = %v, want the second connection", got)
 	}
 }
 

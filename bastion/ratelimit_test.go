@@ -113,6 +113,43 @@ func TestClientIPTrustProxyIgnoresSpoofedLeftEntries(t *testing.T) {
 	}
 }
 
+func TestRateLimiterSweepEvictsStaleKeys(t *testing.T) {
+	rl := NewRateLimiter(5, 50*time.Millisecond)
+	now := time.Now()
+
+	rl.mu.Lock()
+	// "stale" last attempt is older than the window; "fresh" is current.
+	rl.attempts["stale"] = []time.Time{now.Add(-time.Hour)}
+	rl.attempts["fresh"] = []time.Time{now}
+	// Force the once-per-window guard to allow this sweep.
+	rl.lastSweep = now.Add(-time.Hour)
+	rl.sweep(now)
+	_, staleExists := rl.attempts["stale"]
+	_, freshExists := rl.attempts["fresh"]
+	rl.mu.Unlock()
+
+	if staleExists {
+		t.Error("sweep should evict a key whose last attempt is outside the window")
+	}
+	if !freshExists {
+		t.Error("sweep must keep a key with a recent attempt")
+	}
+}
+
+func TestRateLimiterSweepRunsAtMostOncePerWindow(t *testing.T) {
+	rl := NewRateLimiter(5, time.Hour)
+	now := time.Now()
+	rl.mu.Lock()
+	rl.attempts["stale"] = []time.Time{now.Add(-2 * time.Hour)}
+	rl.lastSweep = now // just swept; another sweep must be a no-op
+	rl.sweep(now)
+	_, exists := rl.attempts["stale"]
+	rl.mu.Unlock()
+	if !exists {
+		t.Error("sweep ran again within the same window; stale key removed too eagerly")
+	}
+}
+
 func TestHashDaemonTokenDeterministic(t *testing.T) {
 	h1 := HashDaemonToken("token-a")
 	h2 := HashDaemonToken("token-a")

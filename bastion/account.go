@@ -10,8 +10,24 @@ import (
 // Account-management constraints.
 const (
 	minPasswordLen = 8
+	maxPasswordLen = 72  // bcrypt only hashes the first 72 bytes; reject longer
 	maxEmailLen    = 254 // RFC 5321 maximum address length
 )
+
+// passwordPolicyError returns a user-facing message if pw violates the password
+// policy, or "" if it is acceptable. The upper bound matters because bcrypt
+// silently ignores bytes past 72: without it a longer passphrase would appear
+// stronger than it is, and its tail would not count toward authentication.
+func passwordPolicyError(pw string) string {
+	switch {
+	case len(pw) < minPasswordLen:
+		return "password must be at least 8 characters"
+	case len(pw) > maxPasswordLen:
+		return "password must be at most 72 bytes"
+	default:
+		return ""
+	}
+}
 
 // accountResponse is the authenticated user's profile plus the capability
 // flags the account screen uses to decide which credential controls to render.
@@ -101,8 +117,8 @@ func (s *Server) ChangePassword(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, errMsgBadRequest)
 		return
 	}
-	if len(req.NewPassword) < minPasswordLen {
-		writeJSONError(w, http.StatusBadRequest, "password must be at least 8 characters")
+	if msg := passwordPolicyError(req.NewPassword); msg != "" {
+		writeJSONError(w, http.StatusBadRequest, msg)
 		return
 	}
 	ctx := r.Context()

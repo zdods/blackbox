@@ -213,7 +213,7 @@ func (s *Server) DeleteDaemon(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusNotFound, "not found")
 		return
 	}
-	s.hub.Unregister(daemonID)
+	s.hub.Disconnect(daemonID)
 	w.WriteHeader(http.StatusNoContent)
 }
 
