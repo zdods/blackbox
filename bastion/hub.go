@@ -90,10 +90,34 @@ func (h *Hub) Register(daemonID string, conn *websocket.Conn) *DaemonConn {
 	return ac
 }
 
-func (h *Hub) Unregister(daemonID string) {
+// Unregister removes a daemon's map entry, but only if it still points at ac.
+// A daemon reconnecting over a flaky link briefly has two connections: Register
+// installs the new one and closes the old, whose readLoop then unwinds and calls
+// Unregister. Without the compare-and-delete guard that teardown would delete the
+// freshly-registered connection, leaving the daemon socket-connected yet absent
+// from the hub ("daemon not connected") until it reconnected again.
+func (h *Hub) Unregister(daemonID string, ac *DaemonConn) {
 	h.mu.Lock()
-	delete(h.daemons, daemonID)
+	if h.daemons[daemonID] == ac {
+		delete(h.daemons, daemonID)
+	}
 	h.mu.Unlock()
+}
+
+// Disconnect forcibly removes and closes a daemon's connection if one is present.
+// Used when the daemon is deleted: the socket should drop immediately rather than
+// linger until the daemon notices. The closed connection's readLoop later calls
+// Unregister, which is a no-op here thanks to the compare-and-delete guard.
+func (h *Hub) Disconnect(daemonID string) {
+	h.mu.Lock()
+	ac := h.daemons[daemonID]
+	if ac != nil {
+		delete(h.daemons, daemonID)
+	}
+	h.mu.Unlock()
+	if ac != nil {
+		ac.close()
+	}
 }
 
 func (h *Hub) Get(daemonID string) *DaemonConn {
@@ -262,7 +286,7 @@ var errConnClosed = fmt.Errorf("connection closed")
 // readLoop reads responses and dispatches to pending channels. Run in goroutine.
 func (ac *DaemonConn) readLoop(hub *Hub) {
 	defer func() {
-		hub.Unregister(ac.DaemonID)
+		hub.Unregister(ac.DaemonID, ac)
 		ac.close()
 	}()
 	for {
