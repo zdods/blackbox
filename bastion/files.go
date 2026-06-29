@@ -18,17 +18,26 @@ import (
 	"github.com/google/uuid"
 )
 
-const proxyTimeout = 30 * time.Second
+// proxyTimeout bounds short control-plane operations (list, delete) and the
+// daemon round-trip for a single-shot upload, plus the initial metadata lookup
+// of a download. It deliberately does NOT bound a whole streaming transfer —
+// those use a per-chunk deadline (chunkTimeout) derived from the request
+// context, so a large file over a slow link isn't truncated by one budget.
+// A var (not const) so tests can shrink it.
+var proxyTimeout = 30 * time.Second
 
 // Upload memory bounds. Large files MUST use the chunked protocol; the
 // single-shot PUT is only for small files. Both caps sit just above the
 // client's 5 MB chunk size so the bastion never buffers a large body in RAM
 // for a single request — bounded per-request memory is what makes uploads
 // "stream" through this WebSocket proxy.
-const (
-	maxSingleShotUpload    = 6 << 20 // single, non-chunked PUT
-	maxChunkUpload         = 6 << 20 // one chunk of a chunked PUT
-	maxConcurrentTransfers = 16      // simultaneous uploads/downloads proxied
+const maxConcurrentTransfers = 16 // simultaneous uploads/downloads proxied
+
+// Upload caps are vars (not consts) so tests can shrink them to exercise the
+// 413 paths without sending multi-megabyte bodies.
+var (
+	maxSingleShotUpload int64 = 6 << 20 // single, non-chunked PUT
+	maxChunkUpload      int64 = 6 << 20 // one chunk of a chunked PUT
 )
 
 // acquireTransfer bounds how many uploads/downloads proxy through the bastion
@@ -44,6 +53,16 @@ func (s *Server) acquireTransfer(ctx context.Context) bool {
 }
 
 func (s *Server) releaseTransfer() { <-s.transferSem }
+
+// acquireTransferSlot waits up to proxyTimeout for a free transfer slot, bounding
+// only the wait for capacity — not the (possibly long) transfer that follows. It
+// sheds load with a 503 rather than blocking a download/upload indefinitely when
+// all slots are taken.
+func (s *Server) acquireTransferSlot(r *http.Request) bool {
+	acqCtx, cancel := context.WithTimeout(r.Context(), proxyTimeout)
+	defer cancel()
+	return s.acquireTransfer(acqCtx)
+}
 
 // contentDisposition builds an RFC 6266 attachment header so a direct-navigation
 // download saves under the file's real name. It emits both a sanitized ASCII
@@ -85,33 +104,39 @@ func (s *Server) DaemonFiles(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusServiceUnavailable, "daemon not connected")
 		return
 	}
-	ctx, cancel := context.WithTimeout(r.Context(), proxyTimeout)
-	defer cancel()
+	// Transfers (download, chunked upload) run off the raw request context so
+	// they're bounded only by per-chunk deadlines + client disconnect, not by a
+	// single whole-operation budget. Control ops below get the short proxyTimeout.
 	if r.Method == http.MethodGet && r.URL.Query().Get("download") == "1" {
-		if !s.acquireTransfer(ctx) {
+		if !s.acquireTransferSlot(r) {
 			writeJSONError(w, http.StatusServiceUnavailable, "server busy; try again")
 			return
 		}
 		defer s.releaseTransfer()
-		s.proxyReadFile(ctx, w, ac, path)
-		return
-	}
-	if r.Method == http.MethodGet {
-		s.proxyListDir(ctx, w, ac, path)
+		s.proxyReadFile(r.Context(), w, ac, path)
 		return
 	}
 	if r.Method == http.MethodPut {
-		if !s.acquireTransfer(ctx) {
+		if !s.acquireTransferSlot(r) {
 			writeJSONError(w, http.StatusServiceUnavailable, "server busy; try again")
 			return
 		}
 		defer s.releaseTransfer()
 		// Chunked upload if upload_id, chunk_index, total_chunks are present
 		if r.URL.Query().Get("upload_id") != "" {
-			s.proxyWriteChunk(ctx, w, r, ac, path)
+			s.proxyWriteChunk(r.Context(), w, r, ac, path)
 			return
 		}
+		// Single-shot upload is small and bounded; a short whole-op deadline is fine.
+		ctx, cancel := context.WithTimeout(r.Context(), proxyTimeout)
+		defer cancel()
 		s.proxyWriteFile(ctx, w, r, ac, path)
+		return
+	}
+	ctx, cancel := context.WithTimeout(r.Context(), proxyTimeout)
+	defer cancel()
+	if r.Method == http.MethodGet {
+		s.proxyListDir(ctx, w, ac, path)
 		return
 	}
 	if r.Method == http.MethodDelete {
@@ -192,13 +217,16 @@ func (s *Server) proxyListDir(ctx context.Context, w http.ResponseWriter, ac *Da
 	_ = json.NewEncoder(w).Encode(resp.Entries)
 }
 
-const downloadChunkSize = 5 * 1024 * 1024 // 5 MB
+var downloadChunkSize = 5 * 1024 * 1024 // 5 MB (var so tests can shrink it)
 
 func (s *Server) proxyReadFile(ctx context.Context, w http.ResponseWriter, ac *DaemonConn, path string) {
-	// Get file size first
+	// Get file size first. The metadata round-trip is a quick control call, so
+	// bound it with proxyTimeout even though the overall download is not.
 	metaReqID := uuid.New().String()
 	metaReq := pkg.GetMetaRequest{Type: pkg.TypeGetMeta, RequestID: metaReqID, Path: path}
-	metaData, err := ac.Request(ctx, metaReqID, metaReq)
+	metaCtx, metaCancel := context.WithTimeout(ctx, proxyTimeout)
+	metaData, err := ac.Request(metaCtx, metaReqID, metaReq)
+	metaCancel()
 	if err != nil {
 		reqLog(ctx).Error("daemon read-file meta failed", "err", err)
 		writeJSONError(w, http.StatusBadGateway, errMsgUnavailable)
@@ -280,7 +308,9 @@ func (s *Server) proxyReadFile(ctx context.Context, w http.ResponseWriter, ac *D
 func (s *Server) proxyReadFileSmall(ctx context.Context, w http.ResponseWriter, ac *DaemonConn, path string) {
 	reqID := uuid.New().String()
 	req := pkg.ReadFileRequest{Type: pkg.TypeReadFile, RequestID: reqID, Path: path}
-	respData, err := ac.Request(ctx, reqID, req)
+	reqCtx, cancel := context.WithTimeout(ctx, proxyTimeout)
+	defer cancel()
+	respData, err := ac.Request(reqCtx, reqID, req)
 	if err != nil {
 		reqLog(ctx).Error("daemon read-file request failed", "err", err)
 		writeJSONError(w, http.StatusBadGateway, errMsgUnavailable)
