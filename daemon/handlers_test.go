@@ -121,6 +121,21 @@ func TestHandleWriteFile(t *testing.T) {
 	}
 }
 
+func TestHandleWriteFileRejectsOversize(t *testing.T) {
+	root := t.TempDir()
+	// A payload whose decoded size exceeds maxWriteBytes must be rejected without
+	// being written — large files have to use the chunked upload protocol.
+	big := base64.StdEncoding.EncodeToString(make([]byte, maxWriteBytes+1))
+	req := &pkg.WriteFileRequest{Type: pkg.TypeWriteFile, RequestID: "req-big", Path: "big.bin", Data: big}
+	resp := handleWriteFile(root, req)
+	if resp.Error == "" {
+		t.Fatal("expected oversize write to be rejected")
+	}
+	if _, err := os.Stat(filepath.Join(root, "big.bin")); !os.IsNotExist(err) {
+		t.Errorf("oversize file should not have been written")
+	}
+}
+
 func TestHandleWriteFileCreatesSubdirs(t *testing.T) {
 	root := t.TempDir()
 	data := base64.StdEncoding.EncodeToString([]byte("deep"))
