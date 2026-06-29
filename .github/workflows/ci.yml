@@ -34,8 +34,11 @@ jobs:
       - name: Build
         run: go build ./...
 
-      - name: Test
-        run: go test ./...
+      - name: Test (race + coverage)
+        run: go test -race -coverprofile=coverage.out ./...
+
+      - name: Coverage summary
+        run: go tool cover -func=coverage.out | tail -1
 
       - name: Cross-compile daemon (all release targets)
         run: |
@@ -75,10 +78,13 @@ jobs:
           go-version-file: go.mod
           cache: true
 
-      - name: Integration tests (race)
-        run: go test -tags=integration -race ./bastion/
+      - name: Integration tests (race + coverage)
+        run: go test -tags=integration -race -coverprofile=coverage.integration.out ./bastion/
         env:
           TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/blackhaul_test?sslmode=disable
+
+      - name: Coverage summary
+        run: go tool cover -func=coverage.integration.out | tail -1
 
   web:
     name: Web build
@@ -105,6 +111,9 @@ jobs:
 
       - name: Svelte check
         run: npm run check
+
+      - name: Unit tests
+        run: npm run test:unit
 
       - name: Build
         run: npm run build
